@@ -1,0 +1,334 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+
+:root {
+  --background: hsl(0, 0%, 100%);
+  --foreground: hsl(30, 10%, 10%);
+  --muted: hsl(220, 13%, 96%);
+  --muted-foreground: hsl(220, 10%, 28%);
+  --popover: hsl(0, 0%, 100%);
+  --popover-foreground: hsl(30, 10%, 10%);
+  --card: hsl(0, 0%, 100%);
+  --card-foreground: hsl(30, 10%, 10%);
+  --border: hsl(220, 13%, 91%);
+  --input: hsl(220, 13%, 91%);
+  --primary: hsl(20, 66%, 21%);
+  --primary-foreground: hsl(0, 0%, 100%);
+  --secondary: hsl(214, 14%, 91%);
+  --secondary-foreground: hsl(220, 9%, 10%);
+  --accent: hsl(214, 14%, 91%);
+  --accent-foreground: hsl(220, 9%, 10%);
+  --destructive: hsl(0, 84%, 60%);
+  --destructive-foreground: hsl(0, 0%, 100%);
+  --ring: hsl(20, 66%, 21%);
+  --radius: 0.5rem;
+
+  /* Sidebar (Light/Simple) */
+  --sidebar: hsl(220, 13%, 98%);
+  --sidebar-foreground: hsl(30, 10%, 10%);
+  --sidebar-background: hsl(220, 13%, 98%);
+  --sidebar-border: hsl(220, 13%, 91%);
+  --sidebar-primary: var(--primary);
+  --sidebar-primary-foreground: hsl(0, 0%, 100%);
+  --sidebar-accent: hsl(214, 14%, 91%);
+  --sidebar-accent-foreground: hsl(220, 9%, 10%);
+  --sidebar-ring: var(--primary);
+
+  /* Charts */
+  --chart-1: hsl(20, 66%, 21%);
+  --chart-2: hsl(158, 64%, 52%);
+  --chart-3: hsl(43, 96%, 56%);
+  --chart-4: hsl(280, 65%, 60%);
+  --chart-5: hsl(0, 84%, 60%);
+
+  /* Custom medical theme colors */
+  --medical-blue: hsl(20, 66%, 21%);
+  --medical-blue-dark: hsl(20, 66%, 15%);
+  --success-green: hsl(158, 64%, 52%);
+  --warning-amber: hsl(43, 96%, 56%);
+  --error-red: hsl(0, 84%, 60%);
+  --light-bg: hsl(214, 14%, 95%);
+  --medium-gray: hsl(215, 16%, 47%);
+  --dark-gray: hsl(215, 28%, 17%);
+}
+
+/* 👇 Use Tailwind's @layer directive to define utilities */
+@layer components {
+  .typography {
+    color: var(--foreground);
+  }
+
+  .typography a {
+    color: var(--primary);
+  }
+
+  .typography a:hover {
+    color: var(--primary-foreground);
+  }
+
+  .btn-primary {
+    background-color: var(--primary);
+    color: var(--primary-foreground);
+    padding: 0.5rem 1rem;
+    border-radius: var(--radius);
+  }
+
+  .card {
+    background-color: var(--card);
+    color: var(--card-foreground);
+    padding: 1rem;
+    border-radius: var(--radius);
+  }
+
+  .sidebar {
+    background-color: var(--sidebar-background);
+    color: var(--sidebar-foreground);
+    border-right: 1px solid var(--sidebar-border);
+  }
+
+  .sidebar .accent {
+    color: var(--sidebar-accent);
+  }
+
+  .sidebar .accent:hover {
+    color: var(--sidebar-accent-foreground);
+  }
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar: var(--sidebar);
+  --color-chart-5: var(--chart-5);
+  --color-chart-4: var(--chart-4);
+  --color-chart-3: var(--chart-3);
+  --color-chart-2: var(--chart-2);
+  --color-chart-1: var(--chart-1);
+  --color-ring: var(--ring);
+  --color-input: var(--input);
+  --color-border: var(--border);
+  --color-destructive: var(--destructive);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent: var(--accent);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-muted: var(--muted);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary: var(--secondary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary: var(--primary);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-popover: var(--popover);
+  --color-card-foreground: var(--card-foreground);
+  --color-card: var(--card);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+  }
+}
+
+@layer utilities {
+  .medical-blue {
+    color: var(--medical-blue);
+  }
+
+  .bg-medical-blue {
+    background-color: var(--medical-blue);
+  }
+
+  .hover\:bg-medical-blue-dark:hover {
+    background-color: var(--medical-blue-dark);
+  }
+
+  .text-medical-blue {
+    color: var(--medical-blue);
+  }
+
+  .hover\:text-medical-blue:hover {
+    color: var(--medical-blue);
+  }
+
+  .hover\:text-medical-blue-dark:hover {
+    color: var(--medical-blue-dark);
+  }
+
+  .bg-success-green {
+    background-color: var(--success-green);
+  }
+
+  .text-success-green {
+    color: var(--success-green);
+  }
+
+  .bg-warning-amber {
+    background-color: var(--warning-amber);
+  }
+
+  .text-warning-amber {
+    color: var(--warning-amber);
+  }
+
+  .bg-error-red {
+    background-color: var(--error-red);
+  }
+
+  .text-error-red {
+    color: var(--error-red);
+  }
+
+  .bg-light-bg {
+    background-color: var(--light-bg);
+  }
+
+  .text-medium-gray {
+    color: var(--medium-gray);
+  }
+
+  .text-dark-gray {
+    color: var(--dark-gray);
+  }
+
+  .bg-dark-gray {
+    background-color: var(--dark-gray);
+  }
+}
+
+/* Remove number input arrows and scroll behavior */
+.no-spinner::-webkit-inner-spin-button,
+.no-spinner::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.no-spinner {
+  -moz-appearance: textfield;
+  /* Firefox */
+}
+
+/* Prevent scroll from changing value */
+.no-spinner:focus,
+.no-spinner:hover {
+  -moz-appearance: textfield;
+}
+
+/* Rich text editor: force list markers so bullets/numbers show (override preflight) */
+.rich-text-editor ul {
+  list-style-type: disc !important;
+  padding-left: 1.5rem !important;
+}
+
+.rich-text-editor ol {
+  list-style-type: decimal !important;
+  padding-left: 1.5rem !important;
+}
+
+.rich-text-editor li {
+  display: list-item !important;
+}
+
+/*
+ * Word-like alignment for note content (edit + show: list, history, note list).
+ * Rule 1: Lists (ul, ol) always have padding on the left.
+ * Rule 2: Paragraphs and headings always start from the left with no padding.
+ */
+.note-list-content,
+.note-list-content.prose,
+.patient-note-content,
+.patient-note-content.prose {
+  text-align: left;
+}
+
+/* Rule 2: paragraphs and headings — no left padding, start from the left */
+.note-list-content p,
+.note-list-content.prose p,
+.note-list-content h1,
+.note-list-content h2,
+.note-list-content h3,
+.note-list-content.prose h1,
+.note-list-content.prose h2,
+.note-list-content.prose h3,
+.note-list-content blockquote,
+.note-list-content.prose blockquote,
+.patient-note-content p,
+.patient-note-content.prose p,
+.patient-note-content h1,
+.patient-note-content h2,
+.patient-note-content h3,
+.patient-note-content.prose h1,
+.patient-note-content.prose h2,
+.patient-note-content.prose h3,
+.patient-note-content blockquote,
+.patient-note-content.prose blockquote {
+  margin-left: 0 !important;
+  margin-right: 0 !important;
+  padding-left: 0 !important;
+  padding-right: 0 !important;
+  text-align: left !important;
+  max-width: none;
+}
+
+/* Rule 1: lists — always have left padding */
+.note-list-content ul,
+.note-list-content.prose ul,
+.patient-note-content ul,
+.patient-note-content.prose ul {
+  list-style-type: disc !important;
+  list-style-position: outside !important;
+  padding-left: 1.5rem !important;
+  margin-left: 0 !important;
+  margin-top: 0.25em !important;
+  margin-bottom: 0.25em !important;
+}
+
+.note-list-content ol,
+.note-list-content.prose ol,
+.patient-note-content ol,
+.patient-note-content.prose ol {
+  list-style-type: decimal !important;
+  list-style-position: outside !important;
+  padding-left: 1.5rem !important;
+  margin-left: 0 !important;
+  margin-top: 0.25em !important;
+  margin-bottom: 0.25em !important;
+}
+
+.note-list-content li,
+.note-list-content.prose li,
+.patient-note-content li,
+.patient-note-content.prose li {
+  display: list-item !important;
+  margin-left: 0 !important;
+  padding-left: 0.25em !important;
+}
+
+/* Nested lists: extra indent like Word */
+.note-list-content ul ul,
+.note-list-content ol ol,
+.note-list-content ul ol,
+.note-list-content ol ul,
+.patient-note-content ul ul,
+.patient-note-content ol ol,
+.patient-note-content ul ol,
+.patient-note-content ol ul {
+  padding-left: 1.5rem !important;
+  margin-top: 0 !important;
+  margin-bottom: 0 !important;
+}

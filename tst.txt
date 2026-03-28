@@ -1,0 +1,129 @@
+
+Here’s an audit of the two administration screens against the project context rules.
+
+---
+
+## Where project context **is** used
+
+| Rule / section | Users page | Roles page |
+|----------------|------------|------------|
+| **Rebuild / reference alignment** | Uses `createVendorUserSchema`, `vendorUserService`, `vendorRoleService`, `VendorUser`, `VendorRole`, `getAuthUser`. DTOs and API paths match validators/services. | Uses `vendorRoleService`, `getVendorRoles`, `createVendorRole`, etc., `PermissionModule`, `VendorRole`, `getAuthUser`. Aligned with validators and services. |
+| **App Router & paths** | Under `src/app/administration/users/page.tsx`, uses `@/` imports. | Same. |
+| **UI stack** | Radix Dialog, AlertDialog, Select; Tailwind; `@tabler/icons-react` (IconEye, IconEyeOff, IconChevronDown). | Radix Dialog, AlertDialog; Tailwind. |
+| **Zod** | `createVendorUserSchema.safeParse` for create. | Validation mainly via required fields in UI; no Zod parse in page (backend validates). |
+| **Axios** | Via `vendorUserService` / `vendorRoleService` (use `api` under the hood). | Same. |
+| **Localisation (en/kh)** | `useTranslations()`, `t()` for all UI text; `getLocalizedText(..., locale)` for API `{ en, kh }` (role names, user name). Keys in `messages.en` and `messages.kh`. | Same. |
+| **Backend auth** | `getAuthUser()` for `clinicId`; protected by layout/AuthGuard; 401 handled in `api.ts`. | Same. |
+| **Accessibility** | `aria-label` on trigger/buttons, `role="alert"` on errors, `id`/`htmlFor` on labels. | Same; `aria-label` on close; table has `scope="col"` on actions header. |
+| **tailwind-merge** | Not used (only one conditional class block). | Used for `PermissionEditor` conditional classes. |
+
+---
+
+## Where project context is **not** used (and why)
+
+### 1. **Data: TanStack Query (server state)**
+
+- **Rule:** “TanStack Query (server state)”.
+- **Current:** Both pages use `useState` + `useEffect` + a `refresh` callback to load and refetch data (roles, users, permissions template).
+- **Gap:** No `useQuery` / `useMutation`; no shared cache, `staleTime`, or automatic refetch behavior.
+- **Why it’s like this:** Implemented with local state and manual fetch for simplicity; the rules were followed only partially (Zod, Axios, UI stack), not for server state.
+- **If you want to align:** Refactor to `useQuery` for GET (e.g. `getVendorUsers`, `getVendorRoles`, `getVendorPermissions`) and `useMutation` for create/update/delete, with `queryClient.invalidateQueries` (or similar) instead of manual `refresh()`.
+
+---
+
+### 2. **Data: TanStack Form (forms)**
+
+- **Rule:** “TanStack Form (forms)”.
+- **Current:** Form state is plain `useState` (email, name, password, role, isActive, etc.) in both the users form dialog and the roles form dialog.
+- **Gap:** No TanStack Form; no built-in validation/error handling from that layer.
+- **Why:** Forms were built with controlled inputs and local state; Zod is used only for create-user payload validation, not via a form library.
+- **If you want to align:** Introduce TanStack Form and wire Zod schemas (and optionally TanStack Pacer for debounce) as per the rules.
+
+---
+
+### 3. **Tables: TanStack Table + TanStack Virtual**
+
+- **Rule:** “TanStack Table (headless) + TanStack Virtual for long lists” and “For 50+ rows … use TanStack Virtual”.
+- **Current:** Both pages use a plain `<table>` and `.map()` over the list (users or roles). No headless table API, no virtualization.
+- **Gap:** No TanStack Table; no virtualisation even if the list grows large.
+- **Why:** Tables are small (few roles, moderate user count) and implemented as simple lists; the “long lists” part of the rule was not applied.
+- **If you want to align:** Use TanStack Table for structure/sorting/filtering and add TanStack Virtual (or table virtualizer) when you expect or support 50+ rows.
+
+---
+
+### 4. **Performance: Lazy client code**
+
+- **Rule:** “For heavy client-only UI (charts, modals, complex tables), use `next/dynamic` with `ssr: false` or a loading boundary”.
+- **Current:** No `next/dynamic`; the full page (including dialogs and tables) is in one client bundle.
+- **Gap:** Modals and tables are not lazy-loaded as separate chunks.
+- **Why:** Prioritised simplicity; no explicit “heavy” boundary was added.
+- **If you want to align:** Lazy-load the form dialogs (e.g. `dynamic(..., { ssr: false })`) or wrap the table section in a loading boundary so the rest of the page can be lighter.
+
+---
+
+### 5. **Performance: TanStack Query `staleTime`**
+
+- **Rule:** “Use TanStack Query staleTime (and gcTime) to avoid unnecessary refetches”.
+- **Current:** No TanStack Query, so no cache or `staleTime`.
+- **Gap:** Every mount and every “Refresh” triggers a full refetch; no “data still fresh” behaviour.
+- **Why:** Direct consequence of not using TanStack Query (see 1 above).
+- **If you want to align:** Same as (1): move to `useQuery` and set `staleTime` (and `gcTime`) appropriately.
+
+---
+
+### 6. **Forms/inputs: Debounce / TanStack Pacer**
+
+- **Rule:** “Debounce or throttle expensive validators or API calls (e.g. with TanStack Pacer)”.
+- **Current:** Users page search is a client-side filter on already-loaded data; no API call or validator on keystroke. No debounce/Pacer.
+- **Gap:** If you later add server-side search (API per keystroke), the rule would require debounce/throttle; today it’s not applicable in the same way.
+- **Why:** Current design avoids per-keystroke cost, so Pacer wasn’t needed yet.
+- **If you want to align:** When adding search that hits the API or runs heavy validation, add debounce (or TanStack Pacer) as per the rule.
+
+---
+
+### 7. **Client boundary: `"use client"` at leaf**
+
+- **Rule:** “Add ‘use client’ only where necessary” and “Keep ‘use client’ at leaf components where possible so parent trees stay server-rendered”.
+- **Current:** Both `users/page.tsx` and `roles/page.tsx` are full client pages (`"use client"` at the top). No server component wrapper or client-only islands.
+- **Gap:** The whole route is client; no server-rendered shell (e.g. layout or static parts as Server Components).
+- **Why:** All UI is interactive (tables, dialogs, buttons, forms), so the whole page was implemented as a single client component for simplicity.
+- **If you want to align:** Split so that layout and non-interactive parts are Server Components and only the interactive table + dialogs (or smaller islands) are client components loaded where needed.
+
+---
+
+### 8. **Toasts (sonner)**
+
+- **Rule:** “Toasts: sonner”.
+- **Current:** No toasts on success/error for create/update/delete; only inline error state and closing the dialog on success.
+- **Gap:** No global “Saved” / “Deleted” / “Error” toast as per the stack.
+- **Why:** UX was kept to local feedback (error message in dialog, list refresh); toasts were not wired.
+- **If you want to align:** Add sonner and call `toast.success()` / `toast.error()` after mutations (and optionally on load errors).
+
+---
+
+### 9. **Testing and quality assurance**
+
+- **Rule:** “Write unit and integration tests for critical logic and components. Perform accessibility testing”.
+- **Current:** No test files or a11y tests for these two pages.
+- **Gap:** No automated tests for roles/users CRUD or accessibility.
+- **Why:** Implementation focused on feature completeness; tests were not added in the same pass.
+- **If you want to align:** Add tests (e.g. for validation, service calls, and critical UI) and run accessibility checks (keyboard, screen reader) as per the rule.
+
+---
+
+### 10. **Users page: `tailwind-merge`**
+
+- **Rule:** “Use tailwind-merge (e.g. `twMerge()`) for conditional classes”.
+- **Current:** Roles page uses `twMerge` in PermissionEditor; users page does not import or use it (conditional classes are plain strings).
+- **Gap:** Users page doesn’t use `twMerge` where classes are composed conditionally.
+- **Why:** Only a few conditional class strings; could be oversight.
+- **If you want to align:** Import `twMerge` and use it wherever you merge or override classes (e.g. trigger, buttons, list items).
+
+---
+
+## Summary
+
+- **Fully aligned:** Rebuild/reference alignment (validators, services, types), App Router and paths, Radix + Tailwind + icons, Zod (users create), Axios via services, en/kh i18n and `getLocalizedText`, backend auth and 401 handling, basic accessibility (labels, ARIA, alerts), and no new dependencies.
+- **Partially or not used:** TanStack Query (server state), TanStack Form, TanStack Table + Virtual, `next/dynamic` for heavy UI, `staleTime`/caching, TanStack Pacer for inputs, keeping `"use client"` at leaves, sonner toasts, and automated testing. The users page also doesn’t use `twMerge` yet.
+
+So: the **product and stack rules** (validators, services, i18n, auth, UI primitives) are used; the **data and performance** rules (Query, Form, Table, Virtual, lazy loading, toasts) and **testing** are the main places where the two screens don’t yet follow the project context.
