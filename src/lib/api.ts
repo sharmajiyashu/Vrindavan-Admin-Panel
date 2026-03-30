@@ -3,7 +3,9 @@ import axios, {
   type AxiosRequestConfig,
 } from "axios";
 
-const BASE_URL = "http://localhost:3000/v1/api/admin";
+// const BASE_URL = "http://localhost:3000/v1/api/admin";
+const BASE_URL = "https://temple-api.creatamax.in/v1/api/admin";
+
 
 const PUBLIC_PATHS = ["/health", "/auth/login", "/user/login", "/login"];
 
