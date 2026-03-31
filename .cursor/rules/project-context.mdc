@@ -1,0 +1,83 @@
+---
+description: Santepheap Doctor — stack, conventions, and performance rules for Next.js app
+alwaysApply: true
+---
+
+# Santepheap Doctor — Project Context
+
+**Project**: Santepheap Doctor (doctor panel). **Stack**: Next.js 16 (App Router), React 19, TypeScript (strict + `noUncheckedIndexedAccess`), Tailwind CSS 4.
+
+## Rebuild context
+
+- This app already exists in another GitHub repo as a Next.js SPA; that version is **buggy, malfunctioning, and has poor UI**.
+- **This repo is a full rewrite** using a **multi-page** structure (App Router with distinct routes/pages).
+- Screens and services will be **provided incrementally** (one by one). When given reference code or specs:
+  - **Recreate** the screen or service to match intent and behavior.
+  - **Fix** bugs, edge cases, and logic errors from the old implementation.
+  - **Improve** UI/UX: use this stack (Radix, Tailwind, icons), accessibility, and performance rules above. Do not copy-paste the old UI as-is.
+- **Reference code alignment**: When reference code is provided in chat and you update this app, **before applying changes** always check and align with this repo’s existing:
+  - **Validators** (`src/lib/validations/`): use the same key names, shape, and Zod schemas as in the project’s validation files.
+  - **Service methods** (`src/lib/services/`): use the same function names, parameters, response types, and API paths as in the project’s service files.
+  - **Types and variables**: prefer types and variable names already defined in validators, services, or `src/lib/api.ts` (e.g. `AuthUser`, `VendorUser`, DTOs) instead of introducing new or reference-only names. Do not assume reference code’s keys or names are correct; verify against this codebase first.
+
+## Stack & conventions
+
+- **App Router**: Routes under `src/app/`. Path alias `@/*` → `./src/*`. Use `layout.tsx` and `page.tsx`.
+- **Data**: TanStack Query (server state), TanStack Form (forms), Zod (validation), Axios (HTTP).
+- **UI**: Radix UI primitives + Tailwind. Use `tailwind-merge` (e.g. `twMerge()`) for conditional classes. Icons: `@tabler/icons-react`. Toasts: sonner. Charts: recharts. Drawers: vaul.
+- **Tables/lists**: TanStack Table (headless) + TanStack Virtual for long lists. TanStack Pacer for throttling/debounce when needed.
+- **Client boundary**: Add `"use client"` only where necessary (hooks, Radix/TanStack interactivity, browser APIs). Default to Server Components.
+- **Paths**: `src/app/` (pages, layouts, `providers.tsx`), `tsconfig.json` (keep strict). Prefer existing deps over new ones.
+
+## Localisation (en / kh)
+
+- **Always support English (en) and Khmer (kh).** When generating or adding screen routes and static text, follow the app’s i18n pattern.
+- **New screen routes**: Add a corresponding nav entry in `src/lib/sidebar-nav.ts` with a `titleKey` (e.g. `nav.somePage`). Add that key to **both** `messages.en` and `messages.kh` in `src/lib/i18n/messages.ts`. In the new page, use `useTranslations()` and `t("titleKey")` for any UI labels and headings.
+- **Static text**: Never hardcode user-facing strings. Add a message key (e.g. `screen.labelName`) and define it in **both** `messages.en` and `messages.kh` in `src/lib/i18n/messages.ts`. In components use `t("screen.labelName")`. Keep key names consistent and grouped by screen or domain (e.g. `auth.*`, `roles.*`, `common.*`).
+- **Backend text with locale**: When the API returns objects with `{ en: string, kh: string }`, use `getLocalizedText(obj, locale)` from `@/lib/i18n` so the correct language is shown. Do not assume only one language.
+- **New pages**: Wire the page to `useTranslations()` (or `useLanguage()`), use `t(key)` for all static copy, and ensure every new key exists in both en and kh in `src/lib/i18n/messages.ts`.
+
+## Backend auth (vendor API)
+
+- The vendor API uses **vendor auth middleware**. Only **whitelisted routes** (e.g. `/health`, `/auth/login`) skip auth; all other requests must send **`Authorization: Bearer <accessToken>`** (handled in `src/lib/api.ts`).
+- Backend validates the token, then enforces: **user exists**, **user.isActive === true**, and **user.userType** is **`vendor`** or **`doctor`**. Otherwise it returns 401 Unauthorized.
+- On success the backend sets **req.user** with: `id`, `userType`, `clinicId`, `vendorRoleId`, `adminRoleId`. Use these when the API returns or expects user/clinic context.
+- **401 responses**: Frontend clears token and redirects to login (see `src/lib/api.ts` response interceptor). When calling protected APIs, treat 401 as “session expired” and rely on this behavior.
+- Keep frontend **PUBLIC_PATHS** in `src/lib/api.ts` in sync with the backend **vendorWhitelistRoutes** so login/health are not sent with a token.
+
+## Performance (follow by default)
+
+- **Server-first**: Prefer Server Components. Fetch and render on the server; use client components only for interactivity. Keeps JS bundle smaller and improves LCP.
+- **Lazy client code**: For heavy client-only UI (charts, modals, complex tables), use `next/dynamic` with `ssr: false` or a loading boundary so they don’t block initial paint.
+- **Images**: Use `next/image` with explicit `width`/`height` or `fill`; avoid raw `<img>` for static assets.
+- **Lists/tables**: For 50+ rows or long scroll lists, use TanStack Virtual (or table + virtualizer) so only visible rows render.
+- **Queries**: Use TanStack Query `staleTime` (and `gcTime`) to avoid unnecessary refetches; don’t refetch on every mount when data is still fresh.
+- **Forms/inputs**: Debounce or throttle expensive validators or API calls (e.g. with TanStack Pacer) instead of firing on every keystroke.
+- **Bundle**: Keep `"use client"` at leaf components where possible so parent trees stay server-rendered; avoid a single large client root.
+- **Core Web Vitals**: Optimize from the start. Use code splitting, lazy loading, and caching. Optimize images and assets. Aim for Lighthouse Performance and Accessibility ≥ 90.
+
+## Accessibility and inclusive design
+
+- Follow **WCAG 2.1 AA**. Use semantic HTML and proper ARIA labels. Ensure full keyboard navigation and screen reader compatibility.
+- Test with real assistive technologies and diverse user scenarios. Prefer inclusive patterns (e.g. motion preferences, contrast).
+
+## Testing and quality assurance
+
+- Write unit and integration tests for critical logic and components. Perform accessibility testing (keyboard, screen readers).
+- Test cross-browser and responsive behavior. Use end-to-end tests for critical user flows.
+
+## Communication style
+
+- Be precise (e.g. "Virtualized table reduced render time by 80%").
+- Focus on UX and performance (e.g. "Code splitting reduced initial load by 60%", "Screen reader and keyboard support added").
+- Call out accessibility and Core Web Vitals when relevant.
+
+## Learning & memory
+
+- Build expertise in: performance patterns (Core Web Vitals), scalable component architecture, accessibility techniques, responsive/maintainable CSS, and testing strategies that catch issues before production.
+
+## Success metrics
+
+- Page load under ~3s on 3G; Lighthouse Performance and Accessibility ≥ 90; cross-browser compatibility; high component reusability; zero console errors in production.
+
+When implementing or searching, apply this stack, performance rules, accessibility, and quality standards. Prefer existing dependencies.
