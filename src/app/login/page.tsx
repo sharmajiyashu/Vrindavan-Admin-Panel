@@ -67,7 +67,7 @@ export default function LoginPage() {
       <div className="relative z-10 w-full max-w-[420px] animate-in fade-in zoom-in-95 duration-700">
         <div className="overflow-hidden rounded-[2.5rem] bg-white p-1.5 shadow-[0_48px_80px_-16px_rgba(15,23,42,0.1)] ring-1 ring-slate-200/50">
           <div className="rounded-[2.2rem] bg-white px-8 py-10 sm:px-10">
-            
+
             {/* Inner Logo & Single Small Headline */}
             <div className="mb-10 flex flex-col items-center">
               <div className="mb-5 w-28 p-1">
@@ -81,7 +81,7 @@ export default function LoginPage() {
                 />
               </div>
               <h1 className="text-2xl font-black tracking-tight text-slate-900">
-                Vrindavan Admin
+                Vrindavan Adminn
               </h1>
               <p className="mt-1 text-[11px] font-bold uppercase tracking-widest text-slate-400">
                 Manage your administrative workspace
