@@ -44,6 +44,7 @@ export const sidebarNav: SidebarNavEntry[] = [
   { titleKey: "tours.title", href: "/tours", icon: IconMap2 },
   { titleKey: "nav.bookings", href: "/bookings", icon: IconReceipt2 },
   { titleKey: "nav.darshans", href: "/darshans", icon: IconPhoto },
+  { titleKey: "nav.tourMap", href: "/route-maps", icon: IconMap2 },
   { titleKey: "nav.userManagement", href: "/users", icon: IconUsers },
   { titleKey: "nav.wallets", href: "/wallets", icon: IconWallet },
 ];

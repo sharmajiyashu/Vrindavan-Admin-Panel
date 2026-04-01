@@ -62,10 +62,12 @@ export function DarshanForm({ initialData, onSubmitBasic, onSubmitFiles, onRemov
     defaultValues: initialData ? {
       templeId: initialData.templeId,
       date: initialData.date,
+      shift: initialData.shift,
       descriptionEn: initialData.descriptionEn,
       descriptionHi: initialData.descriptionHi,
     } : {
       date: new Date().toISOString().split("T")[0],
+      shift: "morning",
     },
   });
 
@@ -180,6 +182,37 @@ export function DarshanForm({ initialData, onSubmitBasic, onSubmitFiles, onRemov
                 />
               </div>
               {errors.date && <p className={errorClasses}>{errors.date.message}</p>}
+            </div>
+          </div>
+
+          <div className="grid gap-6 md:grid-cols-2">
+            <div>
+              <label className={labelClasses}>{t("darshans.shift") || "Shift"}</label>
+              <div className="flex bg-muted/30 p-1 rounded-xl w-fit">
+                <label className="cursor-pointer">
+                  <input
+                    type="radio"
+                    value="morning"
+                    {...register("shift")}
+                    className="sr-only peer"
+                  />
+                  <div className="px-4 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all peer-checked:bg-primary peer-checked:text-primary-foreground text-muted-foreground">
+                    {t("darshans.morning") || "Morning"}
+                  </div>
+                </label>
+                <label className="cursor-pointer">
+                  <input
+                    type="radio"
+                    value="evening"
+                    {...register("shift")}
+                    className="sr-only peer"
+                  />
+                  <div className="px-4 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all peer-checked:bg-primary peer-checked:text-primary-foreground text-muted-foreground">
+                    {t("darshans.evening") || "Evening"}
+                  </div>
+                </label>
+              </div>
+              {errors.shift && <p className={errorClasses}>{errors.shift.message}</p>}
             </div>
           </div>
 

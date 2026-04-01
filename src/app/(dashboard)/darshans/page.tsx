@@ -35,12 +35,13 @@ export default function DarshansPage() {
   const [limit, setLimit] = useState(10);
   const [templeId, setTempleId] = useState<number | undefined>(undefined);
   const [date, setDate] = useState<string>("");
+  const [shift, setShift] = useState<string>("");
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [darshanToDelete, setDarshanToDelete] = useState<Darshan | null>(null);
 
   const { data: paginatedData, isLoading } = useQuery({
-    queryKey: ["darshans", currentPage, limit, templeId, date],
-    queryFn: () => darshanService.listDarshans(currentPage, limit, templeId, date),
+    queryKey: ["darshans", currentPage, limit, templeId, date, shift],
+    queryFn: () => darshanService.listDarshans(currentPage, limit, templeId, date, shift),
   });
 
   const { data: templesData } = useQuery({
@@ -198,6 +199,18 @@ export default function DarshansPage() {
             className="h-10 w-full rounded-xl border border-border bg-card/50 pl-10 pr-4 text-[11px] font-bold shadow-sm outline-none transition-all focus:border-primary focus:ring-4 focus:ring-primary/5"
           />
         </div>
+
+        <div className="relative group">
+          <select
+            value={shift}
+            onChange={(e) => { setShift(e.target.value); setCurrentPage(1); }}
+            className="h-10 w-full rounded-xl border border-border bg-card/50 px-4 text-[11px] font-bold shadow-sm outline-none transition-all focus:border-primary focus:ring-4 focus:ring-primary/5 appearance-none cursor-pointer"
+          >
+            <option value="">{t("darshans.allShifts") || "All Shifts"}</option>
+            <option value="morning">{t("darshans.morning") || "Morning"}</option>
+            <option value="evening">{t("darshans.evening") || "Evening"}</option>
+          </select>
+        </div>
       </div>
 
       {/* Main Content */}
@@ -225,6 +238,7 @@ export default function DarshansPage() {
                   <th className="px-5 py-4 w-[80px]">Image</th>
                   <th className="px-4 py-4">{t("darshans.temple")}</th>
                   <th className="px-4 py-4">{t("darshans.date")}</th>
+                  <th className="px-4 py-4">{t("darshans.shift") || "Shift"}</th>
                   <th className="px-4 py-4">{t("darshans.description")}</th>
                   <th className="px-5 py-4 text-right">Actions</th>
                 </tr>
@@ -255,6 +269,11 @@ export default function DarshansPage() {
                       <div className="inline-flex items-center gap-1.5 rounded-full bg-primary/5 px-2.5 py-1 text-[10px] font-bold text-primary border border-primary/10">
                         <IconCalendar size={12} className="opacity-60" />
                         {darshan.date}
+                      </div>
+                    </td>
+                    <td className="px-4 py-3.5">
+                      <div className="inline-flex items-center gap-1.5 rounded-full bg-primary/5 px-2.5 py-1 text-[10px] font-bold text-primary border border-primary/10 tracking-widest uppercase">
+                        {darshan.shift === "morning" ? t("darshans.morning") : t("darshans.evening")}
                       </div>
                     </td>
                     <td className="px-4 py-3.5">

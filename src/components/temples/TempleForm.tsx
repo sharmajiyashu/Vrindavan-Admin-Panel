@@ -38,6 +38,7 @@ export function TempleForm({ initialData, onSubmitBasic, onSubmitFiles, onRemove
   const [existingGallery, setExistingGallery] = useState<any[]>(initialData?.gallery || []);
   const [deletingMediaIds, setDeletingMediaIds] = useState<number[]>([]);
   const [isUploading, setIsUploading] = useState(false);
+  const [videoMode, setVideoMode] = useState<"file" | "url">(initialData?.documentaryVideoUrl ? "url" : "file");
 
   React.useEffect(() => {
     if (initialData?.gallery) {
@@ -132,17 +133,17 @@ export function TempleForm({ initialData, onSubmitBasic, onSubmitFiles, onRemove
 
   const onFormSubmit: SubmitHandler<TempleFormData> = async (data) => {
     try {
+      const payload = {
+        ...data,
+        thumbnailId: initialData ? initialData.thumbnailId : data.thumbnailId,
+        documentaryVideoId: initialData ? initialData.documentaryVideoId : data.documentaryVideoId,
+        documentaryVideoUrl: data.documentaryVideoUrl, // Use current form value
+        audioGuideEnId: initialData ? initialData.audioGuideEnId : data.audioGuideEnId,
+        audioGuideHiId: initialData ? initialData.audioGuideHiId : data.audioGuideHiId,
+        imageIds: initialData ? existingGallery.map(m => m.id) : data.imageIds
+      };
+
       if (activeTab === "basic") {
-        // Include all existing media IDs if editing, otherwise let them be undefined/null
-        const payload = {
-          ...data,
-          thumbnailId: initialData ? initialData.thumbnailId : data.thumbnailId,
-          documentaryVideoId: initialData ? initialData.documentaryVideoId : data.documentaryVideoId,
-          audioGuideEnId: initialData ? initialData.audioGuideEnId : data.audioGuideEnId,
-          audioGuideHiId: initialData ? initialData.audioGuideHiId : data.audioGuideHiId,
-          imageIds: initialData ? existingGallery.map(m => m.id) : data.imageIds
-        };
-        
         const id = await onSubmitBasic(payload);
         setTempleId(id);
         setActiveTab("documents");
@@ -150,6 +151,8 @@ export function TempleForm({ initialData, onSubmitBasic, onSubmitFiles, onRemove
         if (templeId) {
           setIsUploading(true);
           try {
+            // Also update basic details in case the URL or other fields were changed in the current tab
+            await onSubmitBasic({ ...payload, id: templeId } as any);
             await onSubmitFiles(templeId, files);
             onComplete();
           } finally {
@@ -447,74 +450,114 @@ export function TempleForm({ initialData, onSubmitBasic, onSubmitFiles, onRemove
           <div className="grid gap-6 md:grid-cols-3">
             {/* Video Section */}
             <div className="space-y-3">
-              <label className={labelClasses}>{t("temples.video")}</label>
-              <div className={twMerge(
-                "relative overflow-hidden p-4 rounded-2xl border bg-card flex items-center gap-3 transition-all",
-                (files.documentaryVideo || initialData?.documentaryVideo) ? "border-primary/30" : "border-border"
-              )}>
-                {isLoading && files.documentaryVideo && (
-                  <div className="absolute inset-x-0 bottom-0 h-1 bg-primary/20">
-                    <div className="h-full bg-primary animate-progress-indeterminate w-1/3" />
-                  </div>
-                )}
-                <div className="h-10 w-10 shrink-0 rounded-xl bg-primary/10 flex items-center justify-center text-primary">
-                  {isLoading && files.documentaryVideo ? <IconLoader2 className="h-5 w-5 animate-spin" /> : <IconVideo className="h-5 w-5" />}
-                </div>
-                <div className="min-w-0 flex-1">
-                  {files.documentaryVideo ? (
-                    <p className="text-xs font-bold truncate">{(files.documentaryVideo as File).name}</p>
-                  ) : initialData?.documentaryVideo ? (
-                    <div className="flex flex-col gap-0.5 min-w-0">
-                      <p className="text-xs font-bold text-primary truncate uppercase tracking-tighter">Documentary</p>
-                      <a
-                        href={initialData.documentaryVideo?.url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-[10px] text-muted-foreground hover:text-primary underline truncate"
-                      >
-                        View current video
-                      </a>
-                    </div>
-                  ) : (
-                    <p className="text-xs font-bold text-muted-foreground">No video selected</p>
-                  )}
-                </div>
-                {files.documentaryVideo ? (
-                  <button type="button" disabled={isLoading || isUploading} onClick={() => removeFile("documentaryVideo")} className="p-1 text-destructive disabled:opacity-30">
-                    <IconTrash className="h-4 w-4" />
-                  </button>
-                ) : initialData?.documentaryVideo ? (
+              <div className="flex items-center justify-between mb-2">
+                <label className={labelClasses}>{t("temples.video")}</label>
+                <div className="flex bg-muted/30 p-0.5 rounded-lg">
                   <button
                     type="button"
-                    disabled={deletingMediaIds.includes(initialData.documentaryVideo?.id || 0) || isLoading || isUploading}
-                    onClick={async () => {
-                      if (onRemoveMedia && templeId && initialData.documentaryVideo) {
-                        try {
-                          const mediaId = initialData.documentaryVideo.id;
-                          setDeletingMediaIds(prev => [...prev, mediaId]);
-                          await onRemoveMedia(templeId, mediaId);
-                        } catch (err) {
-                          console.error("Failed to remove video:", err);
-                        } finally {
-                          setDeletingMediaIds(prev => prev.filter(id => id !== initialData.documentaryVideo?.id));
-                        }
-                      }
-                    }}
-                    className="p-1 text-destructive disabled:opacity-30"
-                  >
-                    {deletingMediaIds.includes(initialData.documentaryVideo?.id || 0) ? (
-                      <IconLoader2 className="h-4 w-4 animate-spin" />
-                    ) : (
-                      <IconTrash className="h-4 w-4" />
+                    onClick={() => setVideoMode("file")}
+                    className={twMerge(
+                      "px-2.5 py-1 text-[9px] font-black uppercase tracking-widest rounded-md transition-all",
+                      videoMode === "file" ? "bg-card text-primary shadow-sm" : "text-muted-foreground"
                     )}
+                  >
+                    File
                   </button>
-                ) : (
-                  <label className={twMerge("cursor-pointer p-1 text-primary", (isLoading || isUploading) && "opacity-30 pointer-events-none")}>
-                    <IconUpload className="h-4 w-4" />
-                    <input type="file" accept="video/*" className="hidden" disabled={isLoading || isUploading} onChange={(e) => handleFileChange(e, "documentaryVideo")} />
-                  </label>
-                )}
+                  <button
+                    type="button"
+                    onClick={() => setVideoMode("url")}
+                    className={twMerge(
+                      "px-2.5 py-1 text-[9px] font-black uppercase tracking-widest rounded-md transition-all",
+                      videoMode === "url" ? "bg-card text-primary shadow-sm" : "text-muted-foreground"
+                    )}
+                  >
+                    URL
+                  </button>
+                </div>
               </div>
+
+              {videoMode === "url" ? (
+                <div className="space-y-2">
+                  <div className="relative group">
+                    <IconVideo size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground/40 group-focus-within:text-primary transition-colors" />
+                    <input
+                      {...register("documentaryVideoUrl")}
+                      disabled={isLoading || isUploading}
+                      className={twMerge(inputClasses, "pl-9")}
+                      placeholder="https://www.youtube.com/watch?v=..."
+                    />
+                  </div>
+                  {errors.documentaryVideoUrl && <p className={errorClasses}>{errors.documentaryVideoUrl.message}</p>}
+                </div>
+              ) : (
+                <div className={twMerge(
+                  "relative overflow-hidden p-4 rounded-2xl border bg-card flex items-center gap-3 transition-all",
+                  (files.documentaryVideo || initialData?.documentaryVideo) ? "border-primary/30" : "border-border"
+                )}>
+                  {isLoading && files.documentaryVideo && (
+                    <div className="absolute inset-x-0 bottom-0 h-1 bg-primary/20">
+                      <div className="h-full bg-primary animate-progress-indeterminate w-1/3" />
+                    </div>
+                  )}
+                  <div className="h-10 w-10 shrink-0 rounded-xl bg-primary/10 flex items-center justify-center text-primary">
+                    {isLoading && files.documentaryVideo ? <IconLoader2 className="h-5 w-5 animate-spin" /> : <IconVideo className="h-5 w-5" />}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    {files.documentaryVideo ? (
+                      <p className="text-xs font-bold truncate">{(files.documentaryVideo as File).name}</p>
+                    ) : initialData?.documentaryVideo ? (
+                      <div className="flex flex-col gap-0.5 min-w-0">
+                        <p className="text-xs font-bold text-primary truncate uppercase tracking-tighter">Documentary</p>
+                        <a
+                          href={initialData.documentaryVideo?.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-[10px] text-muted-foreground hover:text-primary underline truncate"
+                        >
+                          View current video
+                        </a>
+                      </div>
+                    ) : (
+                      <p className="text-xs font-bold text-muted-foreground">No video selected</p>
+                    )}
+                  </div>
+                  {files.documentaryVideo ? (
+                    <button type="button" disabled={isLoading || isUploading} onClick={() => removeFile("documentaryVideo")} className="p-1 text-destructive disabled:opacity-30">
+                      <IconTrash className="h-4 w-4" />
+                    </button>
+                  ) : initialData?.documentaryVideo ? (
+                    <button
+                      type="button"
+                      disabled={deletingMediaIds.includes(initialData.documentaryVideo?.id || 0) || isLoading || isUploading}
+                      onClick={async () => {
+                        if (onRemoveMedia && templeId && initialData.documentaryVideo) {
+                          try {
+                            const mediaId = initialData.documentaryVideo.id;
+                            setDeletingMediaIds(prev => [...prev, mediaId]);
+                            await onRemoveMedia(templeId, mediaId);
+                          } catch (err) {
+                            console.error("Failed to remove video:", err);
+                          } finally {
+                            setDeletingMediaIds(prev => prev.filter(id => id !== initialData.documentaryVideo?.id));
+                          }
+                        }
+                      }}
+                      className="p-1 text-destructive disabled:opacity-30"
+                    >
+                      {deletingMediaIds.includes(initialData.documentaryVideo?.id || 0) ? (
+                        <IconLoader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <IconTrash className="h-4 w-4" />
+                      )}
+                    </button>
+                  ) : (
+                    <label className={twMerge("cursor-pointer p-1 text-primary", (isLoading || isUploading) && "opacity-30 pointer-events-none")}>
+                      <IconUpload className="h-4 w-4" />
+                      <input type="file" accept="video/*" className="hidden" disabled={isLoading || isUploading} onChange={(e) => handleFileChange(e, "documentaryVideo")} />
+                    </label>
+                  )}
+                </div>
+              )}
             </div>
 
             {/* Audio EN Section */}

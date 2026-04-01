@@ -15,6 +15,7 @@ export interface Darshan {
   id: number;
   templeId: number;
   date: string;
+  shift: 'morning' | 'evening';
   descriptionEn?: string | null;
   descriptionHi?: string | null;
   createdAt: string;
@@ -40,10 +41,11 @@ export interface PaginatedDarshanResponse {
 }
 
 export const darshanService = {
-  listDarshans: async (page = 1, limit = 10, templeId?: number, date?: string) => {
+  listDarshans: async (page = 1, limit = 10, templeId?: number, date?: string, shift?: string) => {
     let url = `/darshans?page=${page}&limit=${limit}`;
     if (templeId) url += `&templeId=${templeId}`;
     if (date) url += `&date=${date}`;
+    if (shift) url += `&shift=${shift}`;
     return await get<PaginatedDarshanResponse>(url);
   },
 
