@@ -27,7 +27,6 @@ export const routeMapValidationSchema = z.object({
     timeFromPreviousHi: z.string().optional().nullable(),
   })).default([]),
 
-  imageIds: z.array(z.number()).optional().default([]),
 });
 
 export type RouteMapFormData = z.infer<typeof routeMapValidationSchema>;
