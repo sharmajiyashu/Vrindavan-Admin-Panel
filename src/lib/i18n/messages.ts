@@ -59,6 +59,7 @@ export const messages: Record<Locale, Record<string, string>> = {
     "nav.activityLogs": "Activity Logs",
     "nav.temples": "Temples",
     "nav.bookings": "Bookings",
+    "nav.darshans": "Daily Darshan",
 
 
     "header.userMenu": "User menu",
@@ -250,6 +251,23 @@ export const messages: Record<Locale, Record<string, string>> = {
     "wallets.loading": "Loading transactions...",
     "wallets.noTransactions": "No transactions found.",
     "wallets.all": "All Transactions",
+
+    "darshans.title": "Daily Darshan",
+    "darshans.subtitle": "Manage daily deity images and descriptions for devotees.",
+    "darshans.add": "Add Darshan",
+    "darshans.edit": "Edit Darshan",
+    "darshans.basicDetails": "Basic Details",
+    "darshans.temple": "Temple",
+    "darshans.date": "Date",
+    "darshans.description": "Description",
+    "darshans.descriptionEn": "Description (English)",
+    "darshans.descriptionHi": "Description (Hindi)",
+    "darshans.gallery": "Darshan Gallery",
+    "darshans.loading": "Loading darshans...",
+    "darshans.noDarshans": "No darshans found.",
+    "darshans.saveSuccess": "Darshan saved successfully",
+    "darshans.deleteSuccess": "Darshan deleted successfully",
+    "darshans.deleteConfirm": "Are you sure you want to delete this darshan?",
   },
   kh: {
     // Khmer messages are optional in this simplified admin panel.

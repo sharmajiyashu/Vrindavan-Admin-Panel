@@ -12,7 +12,8 @@ import {
   IconClock,
   IconBuildingSkyscraper,
   IconMap2,
-  IconWallet
+  IconWallet,
+  IconPhoto
 } from "@tabler/icons-react";
 
 export interface SidebarNavItem {
@@ -42,6 +43,7 @@ export const sidebarNav: SidebarNavEntry[] = [
   { titleKey: "nav.temples", href: "/temples", icon: IconBuildingSkyscraper },
   { titleKey: "tours.title", href: "/tours", icon: IconMap2 },
   { titleKey: "nav.bookings", href: "/bookings", icon: IconReceipt2 },
+  { titleKey: "nav.darshans", href: "/darshans", icon: IconPhoto },
   { titleKey: "nav.userManagement", href: "/users", icon: IconUsers },
   { titleKey: "nav.wallets", href: "/wallets", icon: IconWallet },
 ];

@@ -14,6 +14,7 @@ import {
   IconLoader2,
   IconX
 } from "@tabler/icons-react";
+import { toast } from "react-toastify";
 import { templeValidationSchema, TempleFormData } from "@/lib/validations/temple";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { twMerge } from "tailwind-merge";
@@ -132,15 +133,17 @@ export function TempleForm({ initialData, onSubmitBasic, onSubmitFiles, onRemove
   const onFormSubmit: SubmitHandler<TempleFormData> = async (data) => {
     try {
       if (activeTab === "basic") {
-        // Include all existing media IDs to prevent the backend from clearing them on update
-        const id = await onSubmitBasic({ 
+        // Include all existing media IDs if editing, otherwise let them be undefined/null
+        const payload = {
           ...data,
-          thumbnailId: initialData?.thumbnailId,
-          documentaryVideoId: initialData?.documentaryVideoId,
-          audioGuideEnId: initialData?.audioGuideEnId,
-          audioGuideHiId: initialData?.audioGuideHiId,
-          imageIds: existingGallery.map(m => m.id)
-        });
+          thumbnailId: initialData ? initialData.thumbnailId : data.thumbnailId,
+          documentaryVideoId: initialData ? initialData.documentaryVideoId : data.documentaryVideoId,
+          audioGuideEnId: initialData ? initialData.audioGuideEnId : data.audioGuideEnId,
+          audioGuideHiId: initialData ? initialData.audioGuideHiId : data.audioGuideHiId,
+          imageIds: initialData ? existingGallery.map(m => m.id) : data.imageIds
+        };
+        
+        const id = await onSubmitBasic(payload);
         setTempleId(id);
         setActiveTab("documents");
       } else {
@@ -154,8 +157,9 @@ export function TempleForm({ initialData, onSubmitBasic, onSubmitFiles, onRemove
           }
         }
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error("Form submission error:", error);
+      toast.error(error.message || "Something went wrong. Please check the form and try again.");
     }
   };
 
