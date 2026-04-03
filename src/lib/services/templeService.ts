@@ -27,6 +27,7 @@ export interface Temple {
   eveningTimings: any[];
   thumbnailId?: number | null;
   documentaryVideoId?: number | null;
+  documentaryVideoUrl?: string | null;
   audioGuideEnId?: number | null;
   audioGuideHiId?: number | null;
   imageIds: number[];

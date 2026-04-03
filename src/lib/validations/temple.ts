@@ -35,6 +35,7 @@ export const templeValidationSchema = z.object({
   imageIds: z.array(z.number()).optional().default([]),
   thumbnailId: z.number().optional().nullable(),
   documentaryVideoId: z.number().optional().nullable(),
+  documentaryVideoUrl: z.string().url('Please enter a valid URL').optional().nullable().or(z.literal('')),
   audioGuideEnId: z.number().optional().nullable(),
   audioGuideHiId: z.number().optional().nullable(),
 });
