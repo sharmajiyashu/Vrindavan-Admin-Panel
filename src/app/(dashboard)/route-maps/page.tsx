@@ -44,9 +44,10 @@ export default function RouteMapsPage() {
 
   const createMutation = useMutation({
     mutationFn: routeMapService.createRouteMap,
-    onSuccess: () => {
+    onSuccess: (data: any) => {
       queryClient.invalidateQueries({ queryKey: ["route-maps"] });
       toast.success(t("routeMaps.saveSuccess"));
+      setEditingRoute(data);
     },
     onError: (error: any) => {
       toast.error(error.message || "Failed to create route map");
