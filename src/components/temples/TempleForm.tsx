@@ -193,7 +193,7 @@ export function TempleForm({ initialData, onSubmitBasic, onSubmitFiles, onRemove
     }
   };
 
-  const inputClasses = "w-full rounded-xl border border-border bg-background px-4 py-2.5 text-sm transition-all focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none";
+  const inputClasses = "w-full rounded-xl border-2 border-border bg-background px-4 py-2.5 text-sm transition-all focus:border-primary focus:ring-4 focus:ring-primary/5 outline-none placeholder:text-muted-foreground/30";
   const labelClasses = "block text-xs font-black uppercase tracking-widest text-muted-foreground/70 mb-1.5";
   const errorClasses = "text-[10px] font-bold text-destructive mt-1";
 
@@ -366,7 +366,7 @@ export function TempleForm({ initialData, onSubmitBasic, onSubmitFiles, onRemove
                 </button>
               </div>
               {morningFields.map((field, index) => (
-                <div key={field.id} className="grid grid-cols-2 md:grid-cols-12 gap-3 p-3 rounded-2xl bg-muted/20 border border-border/50 items-end">
+                <div key={field.id} className="grid grid-cols-2 md:grid-cols-12 gap-3 p-4 rounded-2xl bg-muted/50 border-2 border-border items-end shadow-sm">
                   <div className="col-span-2 md:col-span-3">
                     <label className="text-[9px] font-black uppercase text-muted-foreground/50 mb-1 ml-1">Name (EN)</label>
                     <input {...register(`morningTimings.${index}.nameEn`)} className={twMerge(inputClasses, "text-xs py-2")} placeholder="Morning Aarti" />
@@ -404,7 +404,7 @@ export function TempleForm({ initialData, onSubmitBasic, onSubmitFiles, onRemove
                 </button>
               </div>
               {eveningFields.map((field, index) => (
-                <div key={field.id} className="grid grid-cols-2 md:grid-cols-12 gap-3 p-3 rounded-2xl bg-muted/20 border border-border/50 items-end">
+                <div key={field.id} className="grid grid-cols-2 md:grid-cols-12 gap-3 p-4 rounded-2xl bg-muted/50 border-2 border-border items-end shadow-sm">
                   <div className="col-span-2 md:col-span-3">
                     <label className="text-[9px] font-black uppercase text-muted-foreground/50 mb-1 ml-1">Name (EN)</label>
                     <input {...register(`eveningTimings.${index}.nameEn`)} className={twMerge(inputClasses, "text-xs py-2")} placeholder="Evening Aarti" />
@@ -438,7 +438,7 @@ export function TempleForm({ initialData, onSubmitBasic, onSubmitFiles, onRemove
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4">
               {/* Existing Gallery Images */}
               {existingGallery.map((media) => (
-                <div key={media.id} className="relative group aspect-square rounded-2xl bg-muted/30 overflow-hidden border border-border">
+                <div key={media.id} className="relative group aspect-square rounded-2xl bg-muted/50 overflow-hidden border-2 border-border">
                   <img src={media.url} className="w-full h-full object-cover opacity-80" />
                   <div className="absolute inset-0 bg-black/20 group-hover:bg-transparent transition-all" />
                   <button
@@ -470,7 +470,7 @@ export function TempleForm({ initialData, onSubmitBasic, onSubmitFiles, onRemove
 
               {/* New Photos (Previews) */}
               {Array.isArray(previews.images) && previews.images.map((src, idx) => (
-                <div key={idx} className="relative group aspect-square rounded-2xl bg-muted/30 overflow-hidden border border-border border-primary/20">
+                <div key={idx} className="relative group aspect-square rounded-2xl bg-muted/50 overflow-hidden border-2 border-primary/20">
                   <img src={src} className="w-full h-full object-cover" />
                   {isLoading ? (
                     <div className="absolute inset-0 bg-background/60 backdrop-blur-[2px] flex items-center justify-center">
@@ -492,7 +492,7 @@ export function TempleForm({ initialData, onSubmitBasic, onSubmitFiles, onRemove
               ))}
 
               <label className={twMerge(
-                "cursor-pointer aspect-square rounded-2xl border-2 border-dashed border-border flex flex-col items-center justify-center bg-muted/10 hover:bg-muted/30 transition-all hover:border-primary/50",
+                "cursor-pointer aspect-square rounded-2xl border-2 border-dashed border-border flex flex-col items-center justify-center bg-muted/30 hover:bg-muted/50 transition-all hover:border-primary/50",
                 isLoading && "opacity-50 cursor-not-allowed pointer-events-none"
               )}>
                 <IconPlus className="h-6 w-6 text-muted-foreground" />
@@ -546,7 +546,7 @@ export function TempleForm({ initialData, onSubmitBasic, onSubmitFiles, onRemove
                 </div>
               ) : (
                 <div className={twMerge(
-                  "relative overflow-hidden p-4 rounded-2xl border bg-card flex items-center gap-3 transition-all",
+                  "relative overflow-hidden p-4 rounded-2xl border-2 bg-card flex items-center gap-3 transition-all shadow-sm",
                   (files.documentaryVideo || initialData?.documentaryVideo) ? "border-primary/30" : "border-border"
                 )}>
                   {isLoading && files.documentaryVideo && (
@@ -619,8 +619,8 @@ export function TempleForm({ initialData, onSubmitBasic, onSubmitFiles, onRemove
             <div className="space-y-3">
               <label className={labelClasses}>{t("temples.audioEn")}</label>
               <div className={twMerge(
-                "relative overflow-hidden p-4 rounded-2xl border bg-card flex items-center gap-3 transition-all",
-                (files.audioGuideEn || initialData?.audioGuideEn) ? "border-emerald-100" : "border-border"
+                "relative overflow-hidden p-4 rounded-2xl border-2 bg-card flex items-center gap-3 transition-all shadow-sm",
+                (files.audioGuideEn || initialData?.audioGuideEn) ? "border-emerald-200" : "border-border"
               )}>
                 {(isLoading || isUploading) && files.audioGuideEn && (
                   <div className="absolute inset-x-0 bottom-0 h-1 bg-emerald-100">
@@ -691,8 +691,8 @@ export function TempleForm({ initialData, onSubmitBasic, onSubmitFiles, onRemove
             <div className="space-y-3">
               <label className={labelClasses}>{t("temples.audioHi")}</label>
               <div className={twMerge(
-                "relative overflow-hidden p-4 rounded-2xl border bg-card flex items-center gap-3 transition-all",
-                (files.audioGuideHi || initialData?.audioGuideHi) ? "border-orange-100" : "border-border"
+                "relative overflow-hidden p-4 rounded-2xl border-2 bg-card flex items-center gap-3 transition-all shadow-sm",
+                (files.audioGuideHi || initialData?.audioGuideHi) ? "border-orange-200" : "border-border"
               )}>
                 {(isLoading || isUploading) && files.audioGuideHi && (
                   <div className="absolute inset-x-0 bottom-0 h-1 bg-orange-100">

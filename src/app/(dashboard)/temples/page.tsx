@@ -205,13 +205,13 @@ export default function TemplesPage() {
               placeholder="Search..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="h-10 w-full rounded-xl border border-border bg-card/50 pl-10 pr-4 text-[11px] font-bold shadow-sm transition-all focus:border-primary focus:ring-4 focus:ring-primary/5 outline-none placeholder:text-muted-foreground/20"
+              className="h-11 w-full rounded-xl border-2 border-border bg-card pl-10 pr-4 text-[11px] font-bold shadow-sm transition-all focus:border-primary focus:ring-4 focus:ring-primary/5 outline-none placeholder:text-muted-foreground/40"
             />
           </div>
 
           <button
             onClick={() => queryClient.invalidateQueries({ queryKey: ["temples"] })}
-            className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-border bg-card text-muted-foreground transition-all hover:bg-muted active:scale-95 shadow-sm"
+            className="inline-flex h-11 w-11 items-center justify-center rounded-xl border-2 border-border bg-card text-muted-foreground transition-all hover:bg-muted active:scale-95 shadow-sm"
             title="Refresh"
           >
             <IconReload className={twMerge("h-4 w-4", isLoading && "animate-spin")} />
@@ -222,13 +222,13 @@ export default function TemplesPage() {
             if (!open) setEditingTemple(null);
           }}>
             <Dialog.Trigger asChild>
-              <button className="inline-flex h-10 items-center justify-center rounded-xl bg-primary px-6 text-[11px] font-black uppercase tracking-wider text-primary-foreground shadow-lg shadow-primary/20 transition-all hover:opacity-90 active:scale-95">
+              <button className="inline-flex h-11 items-center justify-center rounded-xl bg-primary px-6 text-[11px] font-black uppercase tracking-wider text-primary-foreground shadow-lg shadow-primary/20 transition-all hover:opacity-90 active:scale-95">
                 {t("temples.add")}
               </button>
             </Dialog.Trigger>
             <Dialog.Portal>
-              <Dialog.Overlay className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm animate-in fade-in duration-300" />
-              <Dialog.Content className="fixed left-[50%] top-[50%] z-50 w-full max-w-4xl max-h-[90vh] translate-x-[-50%] translate-y-[-50%] overflow-y-auto rounded-[2.5rem] bg-card p-10 shadow-2xl animate-in zoom-in-95 fade-in duration-300 outline-none">
+              <Dialog.Overlay className="fixed inset-0 z-50 bg-black/60 animate-in fade-in duration-300" />
+              <Dialog.Content className="fixed left-[50%] top-[50%] z-50 w-full max-w-4xl max-h-[90vh] translate-x-[-50%] translate-y-[-50%] overflow-y-auto rounded-3xl border-2 border-border bg-card p-10 shadow-2xl animate-in zoom-in-95 fade-in duration-300 outline-none">
                 <div className="flex items-center justify-between mb-8">
                   <Dialog.Title className="text-2xl font-black tracking-tight flex items-center gap-3">
                     <div className="h-9 w-9 rounded-xl bg-primary/10 flex items-center justify-center text-primary">
@@ -292,7 +292,7 @@ export default function TemplesPage() {
 
 
       {/* Main Content */}
-      <div className="rounded-[2.5rem] border border-border bg-card p-4 shadow-[0_20px_50px_-15px_rgba(0,0,0,0.05)] overflow-hidden">
+      <div className="rounded-3xl border-2 border-border bg-card p-2 shadow-sm overflow-hidden">
         {isLoading ? (
           <div className="flex h-64 flex-col items-center justify-center gap-3">
             <IconLoader2 className="h-10 w-10 animate-spin text-primary" />
@@ -322,7 +322,7 @@ export default function TemplesPage() {
               </thead>
               <tbody className="divide-y divide-border/40">
                 {temples.map((temple) => (
-                  <tr key={temple.id} className="group transition-all hover:bg-muted/20">
+                  <tr key={temple.id} className="group transition-all hover:bg-muted/50 border-b border-border/50 last:border-0">
                     <td className="px-5 py-3.5">
                       <div className="h-11 w-11 shrink-0 overflow-hidden rounded-xl bg-muted/50 border border-border shadow-sm">
                         {temple.thumbnail?.url || (temple.gallery && temple.gallery.length > 0) ? (
@@ -367,7 +367,7 @@ export default function TemplesPage() {
                     </td>
                     <td className="px-5 py-3.5 text-right">
                       <div className="flex items-center justify-end gap-2">
-                        <div className="flex items-center gap-1 bg-muted/40 p-1 rounded-xl mr-2">
+                        <div className="flex items-center gap-1 bg-muted p-1 rounded-xl mr-2 border border-border/50">
                           <button
                             onClick={() => handleMove(temple, "up")}
                             disabled={updateSortMutation.isPending}

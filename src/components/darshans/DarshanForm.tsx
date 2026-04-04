@@ -114,7 +114,7 @@ export function DarshanForm({ initialData, onSubmitBasic, onSubmitFiles, onRemov
     }
   };
 
-  const inputClasses = "w-full rounded-xl border border-border bg-background px-4 py-2.5 text-sm transition-all focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none";
+  const inputClasses = "w-full rounded-xl border-2 border-border bg-background px-4 py-2.5 text-sm transition-all focus:border-primary focus:ring-4 focus:ring-primary/5 outline-none placeholder:text-muted-foreground/30";
   const labelClasses = "block text-xs font-black uppercase tracking-widest text-muted-foreground/70 mb-1.5";
   const errorClasses = "text-[10px] font-bold text-destructive mt-1";
 
@@ -244,7 +244,7 @@ export function DarshanForm({ initialData, onSubmitBasic, onSubmitFiles, onRemov
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
             {/* Existing Images */}
             {existingGallery.map((media) => (
-              <div key={media.id} className="relative group aspect-square rounded-2xl bg-muted/30 overflow-hidden border border-border">
+              <div key={media.id} className="relative group aspect-square rounded-2xl bg-muted/50 overflow-hidden border-2 border-border">
                 <img src={media.url} className="w-full h-full object-cover opacity-80" />
                 <div className="absolute inset-0 bg-black/20 group-hover:bg-transparent transition-all" />
                 <button
@@ -276,7 +276,7 @@ export function DarshanForm({ initialData, onSubmitBasic, onSubmitFiles, onRemov
 
             {/* New Previews */}
             {previews.map((src, idx) => (
-              <div key={idx} className="relative group aspect-square rounded-2xl bg-muted/30 overflow-hidden border border-primary/20">
+              <div key={idx} className="relative group aspect-square rounded-2xl bg-muted/50 overflow-hidden border-2 border-primary/20">
                 <img src={src} className="w-full h-full object-cover" />
                 <button
                   type="button"
@@ -292,7 +292,7 @@ export function DarshanForm({ initialData, onSubmitBasic, onSubmitFiles, onRemov
             ))}
 
             <label className={twMerge(
-              "cursor-pointer aspect-square rounded-2xl border-2 border-dashed border-border flex flex-col items-center justify-center bg-muted/10 hover:bg-muted/30 transition-all hover:border-primary/50",
+              "cursor-pointer aspect-square rounded-2xl border-2 border-dashed border-border flex flex-col items-center justify-center bg-muted/30 hover:bg-muted/50 transition-all hover:border-primary/50",
               isLoading && "opacity-50 cursor-not-allowed pointer-events-none"
             )}>
               <IconPlus className="h-6 w-6 text-muted-foreground" />

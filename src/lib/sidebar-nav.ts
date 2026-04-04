@@ -15,7 +15,8 @@ import {
   IconWallet,
   IconPhoto,
   IconPhotoStar,
-  IconFingerprint
+  IconFingerprint,
+  IconTicket
 } from "@tabler/icons-react";
 
 export interface SidebarNavItem {
@@ -56,5 +57,6 @@ export const sidebarNav: SidebarNavEntry[] = [
   { titleKey: "nav.bookings", href: "/bookings", icon: IconReceipt2 },
   { titleKey: "nav.tourMap", href: "/route-maps", icon: IconMap2 },
   { titleKey: "nav.userManagement", href: "/users", icon: IconUsers },
+  { titleKey: "nav.coupons", href: "/coupons", icon: IconTicket },
   { titleKey: "nav.wallets", href: "/wallets", icon: IconWallet },
 ];
