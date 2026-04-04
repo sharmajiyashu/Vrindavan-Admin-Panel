@@ -53,10 +53,40 @@ export function TempleForm({ initialData, onSubmitBasic, onSubmitFiles, onRemove
     formState: { errors },
   } = useForm<TempleFormData>({
     resolver: zodResolver(templeValidationSchema) as any,
-    defaultValues: initialData || {
+    defaultValues: initialData ? {
+      nameEn: initialData.nameEn,
+      nameHi: initialData.nameHi,
+      addressEn: initialData.addressEn,
+      addressHi: initialData.addressHi,
+      cityEn: initialData.cityEn,
+      cityHi: initialData.cityHi,
+      stateEn: initialData.stateEn,
+      stateHi: initialData.stateHi,
+      lat: initialData.lat,
+      long: initialData.long,
+      descriptionEn: initialData.descriptionEn,
+      descriptionHi: initialData.descriptionHi,
+      establishedEn: initialData.establishedEn || "",
+      establishedHi: initialData.establishedHi || "",
+      morningTimings: initialData.morningTimings || [],
+      eveningTimings: initialData.eveningTimings || [],
+      imageIds: initialData.imageIds || [],
+      audioGuideEn: initialData.audioGuideEn?.url || "",
+      audioGuideHi: initialData.audioGuideHi?.url || "",
+      documentaryVideoUrl: initialData.documentaryVideoUrl || initialData.documentaryVideo?.url || "",
+      bestTimeEn: initialData.bestTimeEn || "",
+      bestTimeHi: initialData.bestTimeHi || "",
+      historyEn: initialData.historyEn || "",
+      historyHi: initialData.historyHi || "",
+      listenToHistoryUrlEn: initialData.listenToHistoryUrlEn || "",
+      listenToHistoryUrlHi: initialData.listenToHistoryUrlHi || "",
+      sortOrder: initialData.sortOrder || 0,
+      isActive: initialData.isActive ?? true,
+    } : {
       morningTimings: [],
       eveningTimings: [],
       isActive: true,
+      sortOrder: 0,
     },
   });
 
@@ -131,16 +161,13 @@ export function TempleForm({ initialData, onSubmitBasic, onSubmitFiles, onRemove
     }
   };
 
-  const onFormSubmit: SubmitHandler<TempleFormData> = async (data) => {
+  const onFormSubmit = async (data: any) => {
+    const formData = data as TempleFormData;
     try {
       const payload = {
-        ...data,
-        thumbnailId: initialData ? initialData.thumbnailId : data.thumbnailId,
-        documentaryVideoId: initialData ? initialData.documentaryVideoId : data.documentaryVideoId,
-        documentaryVideoUrl: data.documentaryVideoUrl, // Use current form value
-        audioGuideEnId: initialData ? initialData.audioGuideEnId : data.audioGuideEnId,
-        audioGuideHiId: initialData ? initialData.audioGuideHiId : data.audioGuideHiId,
-        imageIds: initialData ? existingGallery.map(m => m.id) : data.imageIds
+        ...formData,
+        imageIds: initialData ? existingGallery.map(m => m.id) : formData.imageIds,
+
       };
 
       if (activeTab === "basic") {
@@ -171,7 +198,7 @@ export function TempleForm({ initialData, onSubmitBasic, onSubmitFiles, onRemove
   const errorClasses = "text-[10px] font-bold text-destructive mt-1";
 
   return (
-    <form onSubmit={handleSubmit(onFormSubmit)} className="space-y-6">
+    <form onSubmit={handleSubmit(onFormSubmit as any)} className="space-y-6">
       <Tabs.Root value={activeTab} onValueChange={setActiveTab} className="w-full">
         <Tabs.List className="flex border-b border-border mb-6 overflow-x-auto scrollbar-none">
           <Tabs.Trigger
@@ -272,6 +299,23 @@ export function TempleForm({ initialData, onSubmitBasic, onSubmitFiles, onRemove
               <label className={labelClasses}>{t("temples.establishedHi")}</label>
               <input {...register("establishedHi")} className={inputClasses} placeholder="16वीं शताब्दी" />
             </div>
+
+            <div>
+              <label className={labelClasses}>Sort Order</label>
+              <input type="number" {...register("sortOrder")} className={inputClasses} placeholder="0" />
+              <p className="text-[9px] text-muted-foreground mt-1 font-bold uppercase tracking-widest leading-tight">Higher numbers appear first in the main list.</p>
+            </div>
+          </div>
+
+          <div className="grid gap-6 md:grid-cols-2">
+            <div>
+              <label className={labelClasses}>Best Time to Visit (EN)</label>
+              <input {...register("bestTimeEn")} className={inputClasses} placeholder="October to March" />
+            </div>
+            <div>
+              <label className={labelClasses}>Best Time to Visit (HI)</label>
+              <input {...register("bestTimeHi")} className={inputClasses} placeholder="अक्टूबर से मार्च" />
+            </div>
           </div>
 
           <div className="grid gap-6 md:grid-cols-2">
@@ -295,6 +339,17 @@ export function TempleForm({ initialData, onSubmitBasic, onSubmitFiles, onRemove
             <div>
               <label className={labelClasses}>{t("temples.historyHi")}</label>
               <textarea {...register("historyHi")} className={twMerge(inputClasses, "min-h-[120px]")} />
+            </div>
+          </div>
+
+          <div className="grid gap-6 md:grid-cols-2">
+            <div>
+              <label className={labelClasses}>Listen to History URL (EN)</label>
+              <input {...register("listenToHistoryUrlEn")} className={inputClasses} placeholder="https://cloud.com/audio-en.mp3" />
+            </div>
+            <div>
+              <label className={labelClasses}>Listen to History URL (HI)</label>
+              <input {...register("listenToHistoryUrlHi")} className={inputClasses} placeholder="https://cloud.com/audio-hi.mp3" />
             </div>
           </div>
 

@@ -37,6 +37,10 @@ export interface Tour {
   approxTimeHi?: string | null;
   recommendationEn?: string | null;
   recommendationHi?: string | null;
+  badgeEn?: string | null;
+  badgeHi?: string | null;
+  cancellationBeforeHours?: number;
+  guideDetailsBeforeHours?: number;
   isActive: boolean;
   createdAt: string;
   updatedAt: string;

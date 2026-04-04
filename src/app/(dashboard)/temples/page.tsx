@@ -110,6 +110,18 @@ export default function TemplesPage() {
       toast.error(error.message || "Failed to delete temple");
     },
   });
+ 
+  const updateSortMutation = useMutation({
+    mutationFn: async ({ id, sortOrder }: { id: number; sortOrder: number }) => {
+      return await templeService.updateTemple(id, { sortOrder });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["temples"] });
+    },
+    onError: (error: any) => {
+      toast.error(error.message || "Failed to update sort order");
+    },
+  });
 
   const handleCreateOrUpdate = async (data: TempleFormData, files: Record<string, File | File[] | undefined>) => {
     if (editingTemple) {
@@ -254,6 +266,7 @@ export default function TemplesPage() {
                   <th className="px-5 py-4 w-[80px]">Image</th>
                   <th className="px-4 py-4 min-w-[240px]">{t("temples.name")}</th>
                   <th className="px-4 py-4">{t("temples.city")} & {t("temples.state")}</th>
+                  <th className="px-4 py-4">Sort Order</th>
                   <th className="px-4 py-4">{t("temples.active")}</th>
                   <th className="px-5 py-4 text-right">Actions</th>
                 </tr>
@@ -291,6 +304,19 @@ export default function TemplesPage() {
                         </p>
                         <p className="text-[9px] text-muted-foreground font-medium opacity-60 uppercase tracking-tighter">{temple.cityHi}, {temple.stateHi}</p>
                       </div>
+                    </td>
+                    <td className="px-4 py-3.5">
+                      <input
+                        type="number"
+                        defaultValue={temple.sortOrder}
+                        onBlur={(e) => {
+                          const val = parseInt(e.target.value);
+                          if (val !== temple.sortOrder) {
+                            updateSortMutation.mutate({ id: temple.id, sortOrder: val });
+                          }
+                        }}
+                        className="w-16 rounded-lg border border-border bg-transparent px-2 py-1 text-[11px] font-black focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition-all"
+                      />
                     </td>
                     <td className="px-4 py-3.5">
                       <div className={twMerge(

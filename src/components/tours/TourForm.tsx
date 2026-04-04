@@ -30,6 +30,14 @@ interface TourFormProps {
   isLoading?: boolean;
 }
 
+const PREDEFINED_BADGES = [
+  { en: "Bestseller", hi: "बेस्टसेलर" },
+  { en: "Value For Money", hi: "पैसे की कीमत" },
+  { en: "Popular", hi: "लोकप्रिय" },
+  { en: "Private", hi: "निजी" },
+  { en: "Group", hi: "समूह" },
+];
+
 export function TourForm({ initialData, onSubmitBasic, onSubmitFiles, onRemoveMedia, onComplete, isLoading }: TourFormProps) {
   const { t } = useLanguage();
   const [activeTab, setActiveTab] = useState("basic");
@@ -111,6 +119,10 @@ export function TourForm({ initialData, onSubmitBasic, onSubmitFiles, onRemoveMe
       type: initialData.type || "group",
       minPersons: initialData.minPersons || null,
       maxPersons: initialData.maxPersons || null,
+      badgeEn: initialData.badgeEn || "",
+      badgeHi: initialData.badgeHi || "",
+      cancellationBeforeHours: initialData.cancellationBeforeHours ?? 24,
+      guideDetailsBeforeHours: initialData.guideDetailsBeforeHours ?? 24,
     } : {
       titleEn: "",
       titleHi: "",
@@ -127,6 +139,10 @@ export function TourForm({ initialData, onSubmitBasic, onSubmitFiles, onRemoveMe
       type: "group",
       minPersons: null,
       maxPersons: null,
+      badgeEn: "",
+      badgeHi: "",
+      cancellationBeforeHours: 24,
+      guideDetailsBeforeHours: 24,
     },
   });
 
@@ -284,6 +300,47 @@ export function TourForm({ initialData, onSubmitBasic, onSubmitFiles, onRemoveMe
               <label className={labelClasses}>{t("tours.titleHi")}</label>
               <input {...register("titleHi")} className={inputClasses} placeholder="पारंपरिक ब्रज यात्रा" />
               {errors.titleHi && <p className={errorClasses}>{errors.titleHi.message}</p>}
+            </div>
+
+            <div className="md:col-span-2 space-y-4">
+              <label className={labelClasses}>Select Badge</label>
+              <div className="flex flex-wrap gap-2">
+                {PREDEFINED_BADGES.map((badge) => (
+                  <button
+                    key={badge.en}
+                    type="button"
+                    onClick={() => {
+                      setValue("badgeEn", badge.en);
+                      setValue("badgeHi", badge.hi);
+                    }}
+                    className={twMerge(
+                      "px-4 py-1.5 rounded-full text-xs font-bold border transition-all",
+                      watch("badgeEn") === badge.en
+                        ? "bg-primary border-primary text-primary-foreground shadow-md shadow-primary/20"
+                        : "bg-muted/50 border-border text-muted-foreground hover:border-primary/50"
+                    )}
+                  >
+                    {badge.en}
+                  </button>
+                ))}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setValue("badgeEn", "");
+                    setValue("badgeHi", "");
+                  }}
+                  className="px-4 py-1.5 rounded-full text-xs font-bold border border-destructive/20 text-destructive hover:bg-destructive/10 transition-all"
+                >
+                  Clear
+                </button>
+              </div>
+            </div>
+
+            <div>
+              <input type="hidden" {...register("badgeEn")} />
+            </div>
+            <div>
+              <input type="hidden" {...register("badgeHi")} />
             </div>
 
             <div className="grid grid-cols-2 gap-4">
@@ -491,6 +548,19 @@ export function TourForm({ initialData, onSubmitBasic, onSubmitFiles, onRemoveMe
               <div>
                 <label className={labelClasses}>{t("tours.recommendation")} (HI)</label>
                 <input {...register("recommendationHi")} className={inputClasses} placeholder="पानी ले जाएँ और आरामदायक जूते पहनें..." />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4 pt-4 border-t border-border/40">
+              <div>
+                <label className={labelClasses}>{t("tours.cancellationBeforeHours")}</label>
+                <input type="number" {...register("cancellationBeforeHours")} className={inputClasses} />
+                <p className="text-[10px] text-muted-foreground mt-1">{t("tours.cancellationBeforeHoursHint")}</p>
+              </div>
+              <div>
+                <label className={labelClasses}>{t("tours.guideDetailsBeforeHour")}</label>
+                <input type="number" {...register("guideDetailsBeforeHours")} className={inputClasses} />
+                <p className="text-[10px] text-muted-foreground mt-1">{t("tours.guideDetailsBeforeHourHint")}</p>
               </div>
             </div>
           </div>

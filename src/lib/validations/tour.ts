@@ -19,6 +19,9 @@ export const tourBaseSchema = z.object({
   descriptionEn: z.string().optional().nullable(),
   descriptionHi: z.string().optional().nullable(),
 
+  badgeEn: z.string().optional().nullable(),
+  badgeHi: z.string().optional().nullable(),
+
   price: coerceNumber.min(0),
   discountPrice: coerceNumber.min(0).optional().nullable(),
   pricePerPerson: coerceNumber.min(0).optional().nullable(),
@@ -40,6 +43,9 @@ export const tourBaseSchema = z.object({
   approxTimeHi: z.string().optional().nullable(),
   recommendationEn: z.string().optional().nullable(),
   recommendationHi: z.string().optional().nullable(),
+
+  cancellationBeforeHours: coerceNumber.default(24),
+  guideDetailsBeforeHours: coerceNumber.default(24),
 
   cancellationPolicyEn: z.string().optional().nullable(),
   cancellationPolicyHi: z.string().optional().nullable(),
