@@ -48,24 +48,24 @@ export default function DashboardPage() {
       value: stats?.totalBookings ?? "...",
       icon: IconCalendarCheck,
       color: "text-purple-600",
-      bg: "bg-purple-50/50",
-      border: "border-purple-100",
+      bg: "bg-purple-50",
+      border: "border-purple-200",
     },
     {
       title: t("dashboard.card.cancelledBookings"),
       value: stats?.statusBreakdown.cancelled ?? "...",
       icon: IconCircleX,
       color: "text-red-600",
-      bg: "bg-red-50/50",
-      border: "border-red-100",
+      bg: "bg-red-50",
+      border: "border-red-200",
     },
     {
       title: t("dashboard.card.todayBookings"),
       value: stats?.todayBookings ?? "...",
       icon: IconCalendarEvent,
       color: "text-pink-600",
-      bg: "bg-pink-50/50",
-      border: "border-pink-100",
+      bg: "bg-pink-50",
+      border: "border-pink-200",
     },
   ];
 
@@ -101,8 +101,8 @@ export default function DashboardPage() {
           <div
             key={i}
             className={twMerge(
-              "group relative overflow-hidden rounded-[2.5rem] border bg-card p-6 transition-all duration-300",
-              "hover:shadow-[0_20px_40px_-15px_rgba(0,0,0,0.08)] hover:-translate-y-1",
+              "group relative overflow-hidden rounded-3xl border-2 bg-card p-6 transition-all duration-300",
+              "hover:shadow-lg hover:-translate-y-1",
               stat.border
             )}
           >
@@ -138,7 +138,7 @@ export default function DashboardPage() {
 
       <div className="grid gap-6 lg:grid-cols-3 px-2">
         {/* Recent Upcoming Bookings */}
-        <section className="lg:col-span-2 rounded-[2.5rem] border border-border bg-card p-8 shadow-[0_20px_50px_-15px_rgba(0,0,0,0.05)] overflow-hidden">
+        <section className="lg:col-span-2 rounded-3xl border-2 border-border bg-card p-8 shadow-sm overflow-hidden">
           <div className="flex items-center justify-between mb-8">
             <h2 className="text-xl font-black tracking-tight text-foreground">
               {t("dashboard.recentUpcoming")}
@@ -195,12 +195,12 @@ export default function DashboardPage() {
 
         {/* Quick Actions Sidebar */}
         <div className="space-y-6">
-          <section className="rounded-[2.5rem] border border-border bg-card p-8 shadow-sm h-full">
+          <section className="rounded-3xl border-2 border-border bg-card p-8 shadow-sm h-full">
             <div className="flex items-center justify-between mb-8">
               <h3 className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/40 leading-none">Administrative Shortcuts</h3>
             </div>
             <div className="grid gap-3">
-              <Link href="/temples" className="flex items-center justify-between p-4 rounded-2xl bg-amber-50/50 border border-amber-100/50 text-amber-900 group transition-all hover:bg-amber-100/80 active:scale-[0.98]">
+              <Link href="/temples" className="flex items-center justify-between p-4 rounded-2xl bg-amber-50 border-2 border-amber-200 text-amber-900 group transition-all hover:bg-amber-100 active:scale-[0.98]">
                 <div className="flex items-center gap-3">
                   <div className="h-8 w-8 rounded-lg bg-white shadow-sm flex items-center justify-center">
                     <IconMapPin size={18} className="text-amber-600" />
@@ -209,7 +209,7 @@ export default function DashboardPage() {
                 </div>
                 <IconArrowRight size={14} className="opacity-30 group-hover:translate-x-1 transition-transform" />
               </Link>
-              <Link href="/tours" className="flex items-center justify-between p-4 rounded-2xl bg-purple-50/50 border border-purple-100/50 text-purple-900 group transition-all hover:bg-purple-100/80 active:scale-[0.98]">
+              <Link href="/tours" className="flex items-center justify-between p-4 rounded-2xl bg-purple-50 border-2 border-purple-200 text-purple-900 group transition-all hover:bg-purple-100 active:scale-[0.98]">
                 <div className="flex items-center gap-3">
                   <div className="h-8 w-8 rounded-lg bg-white shadow-sm flex items-center justify-center">
                     <IconCalendarCheck size={18} className="text-purple-600" />
@@ -218,7 +218,7 @@ export default function DashboardPage() {
                 </div>
                 <IconArrowRight size={14} className="opacity-30 group-hover:translate-x-1 transition-transform" />
               </Link>
-              <Link href="/users" className="flex items-center justify-between p-4 rounded-2xl bg-blue-50/50 border border-blue-100/50 text-blue-900 group transition-all hover:bg-blue-100/80 active:scale-[0.98]">
+              <Link href="/users" className="flex items-center justify-between p-4 rounded-2xl bg-blue-50 border-2 border-blue-200 text-blue-900 group transition-all hover:bg-blue-100 active:scale-[0.98]">
                 <div className="flex items-center gap-3">
                   <div className="h-8 w-8 rounded-lg bg-white shadow-sm flex items-center justify-center">
                     <IconUser size={18} className="text-blue-600" />

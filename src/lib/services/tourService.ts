@@ -15,6 +15,13 @@ export interface Tour {
   discountPrice?: number | null;
   pricePerPerson?: number | null;
   extraDiscountPerUser: number;
+  descriptionEn?: string | null;
+  descriptionHi?: string | null;
+  cancellationPolicyEn?: string | null;
+  cancellationPolicyHi?: string | null;
+  type: 'group' | 'private';
+  minPersons?: number | null;
+  maxPersons?: number | null;
   expertGuidanceEn?: string | null;
   expertGuidanceHi?: string | null;
   spiritualImmersionEn?: string | null;
@@ -30,6 +37,10 @@ export interface Tour {
   approxTimeHi?: string | null;
   recommendationEn?: string | null;
   recommendationHi?: string | null;
+  badgeEn?: string | null;
+  badgeHi?: string | null;
+  cancellationBeforeHours?: number;
+  guideDetailsBeforeHours?: number;
   isActive: boolean;
   createdAt: string;
   updatedAt: string;

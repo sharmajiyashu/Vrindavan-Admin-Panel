@@ -53,10 +53,40 @@ export function TempleForm({ initialData, onSubmitBasic, onSubmitFiles, onRemove
     formState: { errors },
   } = useForm<TempleFormData>({
     resolver: zodResolver(templeValidationSchema) as any,
-    defaultValues: initialData || {
+    defaultValues: initialData ? {
+      nameEn: initialData.nameEn,
+      nameHi: initialData.nameHi,
+      addressEn: initialData.addressEn,
+      addressHi: initialData.addressHi,
+      cityEn: initialData.cityEn,
+      cityHi: initialData.cityHi,
+      stateEn: initialData.stateEn,
+      stateHi: initialData.stateHi,
+      lat: initialData.lat,
+      long: initialData.long,
+      descriptionEn: initialData.descriptionEn,
+      descriptionHi: initialData.descriptionHi,
+      establishedEn: initialData.establishedEn || "",
+      establishedHi: initialData.establishedHi || "",
+      morningTimings: initialData.morningTimings || [],
+      eveningTimings: initialData.eveningTimings || [],
+      imageIds: initialData.imageIds || [],
+      audioGuideEn: initialData.audioGuideEn?.url || "",
+      audioGuideHi: initialData.audioGuideHi?.url || "",
+      documentaryVideoUrl: initialData.documentaryVideoUrl || initialData.documentaryVideo?.url || "",
+      bestTimeEn: initialData.bestTimeEn || "",
+      bestTimeHi: initialData.bestTimeHi || "",
+      historyEn: initialData.historyEn || "",
+      historyHi: initialData.historyHi || "",
+      listenToHistoryUrlEn: initialData.listenToHistoryUrlEn || "",
+      listenToHistoryUrlHi: initialData.listenToHistoryUrlHi || "",
+      sortOrder: initialData.sortOrder || 0,
+      isActive: initialData.isActive ?? true,
+    } : {
       morningTimings: [],
       eveningTimings: [],
       isActive: true,
+      sortOrder: 0,
     },
   });
 
@@ -131,16 +161,13 @@ export function TempleForm({ initialData, onSubmitBasic, onSubmitFiles, onRemove
     }
   };
 
-  const onFormSubmit: SubmitHandler<TempleFormData> = async (data) => {
+  const onFormSubmit = async (data: any) => {
+    const formData = data as TempleFormData;
     try {
       const payload = {
-        ...data,
-        thumbnailId: initialData ? initialData.thumbnailId : data.thumbnailId,
-        documentaryVideoId: initialData ? initialData.documentaryVideoId : data.documentaryVideoId,
-        documentaryVideoUrl: data.documentaryVideoUrl, // Use current form value
-        audioGuideEnId: initialData ? initialData.audioGuideEnId : data.audioGuideEnId,
-        audioGuideHiId: initialData ? initialData.audioGuideHiId : data.audioGuideHiId,
-        imageIds: initialData ? existingGallery.map(m => m.id) : data.imageIds
+        ...formData,
+        imageIds: initialData ? existingGallery.map(m => m.id) : formData.imageIds,
+
       };
 
       if (activeTab === "basic") {
@@ -166,12 +193,12 @@ export function TempleForm({ initialData, onSubmitBasic, onSubmitFiles, onRemove
     }
   };
 
-  const inputClasses = "w-full rounded-xl border border-border bg-background px-4 py-2.5 text-sm transition-all focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none";
+  const inputClasses = "w-full rounded-xl border-2 border-border bg-background px-4 py-2.5 text-sm transition-all focus:border-primary focus:ring-4 focus:ring-primary/5 outline-none placeholder:text-muted-foreground/30";
   const labelClasses = "block text-xs font-black uppercase tracking-widest text-muted-foreground/70 mb-1.5";
   const errorClasses = "text-[10px] font-bold text-destructive mt-1";
 
   return (
-    <form onSubmit={handleSubmit(onFormSubmit)} className="space-y-6">
+    <form onSubmit={handleSubmit(onFormSubmit as any)} className="space-y-6">
       <Tabs.Root value={activeTab} onValueChange={setActiveTab} className="w-full">
         <Tabs.List className="flex border-b border-border mb-6 overflow-x-auto scrollbar-none">
           <Tabs.Trigger
@@ -272,6 +299,23 @@ export function TempleForm({ initialData, onSubmitBasic, onSubmitFiles, onRemove
               <label className={labelClasses}>{t("temples.establishedHi")}</label>
               <input {...register("establishedHi")} className={inputClasses} placeholder="16वीं शताब्दी" />
             </div>
+
+            <div>
+              <label className={labelClasses}>Sort Order</label>
+              <input type="number" {...register("sortOrder")} className={inputClasses} placeholder="0" />
+              <p className="text-[9px] text-muted-foreground mt-1 font-bold uppercase tracking-widest leading-tight">Higher numbers appear first in the main list.</p>
+            </div>
+          </div>
+
+          <div className="grid gap-6 md:grid-cols-2">
+            <div>
+              <label className={labelClasses}>Best Time to Visit (EN)</label>
+              <input {...register("bestTimeEn")} className={inputClasses} placeholder="October to March" />
+            </div>
+            <div>
+              <label className={labelClasses}>Best Time to Visit (HI)</label>
+              <input {...register("bestTimeHi")} className={inputClasses} placeholder="अक्टूबर से मार्च" />
+            </div>
           </div>
 
           <div className="grid gap-6 md:grid-cols-2">
@@ -298,6 +342,17 @@ export function TempleForm({ initialData, onSubmitBasic, onSubmitFiles, onRemove
             </div>
           </div>
 
+          <div className="grid gap-6 md:grid-cols-2">
+            <div>
+              <label className={labelClasses}>Listen to History URL (EN)</label>
+              <input {...register("listenToHistoryUrlEn")} className={inputClasses} placeholder="https://cloud.com/audio-en.mp3" />
+            </div>
+            <div>
+              <label className={labelClasses}>Listen to History URL (HI)</label>
+              <input {...register("listenToHistoryUrlHi")} className={inputClasses} placeholder="https://cloud.com/audio-hi.mp3" />
+            </div>
+          </div>
+
           <div className="space-y-6">
             <div className="space-y-4">
               <div className="flex items-center justify-between">
@@ -311,7 +366,7 @@ export function TempleForm({ initialData, onSubmitBasic, onSubmitFiles, onRemove
                 </button>
               </div>
               {morningFields.map((field, index) => (
-                <div key={field.id} className="grid grid-cols-2 md:grid-cols-12 gap-3 p-3 rounded-2xl bg-muted/20 border border-border/50 items-end">
+                <div key={field.id} className="grid grid-cols-2 md:grid-cols-12 gap-3 p-4 rounded-2xl bg-muted/50 border-2 border-border items-end shadow-sm">
                   <div className="col-span-2 md:col-span-3">
                     <label className="text-[9px] font-black uppercase text-muted-foreground/50 mb-1 ml-1">Name (EN)</label>
                     <input {...register(`morningTimings.${index}.nameEn`)} className={twMerge(inputClasses, "text-xs py-2")} placeholder="Morning Aarti" />
@@ -349,7 +404,7 @@ export function TempleForm({ initialData, onSubmitBasic, onSubmitFiles, onRemove
                 </button>
               </div>
               {eveningFields.map((field, index) => (
-                <div key={field.id} className="grid grid-cols-2 md:grid-cols-12 gap-3 p-3 rounded-2xl bg-muted/20 border border-border/50 items-end">
+                <div key={field.id} className="grid grid-cols-2 md:grid-cols-12 gap-3 p-4 rounded-2xl bg-muted/50 border-2 border-border items-end shadow-sm">
                   <div className="col-span-2 md:col-span-3">
                     <label className="text-[9px] font-black uppercase text-muted-foreground/50 mb-1 ml-1">Name (EN)</label>
                     <input {...register(`eveningTimings.${index}.nameEn`)} className={twMerge(inputClasses, "text-xs py-2")} placeholder="Evening Aarti" />
@@ -383,7 +438,7 @@ export function TempleForm({ initialData, onSubmitBasic, onSubmitFiles, onRemove
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4">
               {/* Existing Gallery Images */}
               {existingGallery.map((media) => (
-                <div key={media.id} className="relative group aspect-square rounded-2xl bg-muted/30 overflow-hidden border border-border">
+                <div key={media.id} className="relative group aspect-square rounded-2xl bg-muted/50 overflow-hidden border-2 border-border">
                   <img src={media.url} className="w-full h-full object-cover opacity-80" />
                   <div className="absolute inset-0 bg-black/20 group-hover:bg-transparent transition-all" />
                   <button
@@ -415,7 +470,7 @@ export function TempleForm({ initialData, onSubmitBasic, onSubmitFiles, onRemove
 
               {/* New Photos (Previews) */}
               {Array.isArray(previews.images) && previews.images.map((src, idx) => (
-                <div key={idx} className="relative group aspect-square rounded-2xl bg-muted/30 overflow-hidden border border-border border-primary/20">
+                <div key={idx} className="relative group aspect-square rounded-2xl bg-muted/50 overflow-hidden border-2 border-primary/20">
                   <img src={src} className="w-full h-full object-cover" />
                   {isLoading ? (
                     <div className="absolute inset-0 bg-background/60 backdrop-blur-[2px] flex items-center justify-center">
@@ -437,7 +492,7 @@ export function TempleForm({ initialData, onSubmitBasic, onSubmitFiles, onRemove
               ))}
 
               <label className={twMerge(
-                "cursor-pointer aspect-square rounded-2xl border-2 border-dashed border-border flex flex-col items-center justify-center bg-muted/10 hover:bg-muted/30 transition-all hover:border-primary/50",
+                "cursor-pointer aspect-square rounded-2xl border-2 border-dashed border-border flex flex-col items-center justify-center bg-muted/30 hover:bg-muted/50 transition-all hover:border-primary/50",
                 isLoading && "opacity-50 cursor-not-allowed pointer-events-none"
               )}>
                 <IconPlus className="h-6 w-6 text-muted-foreground" />
@@ -491,7 +546,7 @@ export function TempleForm({ initialData, onSubmitBasic, onSubmitFiles, onRemove
                 </div>
               ) : (
                 <div className={twMerge(
-                  "relative overflow-hidden p-4 rounded-2xl border bg-card flex items-center gap-3 transition-all",
+                  "relative overflow-hidden p-4 rounded-2xl border-2 bg-card flex items-center gap-3 transition-all shadow-sm",
                   (files.documentaryVideo || initialData?.documentaryVideo) ? "border-primary/30" : "border-border"
                 )}>
                   {isLoading && files.documentaryVideo && (
@@ -564,8 +619,8 @@ export function TempleForm({ initialData, onSubmitBasic, onSubmitFiles, onRemove
             <div className="space-y-3">
               <label className={labelClasses}>{t("temples.audioEn")}</label>
               <div className={twMerge(
-                "relative overflow-hidden p-4 rounded-2xl border bg-card flex items-center gap-3 transition-all",
-                (files.audioGuideEn || initialData?.audioGuideEn) ? "border-emerald-100" : "border-border"
+                "relative overflow-hidden p-4 rounded-2xl border-2 bg-card flex items-center gap-3 transition-all shadow-sm",
+                (files.audioGuideEn || initialData?.audioGuideEn) ? "border-emerald-200" : "border-border"
               )}>
                 {(isLoading || isUploading) && files.audioGuideEn && (
                   <div className="absolute inset-x-0 bottom-0 h-1 bg-emerald-100">
@@ -636,8 +691,8 @@ export function TempleForm({ initialData, onSubmitBasic, onSubmitFiles, onRemove
             <div className="space-y-3">
               <label className={labelClasses}>{t("temples.audioHi")}</label>
               <div className={twMerge(
-                "relative overflow-hidden p-4 rounded-2xl border bg-card flex items-center gap-3 transition-all",
-                (files.audioGuideHi || initialData?.audioGuideHi) ? "border-orange-100" : "border-border"
+                "relative overflow-hidden p-4 rounded-2xl border-2 bg-card flex items-center gap-3 transition-all shadow-sm",
+                (files.audioGuideHi || initialData?.audioGuideHi) ? "border-orange-200" : "border-border"
               )}>
                 {(isLoading || isUploading) && files.audioGuideHi && (
                   <div className="absolute inset-x-0 bottom-0 h-1 bg-orange-100">

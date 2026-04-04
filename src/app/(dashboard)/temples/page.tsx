@@ -16,7 +16,9 @@ import {
   IconLoader2,
   IconChevronRight,
   IconChevronLeft,
-  IconReload
+  IconReload,
+  IconChevronUp,
+  IconChevronDown
 } from "@tabler/icons-react";
 import * as Dialog from "@radix-ui/react-dialog";
 import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
@@ -111,6 +113,64 @@ export default function TemplesPage() {
     },
   });
 
+  const updateSortMutation = useMutation({
+    mutationFn: async (updates: { id: number; sortOrder: number }[]) => {
+      // Step 3: Run updates sequentially or in parallel
+      return await Promise.all(
+        updates.map((update) => templeService.updateTemple(update.id, { sortOrder: update.sortOrder }))
+      );
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["temples"] });
+      toast.success(t("temples.saveSuccess"));
+    },
+    onError: (error: any) => {
+      toast.error(error.message || "Failed to update sort order");
+    },
+  });
+
+  const handleMove = (temple: Temple, direction: "up" | "down") => {
+    const index = temples.findIndex((t) => t.id === temple.id);
+    if (index === -1) return;
+
+    const newIndex = direction === "up" ? index - 1 : index + 1;
+
+    // Create a new array with the item moved to its new position
+    const sortedTemples = [...temples];
+    const [movedItem] = sortedTemples.splice(index, 1);
+    if (!movedItem) return;
+
+
+    // Bounds check and injection
+    if (newIndex < 0) {
+      sortedTemples.unshift(movedItem);
+    } else if (newIndex >= temples.length) {
+      sortedTemples.push(movedItem);
+    } else {
+      sortedTemples.splice(newIndex, 0, movedItem);
+    }
+
+    // Determine the base sort order to maintain page context
+    // This handles cases like "0, 1, 3, 3" by normalizing them to sequential integers
+    const minSortOrder = temples.length > 0 ? Math.min(...temples.map((t) => t.sortOrder)) : 1;
+    const baseSortOrder = newIndex < 0 ? minSortOrder - 1 : minSortOrder;
+
+    // Map new positions to new sort orders and filter for only items that actually changed
+    const updates = sortedTemples
+      .map((t, idx) => ({
+        id: t.id,
+        sortOrder: baseSortOrder + idx,
+      }))
+      .filter((update) => {
+        const oldTemple = temples.find((ot) => ot.id === update.id);
+        return oldTemple?.sortOrder !== update.sortOrder;
+      });
+
+    if (updates.length > 0) {
+      updateSortMutation.mutate(updates);
+    }
+  };
+
   const handleCreateOrUpdate = async (data: TempleFormData, files: Record<string, File | File[] | undefined>) => {
     if (editingTemple) {
       await updateMutation.mutateAsync({ id: editingTemple.id, data, files });
@@ -145,13 +205,13 @@ export default function TemplesPage() {
               placeholder="Search..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="h-10 w-full rounded-xl border border-border bg-card/50 pl-10 pr-4 text-[11px] font-bold shadow-sm transition-all focus:border-primary focus:ring-4 focus:ring-primary/5 outline-none placeholder:text-muted-foreground/20"
+              className="h-11 w-full rounded-xl border-2 border-border bg-card pl-10 pr-4 text-[11px] font-bold shadow-sm transition-all focus:border-primary focus:ring-4 focus:ring-primary/5 outline-none placeholder:text-muted-foreground/40"
             />
           </div>
 
           <button
             onClick={() => queryClient.invalidateQueries({ queryKey: ["temples"] })}
-            className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-border bg-card text-muted-foreground transition-all hover:bg-muted active:scale-95 shadow-sm"
+            className="inline-flex h-11 w-11 items-center justify-center rounded-xl border-2 border-border bg-card text-muted-foreground transition-all hover:bg-muted active:scale-95 shadow-sm"
             title="Refresh"
           >
             <IconReload className={twMerge("h-4 w-4", isLoading && "animate-spin")} />
@@ -162,13 +222,13 @@ export default function TemplesPage() {
             if (!open) setEditingTemple(null);
           }}>
             <Dialog.Trigger asChild>
-              <button className="inline-flex h-10 items-center justify-center rounded-xl bg-primary px-6 text-[11px] font-black uppercase tracking-wider text-primary-foreground shadow-lg shadow-primary/20 transition-all hover:opacity-90 active:scale-95">
+              <button className="inline-flex h-11 items-center justify-center rounded-xl bg-primary px-6 text-[11px] font-black uppercase tracking-wider text-primary-foreground shadow-lg shadow-primary/20 transition-all hover:opacity-90 active:scale-95">
                 {t("temples.add")}
               </button>
             </Dialog.Trigger>
             <Dialog.Portal>
-              <Dialog.Overlay className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm animate-in fade-in duration-300" />
-              <Dialog.Content className="fixed left-[50%] top-[50%] z-50 w-full max-w-4xl max-h-[90vh] translate-x-[-50%] translate-y-[-50%] overflow-y-auto rounded-[2.5rem] bg-card p-10 shadow-2xl animate-in zoom-in-95 fade-in duration-300 outline-none">
+              <Dialog.Overlay className="fixed inset-0 z-50 bg-black/60 animate-in fade-in duration-300" />
+              <Dialog.Content className="fixed left-[50%] top-[50%] z-50 w-full max-w-4xl max-h-[90vh] translate-x-[-50%] translate-y-[-50%] overflow-y-auto rounded-3xl border-2 border-border bg-card p-10 shadow-2xl animate-in zoom-in-95 fade-in duration-300 outline-none">
                 <div className="flex items-center justify-between mb-8">
                   <Dialog.Title className="text-2xl font-black tracking-tight flex items-center gap-3">
                     <div className="h-9 w-9 rounded-xl bg-primary/10 flex items-center justify-center text-primary">
@@ -184,11 +244,12 @@ export default function TemplesPage() {
                   initialData={editingTemple}
                   isLoading={createMutation.isPending || updateMutation.isPending}
                   onSubmitBasic={async (data) => {
-                    if (editingTemple) {
-                      await templeService.updateTemple(editingTemple.id, data);
+                    const id = (data as any).id || editingTemple?.id;
+                    if (id) {
+                      await templeService.updateTemple(id, data);
                       queryClient.invalidateQueries({ queryKey: ["temples"] });
                       toast.success(t("temples.saveSuccess"));
-                      return editingTemple.id;
+                      return id;
                     } else {
                       const result = await templeService.createTemple(data);
                       queryClient.invalidateQueries({ queryKey: ["temples"] });
@@ -196,6 +257,7 @@ export default function TemplesPage() {
                       return result.id;
                     }
                   }}
+
                   onSubmitFiles={async (id, files) => {
                     const uploadPromises = [];
                     if (Array.isArray(files.images) && files.images.length > 0) uploadPromises.push(templeService.uploadGallery(id, files.images));
@@ -230,7 +292,7 @@ export default function TemplesPage() {
 
 
       {/* Main Content */}
-      <div className="rounded-[2.5rem] border border-border bg-card p-4 shadow-[0_20px_50px_-15px_rgba(0,0,0,0.05)] overflow-hidden">
+      <div className="rounded-3xl border-2 border-border bg-card p-2 shadow-sm overflow-hidden">
         {isLoading ? (
           <div className="flex h-64 flex-col items-center justify-center gap-3">
             <IconLoader2 className="h-10 w-10 animate-spin text-primary" />
@@ -260,7 +322,7 @@ export default function TemplesPage() {
               </thead>
               <tbody className="divide-y divide-border/40">
                 {temples.map((temple) => (
-                  <tr key={temple.id} className="group transition-all hover:bg-muted/20">
+                  <tr key={temple.id} className="group transition-all hover:bg-muted/50 border-b border-border/50 last:border-0">
                     <td className="px-5 py-3.5">
                       <div className="h-11 w-11 shrink-0 overflow-hidden rounded-xl bg-muted/50 border border-border shadow-sm">
                         {temple.thumbnail?.url || (temple.gallery && temple.gallery.length > 0) ? (
@@ -305,6 +367,26 @@ export default function TemplesPage() {
                     </td>
                     <td className="px-5 py-3.5 text-right">
                       <div className="flex items-center justify-end gap-2">
+                        <div className="flex items-center gap-1 bg-muted p-1 rounded-xl mr-2 border border-border/50">
+                          <button
+                            onClick={() => handleMove(temple, "up")}
+                            disabled={updateSortMutation.isPending}
+                            className="h-7 w-7 flex items-center justify-center rounded-lg bg-card text-muted-foreground hover:bg-primary hover:text-primary-foreground transition-all active:scale-90 disabled:opacity-50 shadow-sm"
+                            title="Move Up"
+                          >
+                            <IconChevronUp size={14} />
+                          </button>
+                          <span className="w-5 text-center text-[10px] font-black text-muted-foreground">{temple.sortOrder}</span>
+                          <button
+                            onClick={() => handleMove(temple, "down")}
+                            disabled={updateSortMutation.isPending}
+                            className="h-7 w-7 flex items-center justify-center rounded-lg bg-card text-muted-foreground hover:bg-primary hover:text-primary-foreground transition-all active:scale-90 disabled:opacity-50 shadow-sm"
+                            title="Move Down"
+                          >
+                            <IconChevronDown size={14} />
+                          </button>
+                        </div>
+
                         <button
                           onClick={() => {
                             setEditingTemple(temple);

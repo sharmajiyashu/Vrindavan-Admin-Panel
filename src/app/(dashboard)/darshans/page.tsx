@@ -107,7 +107,7 @@ export default function DarshansPage() {
         <div className="flex flex-1 items-center justify-end gap-3 max-w-2xl ml-auto">
           <button
             onClick={() => queryClient.invalidateQueries({ queryKey: ["darshans"] })}
-            className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-border bg-card text-muted-foreground transition-all hover:bg-muted active:scale-95 shadow-sm"
+            className="inline-flex h-11 w-11 items-center justify-center rounded-xl border-2 border-border bg-card text-muted-foreground transition-all hover:bg-muted active:scale-95 shadow-sm"
             title={t("common.refresh")}
           >
             <IconReload className={twMerge("h-4 w-4", isLoading && "animate-spin")} />
@@ -118,13 +118,13 @@ export default function DarshansPage() {
             if (!open) setEditingDarshan(null);
           }}>
             <Dialog.Trigger asChild>
-              <button className="inline-flex h-10 items-center justify-center rounded-xl bg-primary px-6 text-[11px] font-black uppercase tracking-wider text-primary-foreground shadow-lg shadow-primary/20 transition-all hover:opacity-90 active:scale-95">
+              <button className="inline-flex h-11 items-center justify-center rounded-xl bg-primary px-6 text-[11px] font-black uppercase tracking-wider text-primary-foreground shadow-lg shadow-primary/20 transition-all hover:opacity-90 active:scale-95">
                 {t("darshans.add")}
               </button>
             </Dialog.Trigger>
             <Dialog.Portal>
-              <Dialog.Overlay className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm animate-in fade-in duration-300" />
-              <Dialog.Content className="fixed left-[50%] top-[50%] z-50 w-full max-w-4xl max-h-[90vh] translate-x-[-50%] translate-y-[-50%] overflow-y-auto rounded-[2.5rem] bg-card p-10 shadow-2xl animate-in zoom-in-95 fade-in duration-300 outline-none">
+              <Dialog.Overlay className="fixed inset-0 z-50 bg-black/60 animate-in fade-in duration-300" />
+              <Dialog.Content className="fixed left-[50%] top-[50%] z-50 w-full max-w-4xl max-h-[90vh] translate-x-[-50%] translate-y-[-50%] overflow-y-auto rounded-3xl border-2 border-border bg-card p-10 shadow-2xl animate-in zoom-in-95 fade-in duration-300 outline-none">
                 <div className="flex items-center justify-between mb-8">
                   <Dialog.Title className="text-2xl font-black tracking-tight flex items-center gap-3">
                     <div className="h-9 w-9 rounded-xl bg-primary/10 flex items-center justify-center text-primary">
@@ -140,9 +140,10 @@ export default function DarshansPage() {
                   initialData={editingDarshan}
                   isLoading={createMutation.isPending || updateMutation.isPending}
                   onSubmitBasic={async (data) => {
-                    if (editingDarshan) {
-                      await updateMutation.mutateAsync({ id: editingDarshan.id, data });
-                      return editingDarshan.id;
+                    const id = (data as any).id || editingDarshan?.id;
+                    if (id) {
+                      await updateMutation.mutateAsync({ id, data });
+                      return id;
                     } else {
                       const result = await createMutation.mutateAsync(data);
                       return result.id;
@@ -179,7 +180,7 @@ export default function DarshansPage() {
               setTempleId(e.target.value ? Number(e.target.value) : undefined);
               setCurrentPage(1);
             }}
-            className="h-10 w-full rounded-xl border border-border bg-card/50 pl-10 pr-4 text-[11px] font-bold shadow-sm outline-none transition-all focus:border-primary focus:ring-4 focus:ring-primary/5 appearance-none cursor-pointer"
+            className="h-11 w-full rounded-xl border-2 border-border bg-card pl-10 pr-4 text-[11px] font-bold shadow-sm outline-none transition-all focus:border-primary focus:ring-4 focus:ring-primary/5 appearance-none cursor-pointer"
           >
             <option value="">All Temples</option>
             {templesData?.temples?.map((t) => (
@@ -196,7 +197,7 @@ export default function DarshansPage() {
             type="date"
             value={date}
             onChange={(e) => { setDate(e.target.value); setCurrentPage(1); }}
-            className="h-10 w-full rounded-xl border border-border bg-card/50 pl-10 pr-4 text-[11px] font-bold shadow-sm outline-none transition-all focus:border-primary focus:ring-4 focus:ring-primary/5"
+            className="h-11 w-full rounded-xl border-2 border-border bg-card pl-10 pr-4 text-[11px] font-bold shadow-sm outline-none transition-all focus:border-primary focus:ring-4 focus:ring-primary/5"
           />
         </div>
 
@@ -204,7 +205,7 @@ export default function DarshansPage() {
           <select
             value={shift}
             onChange={(e) => { setShift(e.target.value); setCurrentPage(1); }}
-            className="h-10 w-full rounded-xl border border-border bg-card/50 px-4 text-[11px] font-bold shadow-sm outline-none transition-all focus:border-primary focus:ring-4 focus:ring-primary/5 appearance-none cursor-pointer"
+            className="h-11 w-full rounded-xl border-2 border-border bg-card px-4 text-[11px] font-bold shadow-sm outline-none transition-all focus:border-primary focus:ring-4 focus:ring-primary/5 appearance-none cursor-pointer"
           >
             <option value="">{t("darshans.allShifts") || "All Shifts"}</option>
             <option value="morning">{t("darshans.morning") || "Morning"}</option>
@@ -214,7 +215,7 @@ export default function DarshansPage() {
       </div>
 
       {/* Main Content */}
-      <div className="rounded-[2.5rem] border border-border bg-card p-4 shadow-[0_20px_50px_-15px_rgba(0,0,0,0.05)] overflow-hidden">
+      <div className="rounded-3xl border-2 border-border bg-card p-2 shadow-sm overflow-hidden">
         {isLoading ? (
           <div className="flex h-64 flex-col items-center justify-center gap-3">
             <IconLoader2 className="h-10 w-10 animate-spin text-primary" />
@@ -245,7 +246,7 @@ export default function DarshansPage() {
               </thead>
               <tbody className="divide-y divide-border/40">
                 {darshans.map((darshan) => (
-                  <tr key={darshan.id} className="group transition-all hover:bg-muted/20">
+                  <tr key={darshan.id} className="group transition-all hover:bg-muted/50 border-b border-border/50 last:border-0">
                     <td className="px-5 py-3.5">
                       <div className="h-11 w-11 shrink-0 overflow-hidden rounded-xl bg-muted/50 border border-border shadow-sm">
                         {darshan.gallery && darshan.gallery.length > 0 ? (

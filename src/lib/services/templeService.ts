@@ -32,6 +32,13 @@ export interface Temple {
   audioGuideHiId?: number | null;
   imageIds: number[];
   isActive: boolean;
+  sortOrder: number;
+  bestTimeEn?: string | null;
+  bestTimeHi?: string | null;
+  historyEn?: string | null;
+  historyHi?: string | null;
+  listenToHistoryUrlEn?: string | null;
+  listenToHistoryUrlHi?: string | null;
   createdAt: string;
   updatedAt: string;
   thumbnail?: TempleMedia;
