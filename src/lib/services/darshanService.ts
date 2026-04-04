@@ -18,6 +18,8 @@ export interface Darshan {
   shift: 'morning' | 'evening';
   descriptionEn?: string | null;
   descriptionHi?: string | null;
+  displayTextEn?: string | null;
+  displayTextHi?: string | null;
   createdAt: string;
   updatedAt: string;
   temple?: {

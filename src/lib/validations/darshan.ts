@@ -8,6 +8,8 @@ export const darshanValidationSchema = z.object({
   shift: z.enum(['morning', 'evening']).default('morning'),
   descriptionEn: z.string().optional().nullable(),
   descriptionHi: z.string().optional().nullable(),
+  displayTextEn: z.string().optional().nullable(),
+  displayTextHi: z.string().optional().nullable(),
 });
 
 export type DarshanFormData = z.infer<typeof darshanValidationSchema>;

@@ -61,6 +61,7 @@ export const messages: Record<Locale, Record<string, string>> = {
     "nav.bookings": "Bookings",
     "nav.darshans": "Daily Darshan",
     "nav.tourMap": "Tour Map",
+    "nav.darshanManagement": "Darshan Management",
 
 
     "header.userMenu": "User menu",
@@ -290,6 +291,9 @@ export const messages: Record<Locale, Record<string, string>> = {
     "darshans.morning": "Morning",
     "darshans.evening": "Evening",
     "darshans.allShifts": "All Shifts",
+    "darshans.displayTextEn": "Display Text (EN)",
+    "darshans.displayTextHi": "Display Text (HI)",
+    "darshans.displayTextPlaceholder": "e.g. Ekadashi, Special Festival...",
 
     "routeMaps.title": "Route Maps",
     "routeMaps.subtitle": "Manage optimized pilgrimage routes and temple sequences.",

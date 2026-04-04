@@ -14,7 +14,8 @@ import {
   IconMap2,
   IconWallet,
   IconPhoto,
-  IconPhotoStar
+  IconPhotoStar,
+  IconFingerprint
 } from "@tabler/icons-react";
 
 export interface SidebarNavItem {
@@ -41,11 +42,18 @@ export function isNavSection(
 /** Sidebar navigation config for Vrindavan Admin Panel. titleKey matches i18n messages. */
 export const sidebarNav: SidebarNavEntry[] = [
   { titleKey: "nav.dashboard", href: "/dashboard", icon: IconLayoutDashboard },
-  { titleKey: "nav.temples", href: "/temples", icon: IconBuildingSkyscraper },
+  {
+    titleKey: "nav.darshanManagement",
+    href: "/darshan-management", // Arbitrary base for selection tracking
+    icon: IconFingerprint,
+    items: [
+      { titleKey: "nav.darshans", href: "/darshans", icon: IconPhoto },
+      { titleKey: "nav.darshanBanners", href: "/darshan-banners", icon: IconPhotoStar },
+      { titleKey: "nav.temples", href: "/temples", icon: IconBuildingSkyscraper },
+    ],
+  },
   { titleKey: "tours.title", href: "/tours", icon: IconMap2 },
   { titleKey: "nav.bookings", href: "/bookings", icon: IconReceipt2 },
-  { titleKey: "nav.darshanBanners", href: "/darshan-banners", icon: IconPhotoStar },
-  { titleKey: "nav.darshans", href: "/darshans", icon: IconPhoto },
   { titleKey: "nav.tourMap", href: "/route-maps", icon: IconMap2 },
   { titleKey: "nav.userManagement", href: "/users", icon: IconUsers },
   { titleKey: "nav.wallets", href: "/wallets", icon: IconWallet },

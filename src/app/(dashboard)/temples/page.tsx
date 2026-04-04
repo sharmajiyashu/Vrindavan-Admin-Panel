@@ -16,7 +16,9 @@ import {
   IconLoader2,
   IconChevronRight,
   IconChevronLeft,
-  IconReload
+  IconReload,
+  IconChevronUp,
+  IconChevronDown
 } from "@tabler/icons-react";
 import * as Dialog from "@radix-ui/react-dialog";
 import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
@@ -110,18 +112,64 @@ export default function TemplesPage() {
       toast.error(error.message || "Failed to delete temple");
     },
   });
- 
+
   const updateSortMutation = useMutation({
-    mutationFn: async ({ id, sortOrder }: { id: number; sortOrder: number }) => {
-      return await templeService.updateTemple(id, { sortOrder });
+    mutationFn: async (updates: { id: number; sortOrder: number }[]) => {
+      // Step 3: Run updates sequentially or in parallel
+      return await Promise.all(
+        updates.map((update) => templeService.updateTemple(update.id, { sortOrder: update.sortOrder }))
+      );
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["temples"] });
+      toast.success(t("temples.saveSuccess"));
     },
     onError: (error: any) => {
       toast.error(error.message || "Failed to update sort order");
     },
   });
+
+  const handleMove = (temple: Temple, direction: "up" | "down") => {
+    const index = temples.findIndex((t) => t.id === temple.id);
+    if (index === -1) return;
+
+    const newIndex = direction === "up" ? index - 1 : index + 1;
+
+    // Create a new array with the item moved to its new position
+    const sortedTemples = [...temples];
+    const [movedItem] = sortedTemples.splice(index, 1);
+    if (!movedItem) return;
+
+
+    // Bounds check and injection
+    if (newIndex < 0) {
+      sortedTemples.unshift(movedItem);
+    } else if (newIndex >= temples.length) {
+      sortedTemples.push(movedItem);
+    } else {
+      sortedTemples.splice(newIndex, 0, movedItem);
+    }
+
+    // Determine the base sort order to maintain page context
+    // This handles cases like "0, 1, 3, 3" by normalizing them to sequential integers
+    const minSortOrder = temples.length > 0 ? Math.min(...temples.map((t) => t.sortOrder)) : 1;
+    const baseSortOrder = newIndex < 0 ? minSortOrder - 1 : minSortOrder;
+
+    // Map new positions to new sort orders and filter for only items that actually changed
+    const updates = sortedTemples
+      .map((t, idx) => ({
+        id: t.id,
+        sortOrder: baseSortOrder + idx,
+      }))
+      .filter((update) => {
+        const oldTemple = temples.find((ot) => ot.id === update.id);
+        return oldTemple?.sortOrder !== update.sortOrder;
+      });
+
+    if (updates.length > 0) {
+      updateSortMutation.mutate(updates);
+    }
+  };
 
   const handleCreateOrUpdate = async (data: TempleFormData, files: Record<string, File | File[] | undefined>) => {
     if (editingTemple) {
@@ -196,11 +244,12 @@ export default function TemplesPage() {
                   initialData={editingTemple}
                   isLoading={createMutation.isPending || updateMutation.isPending}
                   onSubmitBasic={async (data) => {
-                    if (editingTemple) {
-                      await templeService.updateTemple(editingTemple.id, data);
+                    const id = (data as any).id || editingTemple?.id;
+                    if (id) {
+                      await templeService.updateTemple(id, data);
                       queryClient.invalidateQueries({ queryKey: ["temples"] });
                       toast.success(t("temples.saveSuccess"));
-                      return editingTemple.id;
+                      return id;
                     } else {
                       const result = await templeService.createTemple(data);
                       queryClient.invalidateQueries({ queryKey: ["temples"] });
@@ -208,6 +257,7 @@ export default function TemplesPage() {
                       return result.id;
                     }
                   }}
+
                   onSubmitFiles={async (id, files) => {
                     const uploadPromises = [];
                     if (Array.isArray(files.images) && files.images.length > 0) uploadPromises.push(templeService.uploadGallery(id, files.images));
@@ -266,7 +316,6 @@ export default function TemplesPage() {
                   <th className="px-5 py-4 w-[80px]">Image</th>
                   <th className="px-4 py-4 min-w-[240px]">{t("temples.name")}</th>
                   <th className="px-4 py-4">{t("temples.city")} & {t("temples.state")}</th>
-                  <th className="px-4 py-4">Sort Order</th>
                   <th className="px-4 py-4">{t("temples.active")}</th>
                   <th className="px-5 py-4 text-right">Actions</th>
                 </tr>
@@ -306,19 +355,6 @@ export default function TemplesPage() {
                       </div>
                     </td>
                     <td className="px-4 py-3.5">
-                      <input
-                        type="number"
-                        defaultValue={temple.sortOrder}
-                        onBlur={(e) => {
-                          const val = parseInt(e.target.value);
-                          if (val !== temple.sortOrder) {
-                            updateSortMutation.mutate({ id: temple.id, sortOrder: val });
-                          }
-                        }}
-                        className="w-16 rounded-lg border border-border bg-transparent px-2 py-1 text-[11px] font-black focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition-all"
-                      />
-                    </td>
-                    <td className="px-4 py-3.5">
                       <div className={twMerge(
                         "inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[9px] font-black uppercase tracking-wider",
                         temple.isActive
@@ -331,6 +367,26 @@ export default function TemplesPage() {
                     </td>
                     <td className="px-5 py-3.5 text-right">
                       <div className="flex items-center justify-end gap-2">
+                        <div className="flex items-center gap-1 bg-muted/40 p-1 rounded-xl mr-2">
+                          <button
+                            onClick={() => handleMove(temple, "up")}
+                            disabled={updateSortMutation.isPending}
+                            className="h-7 w-7 flex items-center justify-center rounded-lg bg-card text-muted-foreground hover:bg-primary hover:text-primary-foreground transition-all active:scale-90 disabled:opacity-50 shadow-sm"
+                            title="Move Up"
+                          >
+                            <IconChevronUp size={14} />
+                          </button>
+                          <span className="w-5 text-center text-[10px] font-black text-muted-foreground">{temple.sortOrder}</span>
+                          <button
+                            onClick={() => handleMove(temple, "down")}
+                            disabled={updateSortMutation.isPending}
+                            className="h-7 w-7 flex items-center justify-center rounded-lg bg-card text-muted-foreground hover:bg-primary hover:text-primary-foreground transition-all active:scale-90 disabled:opacity-50 shadow-sm"
+                            title="Move Down"
+                          >
+                            <IconChevronDown size={14} />
+                          </button>
+                        </div>
+
                         <button
                           onClick={() => {
                             setEditingTemple(temple);

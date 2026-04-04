@@ -97,6 +97,8 @@ export function DarshanForm({ initialData, onSubmitBasic, onSubmitFiles, onRemov
         if (darshanId) {
           setIsUploading(true);
           try {
+            // Also update basic details in case they were changed
+            await onSubmitBasic({ ...data, id: darshanId } as any);
             if (files.length > 0) {
               await onSubmitFiles(darshanId, files);
             }

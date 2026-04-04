@@ -140,9 +140,10 @@ export default function DarshansPage() {
                   initialData={editingDarshan}
                   isLoading={createMutation.isPending || updateMutation.isPending}
                   onSubmitBasic={async (data) => {
-                    if (editingDarshan) {
-                      await updateMutation.mutateAsync({ id: editingDarshan.id, data });
-                      return editingDarshan.id;
+                    const id = (data as any).id || editingDarshan?.id;
+                    if (id) {
+                      await updateMutation.mutateAsync({ id, data });
+                      return id;
                     } else {
                       const result = await createMutation.mutateAsync(data);
                       return result.id;
