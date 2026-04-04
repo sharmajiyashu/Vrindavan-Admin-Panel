@@ -29,11 +29,16 @@ import { TourFormData } from "@/lib/validations/tour";
 export default function ToursPage() {
   const { t } = useLanguage();
   const queryClient = useQueryClient();
+  const [mounted, setMounted] = useState(false);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingTour, setEditingTour] = useState<Tour | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [tourToDelete, setTourToDelete] = useState<Tour | null>(null);
+
+  React.useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const { data, isLoading } = useQuery<PaginatedTourResponse>({
     queryKey: ["tours"],
@@ -59,6 +64,8 @@ export default function ToursPage() {
       toast.error(error.message || "Failed to delete tour");
     },
   });
+
+  if (!mounted) return null;
 
   return (
     <div className="space-y-8 pb-12 animate-in fade-in duration-700">
@@ -133,6 +140,7 @@ export default function ToursPage() {
                       const result = await tourService.createTour(data);
                       queryClient.invalidateQueries({ queryKey: ["tours"] });
                       toast.success("Tour created successfully");
+                      setEditingTour(result); // Update editingTour state to prevent multi-create on tab switch
                       return result.id;
                     }
                   }}

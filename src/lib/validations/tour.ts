@@ -3,9 +3,21 @@ import { z } from 'zod';
 const coerceNumber = z.coerce.number();
 const coerceBoolean = z.coerce.boolean();
 
-export const tourValidationSchema = z.object({
+const jsonArrayPreprocess = (val: any) => {
+  if (typeof val === 'string') {
+    if (!val || val === '[]') return [];
+    try { return JSON.parse(val); } catch (e) { return []; }
+  }
+  return val;
+};
+
+// Define the base schema without refinements to allow `.partial()`
+export const tourBaseSchema = z.object({
   titleEn: z.string().min(1, 'Title in English is required'),
   titleHi: z.string().min(1, 'Title in Hindi is required'),
+
+  descriptionEn: z.string().optional().nullable(),
+  descriptionHi: z.string().optional().nullable(),
 
   price: coerceNumber.min(0),
   discountPrice: coerceNumber.min(0).optional().nullable(),
@@ -29,14 +41,33 @@ export const tourValidationSchema = z.object({
   recommendationEn: z.string().optional().nullable(),
   recommendationHi: z.string().optional().nullable(),
 
+  cancellationPolicyEn: z.string().optional().nullable(),
+  cancellationPolicyHi: z.string().optional().nullable(),
+
+  type: z.enum(['group', 'private']).default('group'),
+  minPersons: coerceNumber.optional().nullable(),
+  maxPersons: coerceNumber.optional().nullable(),
+
   isActive: coerceBoolean.default(true),
 
-  templeIds: z.array(z.number()).default([]),
-  imageIds: z.array(z.number()).optional().default([]),
-  morningSlots: z.array(z.string()).default([]),
-  eveningSlots: z.array(z.string()).default([]),
+  templeIds: z.preprocess(jsonArrayPreprocess, z.array(z.number())).default([]),
+  imageIds: z.preprocess(jsonArrayPreprocess, z.array(z.number())).optional().default([]),
+  morningSlots: z.preprocess(jsonArrayPreprocess, z.array(z.string())).default([]),
+  eveningSlots: z.preprocess(jsonArrayPreprocess, z.array(z.string())).default([]),
+});
+
+// Refine the full schema for creation/full validation
+export const tourValidationSchema = tourBaseSchema.refine(data => {
+  if (data.type === 'private') {
+    return data.minPersons != null && data.maxPersons != null;
+  }
+  return true;
+}, {
+  message: "Private tours must have min and max persons allowed",
+  path: ["type"]
 });
 
 export type TourFormData = z.infer<typeof tourValidationSchema>;
 
-export const updateTourValidationSchema = tourValidationSchema.partial();
+// Use .partial() on the base schema, NOT the refined one
+export const updateTourValidationSchema = tourBaseSchema.partial();

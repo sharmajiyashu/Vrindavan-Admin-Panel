@@ -1,9 +1,10 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { useForm, SubmitHandler } from "react-hook-form";
+import { useForm, SubmitHandler, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as Tabs from "@radix-ui/react-tabs";
+import { RichTextEditor } from "@/components/RichTextEditor";
 import {
   IconPlus,
   IconTrash,
@@ -83,21 +84,53 @@ export function TourForm({ initialData, onSubmitBasic, onSubmitFiles, onRemoveMe
     if (initialData?.temples) {
       setSelectedTempleIds(initialData.temples.map(t => t.id));
     }
+    if (initialData?.morningSlots) {
+      setSelectedMorningSlots(initialData.morningSlots);
+    }
+    if (initialData?.eveningSlots) {
+      setSelectedEveningSlots(initialData.eveningSlots);
+    }
   }, [initialData]);
 
   const {
     register,
     handleSubmit,
     setValue,
+    control,
+    watch,
     formState: { errors },
   } = useForm<TourFormData>({
     resolver: zodResolver(tourValidationSchema) as any,
-    defaultValues: initialData || {
+    defaultValues: initialData ? {
+      ...initialData,
+      templeIds: initialData.temples?.map(t => t.id) || [],
+      descriptionEn: initialData.descriptionEn || "",
+      descriptionHi: initialData.descriptionHi || "",
+      cancellationPolicyEn: initialData.cancellationPolicyEn || "",
+      cancellationPolicyHi: initialData.cancellationPolicyHi || "",
+      type: initialData.type || "group",
+      minPersons: initialData.minPersons || null,
+      maxPersons: initialData.maxPersons || null,
+    } : {
+      titleEn: "",
+      titleHi: "",
+      price: 0,
       extraDiscountPerUser: 0,
       isActive: true,
       templeIds: [],
+      descriptionEn: "",
+      descriptionHi: "",
+      cancellationPolicyEn: "",
+      cancellationPolicyHi: "",
+      morningSlots: [],
+      eveningSlots: [],
+      type: "group",
+      minPersons: null,
+      maxPersons: null,
     },
   });
+
+  const tourType = watch("type");
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFiles = e.target.files;
@@ -135,15 +168,8 @@ export function TourForm({ initialData, onSubmitBasic, onSubmitFiles, onRemoveMe
       });
       setTourId(id);
 
-      if (activeTab !== "media") {
-        // Progression
-        if (activeTab === "basic") setActiveTab("features");
-        else if (activeTab === "features") setActiveTab("logistics");
-        else if (activeTab === "logistics") setActiveTab("temples");
-        else if (activeTab === "temples") setActiveTab("slots");
-        else if (activeTab === "slots") setActiveTab("media");
-      } else {
-        // On final tab, upload media if any and then finish
+      // On final tab, upload media if any and then finish
+      if (activeTab === "media") {
         if (id) {
           setIsUploading(true);
           try {
@@ -155,6 +181,14 @@ export function TourForm({ initialData, onSubmitBasic, onSubmitFiles, onRemoveMe
             setIsUploading(false);
           }
         }
+      } else {
+        // Auto-advance the tab after every successful save (create or update)
+        if (activeTab === "basic") setActiveTab("content");
+        else if (activeTab === "content") setActiveTab("features");
+        else if (activeTab === "features") setActiveTab("logistics");
+        else if (activeTab === "logistics") setActiveTab("temples");
+        else if (activeTab === "temples") setActiveTab("slots");
+        else if (activeTab === "slots") setActiveTab("media");
       }
     } catch (error) {
       console.error("Form submission error:", error);
@@ -180,6 +214,15 @@ export function TourForm({ initialData, onSubmitBasic, onSubmitFiles, onRemoveMe
             {(errors.titleEn || errors.titleHi || errors.price) && (
               <span className="absolute top-2 right-2 flex h-2 w-2 rounded-full bg-destructive" />
             )}
+          </Tabs.Trigger>
+          <Tabs.Trigger
+            value="content"
+            className={twMerge(
+              "relative px-6 py-3 text-sm font-bold transition-all border-b-2 border-transparent",
+              activeTab === "content" ? "text-primary border-primary" : "text-muted-foreground hover:text-foreground"
+            )}
+          >
+            {t("tours.content")}
           </Tabs.Trigger>
           <Tabs.Trigger
             value="features"
@@ -246,12 +289,12 @@ export function TourForm({ initialData, onSubmitBasic, onSubmitFiles, onRemoveMe
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className={labelClasses}>{t("tours.price")}</label>
-                <input type="number" {...register("price")} className={inputClasses} />
+                <input type="number" {...register("price")} className={inputClasses} placeholder="2500" />
                 {errors.price && <p className={errorClasses}>{errors.price.message}</p>}
               </div>
               <div>
                 <label className={labelClasses}>{t("tours.discountPrice")}</label>
-                <input type="number" {...register("discountPrice")} className={inputClasses} />
+                <input type="number" {...register("discountPrice")} className={inputClasses} placeholder="1999" />
               </div>
             </div>
 
@@ -264,6 +307,32 @@ export function TourForm({ initialData, onSubmitBasic, onSubmitFiles, onRemoveMe
                 <label className={labelClasses}>{t("tours.extraDiscount")}</label>
                 <input type="number" {...register("extraDiscountPerUser")} className={inputClasses} />
               </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className={labelClasses}>{t("tours.tourType")}</label>
+                <select {...register("type")} className={twMerge(inputClasses, "appearance-none")}>
+                  <option value="group">Group Tour</option>
+                  <option value="private">Private Tour</option>
+                </select>
+                {errors.type && <p className={errorClasses}>{errors.type.message as string}</p>}
+              </div>
+
+              {tourType === "private" && (
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className={labelClasses}>{t("tours.minPersons")}</label>
+                    <input type="number" {...register("minPersons")} className={inputClasses} placeholder="1" />
+                    {errors.minPersons && <p className={errorClasses}>{errors.minPersons.message as string}</p>}
+                  </div>
+                  <div>
+                    <label className={labelClasses}>{t("tours.maxPersons")}</label>
+                    <input type="number" {...register("maxPersons")} className={inputClasses} placeholder="10" />
+                    {errors.maxPersons && <p className={errorClasses}>{errors.maxPersons.message as string}</p>}
+                  </div>
+                </div>
+              )}
             </div>
 
             <div className="flex items-center gap-3 p-4 rounded-2xl border border-border bg-muted/20">
@@ -280,42 +349,108 @@ export function TourForm({ initialData, onSubmitBasic, onSubmitFiles, onRemoveMe
           </div>
         </Tabs.Content>
 
+        <Tabs.Content value="content" className="space-y-8 animate-in fade-in slide-in-from-bottom-2 duration-300">
+          <div className="space-y-6">
+            <div className="grid gap-6 md:grid-cols-2">
+              <div className="space-y-3">
+                <label className={labelClasses}>{t("tours.descriptionEn")}</label>
+                <Controller
+                  name="descriptionEn"
+                  control={control}
+                  render={({ field }) => (
+                    <RichTextEditor
+                      value={field.value || ""}
+                      onChange={field.onChange}
+                      placeholder="Describe the pilgrimage journey, highlights, and history..."
+                    />
+                  )}
+                />
+              </div>
+              <div className="space-y-3">
+                <label className={labelClasses}>{t("tours.descriptionHi")}</label>
+                <Controller
+                  name="descriptionHi"
+                  control={control}
+                  render={({ field }) => (
+                    <RichTextEditor
+                      value={field.value || ""}
+                      onChange={field.onChange}
+                      placeholder="तीर्थयात्रा, मुख्य आकर्षण और इतिहास का वर्णन करें..."
+                    />
+                  )}
+                />
+              </div>
+            </div>
+
+            <div className="grid gap-6 md:grid-cols-2 pt-6 border-t border-border/40">
+              <div className="space-y-3">
+                <label className={labelClasses}>{t("tours.cancellationPolicyEn")}</label>
+                <Controller
+                  name="cancellationPolicyEn"
+                  control={control}
+                  render={({ field }) => (
+                    <RichTextEditor
+                      value={field.value || ""}
+                      onChange={field.onChange}
+                      placeholder="Terms for refunds, cancellations, and rescheduling..."
+                    />
+                  )}
+                />
+              </div>
+              <div className="space-y-3">
+                <label className={labelClasses}>{t("tours.cancellationPolicyHi")}</label>
+                <Controller
+                  name="cancellationPolicyHi"
+                  control={control}
+                  render={({ field }) => (
+                    <RichTextEditor
+                      value={field.value || ""}
+                      onChange={field.onChange}
+                      placeholder="रिफंड, रद्दीकरण और पुनर्निर्धारण की शर्तें..."
+                    />
+                  )}
+                />
+              </div>
+            </div>
+          </div>
+        </Tabs.Content>
+
         <Tabs.Content value="features" className="space-y-8 animate-in fade-in slide-in-from-bottom-2 duration-300">
           <div className="grid gap-6 md:grid-cols-2">
             <div>
               <label className={labelClasses}>{t("tours.expertGuidance")} (EN)</label>
-              <textarea {...register("expertGuidanceEn")} className={twMerge(inputClasses, "min-h-[80px]")} />
+              <textarea {...register("expertGuidanceEn")} className={twMerge(inputClasses, "min-h-[80px]")} placeholder="Deep historical and mythological insights provided by expert guides..." />
             </div>
             <div>
               <label className={labelClasses}>{t("tours.expertGuidance")} (HI)</label>
-              <textarea {...register("expertGuidanceHi")} className={twMerge(inputClasses, "min-h-[80px]")} />
+              <textarea {...register("expertGuidanceHi")} className={twMerge(inputClasses, "min-h-[80px]")} placeholder="विशेषज्ञों द्वारा विस्तृत ऐतिहासिक और पौराणिक जानकारी..." />
             </div>
 
             <div>
               <label className={labelClasses}>{t("tours.spiritualImmersion")} (EN)</label>
-              <textarea {...register("spiritualImmersionEn")} className={twMerge(inputClasses, "min-h-[80px]")} />
+              <textarea {...register("spiritualImmersionEn")} className={twMerge(inputClasses, "min-h-[80px]")} placeholder="Experience sacred kirtans and deep meditation sessions..." />
             </div>
             <div>
               <label className={labelClasses}>{t("tours.spiritualImmersion")} (HI)</label>
-              <textarea {...register("spiritualImmersionHi")} className={twMerge(inputClasses, "min-h-[80px]")} />
+              <textarea {...register("spiritualImmersionHi")} className={twMerge(inputClasses, "min-h-[80px]")} placeholder="पवित्र कीर्तन और गहन ध्यान सत्रों का अनुभव..." />
             </div>
 
             <div>
               <label className={labelClasses}>{t("tours.hassleFreePlanning")} (EN)</label>
-              <textarea {...register("hassleFreePlanningEn")} className={twMerge(inputClasses, "min-h-[80px]")} />
+              <textarea {...register("hassleFreePlanningEn")} className={twMerge(inputClasses, "min-h-[80px]")} placeholder="Pre-booked transportation and VIP darshan for a smooth experience..." />
             </div>
             <div>
               <label className={labelClasses}>{t("tours.hassleFreePlanning")} (HI)</label>
-              <textarea {...register("hassleFreePlanningHi")} className={twMerge(inputClasses, "min-h-[80px]")} />
+              <textarea {...register("hassleFreePlanningHi")} className={twMerge(inputClasses, "min-h-[80px]")} placeholder="सुगम अनुभव के लिए पूर्व-आरक्षित परिवहन और वीआईपी दर्शन..." />
             </div>
 
             <div>
               <label className={labelClasses}>{t("tours.localInsights")} (EN)</label>
-              <textarea {...register("localInsightsEn")} className={twMerge(inputClasses, "min-h-[80px]")} />
+              <textarea {...register("localInsightsEn")} className={twMerge(inputClasses, "min-h-[80px]")} placeholder="Visit hidden temples and sample local braj cuisine..." />
             </div>
             <div>
               <label className={labelClasses}>{t("tours.localInsights")} (HI)</label>
-              <textarea {...register("localInsightsHi")} className={twMerge(inputClasses, "min-h-[80px]")} />
+              <textarea {...register("localInsightsHi")} className={twMerge(inputClasses, "min-h-[80px]")} placeholder="छिपे हुए मंदिरों के दर्शन और स्थानीय ब्रज व्यंजनों का स्वाद..." />
             </div>
           </div>
         </Tabs.Content>
@@ -324,7 +459,7 @@ export function TourForm({ initialData, onSubmitBasic, onSubmitFiles, onRemoveMe
           <div className="grid gap-6 md:grid-cols-2">
             <div>
               <label className={labelClasses}>{t("tours.totalWalkMinutes")}</label>
-              <input type="number" {...register("totalWalkMinutes")} className={inputClasses} />
+              <input type="number" {...register("totalWalkMinutes")} className={inputClasses} placeholder="45" />
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div>
@@ -351,11 +486,11 @@ export function TourForm({ initialData, onSubmitBasic, onSubmitFiles, onRemoveMe
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className={labelClasses}>{t("tours.recommendation")} (EN)</label>
-                <input {...register("recommendationEn")} className={inputClasses} />
+                <input {...register("recommendationEn")} className={inputClasses} placeholder="Carry water and wear comfortable shoes..." />
               </div>
               <div>
                 <label className={labelClasses}>{t("tours.recommendation")} (HI)</label>
-                <input {...register("recommendationHi")} className={inputClasses} />
+                <input {...register("recommendationHi")} className={inputClasses} placeholder="पानी ले जाएँ और आरामदायक जूते पहनें..." />
               </div>
             </div>
           </div>
@@ -521,7 +656,7 @@ export function TourForm({ initialData, onSubmitBasic, onSubmitFiles, onRemoveMe
           className="inline-flex h-12 w-full sm:w-auto items-center justify-center rounded-2xl bg-primary px-10 text-sm font-black text-primary-foreground shadow-xl shadow-primary/20 transition-all hover:opacity-90 active:scale-95 disabled:opacity-50"
         >
           {(isLoading || isUploading) ? <IconLoader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-          {activeTab === "media" ? "Upload & Finish" : "Next (Save Details)"}
+          {activeTab === "media" ? "Upload & Finish" : "Save & Continue"}
         </button>
       </div>
     </form>
