@@ -1,12 +1,30 @@
-import { get, post, put, postFormData, deleteRequest } from "../api";
+import { get, postFormData, putFormData, deleteRequest } from "../api";
+import {
+  type DarshanBannerFormData,
+  toDarshanBannerMultipartBody,
+} from "../validations/darshanBanner";
+
+/**
+ * Backend `parseDarshanBannerFile` accepts any of `image`, `banner`, or `file` (priority: image → banner → file).
+ * We send `image` to match the primary field name in the API docs.
+ */
+const DARSHAN_BANNER_FILE_FIELD = "image" as const;
+
+function appendDarshanBannerFile(formData: FormData, file: File): void {
+  formData.append(DARSHAN_BANNER_FILE_FIELD, file);
+}
+
+export interface DarshanBannerTour {
+  id: number;
+  titleEn: string;
+  titleHi: string;
+}
 
 export interface DarshanBanner {
   id: number;
-  titleEn?: string | null;
-  titleHi?: string | null;
-  subtitleEn?: string | null;
-  subtitleHi?: string | null;
-  templeId?: number | null;
+  linkType?: "tour" | "whatsapp";
+  tourId?: number | null;
+  whatsappNumber?: string | null;
   mediaId: number;
   isActive: boolean;
   createdAt: string;
@@ -15,11 +33,7 @@ export interface DarshanBanner {
     id: number;
     url: string;
   };
-  temple?: {
-    id: number;
-    nameEn: string;
-    nameHi: string;
-  };
+  tour?: DarshanBannerTour | null;
 }
 
 export interface PaginatedBannerResponse {
@@ -32,6 +46,27 @@ export interface PaginatedBannerResponse {
   };
 }
 
+function appendBannerToFormData(
+  formData: FormData,
+  data: Record<string, unknown>,
+  options: { partial: boolean }
+): void {
+  for (const [key, value] of Object.entries(data)) {
+    if (value === undefined) continue;
+    if (options.partial) {
+      if (value === null) continue;
+      if (typeof value === "string" && value === "") continue;
+    } else {
+      if (value === null) continue;
+    }
+    if (typeof value === "boolean") {
+      formData.append(key, value ? "true" : "false");
+    } else {
+      formData.append(key, String(value));
+    }
+  }
+}
+
 export const darshanBannerService = {
   listBanners: async (page: number = 1, limit: number = 10) => {
     return await get<PaginatedBannerResponse>(`/darshan-banners?page=${page}&limit=${limit}`);
@@ -41,30 +76,34 @@ export const darshanBannerService = {
     return await get<DarshanBanner>(`/darshan-banners/${id}`);
   },
 
-  createBanner: async (data: any, file?: File) => {
+  /** POST `/darshan-banners` — multipart body validated with `darshanBannerValidationSchema`. */
+  createBanner: async (data: DarshanBannerFormData, file?: File) => {
     const formData = new FormData();
-    Object.keys(data).forEach(key => {
-      if (data[key] !== undefined && data[key] !== null) {
-        formData.append(key, String(data[key]));
-      }
-    });
+    const body = toDarshanBannerMultipartBody(data);
+    appendBannerToFormData(formData, body as Record<string, unknown>, { partial: false });
     if (file) {
-      formData.append("image", file);
+      appendDarshanBannerFile(formData, file);
     }
     return await postFormData<DarshanBanner>("/darshan-banners", formData);
   },
 
-  updateBanner: async (id: number, data: any, file?: File) => {
-    const formData = new FormData();
-    Object.keys(data).forEach(key => {
-      if (data[key] !== undefined && data[key] !== null) {
-        formData.append(key, String(data[key]));
-      }
-    });
-    if (file) {
-      formData.append("image", file);
+  /**
+   * PUT `/darshan-banners/:id` — multipart; `updateDarshanBannerValidationSchema` allows image-only (no body fields).
+   * When `data` is omitted, only the file is sent (partial append rules still apply when data is present).
+   */
+  updateBanner: async (id: number, data?: DarshanBannerFormData, file?: File) => {
+    if (data === undefined && !file) {
+      throw new Error("Nothing to update: provide banner fields and/or an image file.");
     }
-    return await postFormData<DarshanBanner>(`/darshan-banners/${id}?_method=PUT`, formData);
+    const formData = new FormData();
+    if (data !== undefined) {
+      const body = toDarshanBannerMultipartBody(data);
+      appendBannerToFormData(formData, body as Record<string, unknown>, { partial: true });
+    }
+    if (file) {
+      appendDarshanBannerFile(formData, file);
+    }
+    return await putFormData<DarshanBanner>(`/darshan-banners/${id}`, formData);
   },
 
   deleteBanner: async (id: number) => {

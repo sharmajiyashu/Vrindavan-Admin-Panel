@@ -107,6 +107,7 @@ export default function DarshanBannersPage() {
                   </Dialog.Close>
                 </div>
                 <DarshanBannerForm
+                  key={editingBanner?.id ?? "new"}
                   initialData={editingBanner}
                   isLoading={isSaving}
                   onSubmit={async (data, file) => {
@@ -187,16 +188,20 @@ export default function DarshanBannersPage() {
                     )}
                   </div>
                   <div className="p-6">
-                    <h3 className="text-sm font-black text-foreground truncate">{banner.titleEn || banner.titleHi || "Untitled Banner"}</h3>
+                    <h3 className="text-sm font-black text-foreground truncate">
+                      {banner.linkType === "whatsapp"
+                        ? t("darshanBanners.linkTypeWhatsapp")
+                        : t("darshanBanners.linkTypeTour")}
+                    </h3>
                     <p className="text-[10px] font-bold text-muted-foreground/60 mt-0.5 truncate uppercase tracking-widest">
-                      {banner.subtitleEn || banner.subtitleHi || "No subtitle"}
+                      {banner.linkType === "whatsapp"
+                        ? banner.whatsappNumber || "—"
+                        : banner.tour
+                          ? `${banner.tour.titleEn} (${banner.tour.titleHi})`
+                          : banner.tourId != null
+                            ? `${t("darshanBanners.tour")} #${banner.tourId}`
+                            : "—"}
                     </p>
-                    {banner.temple && (
-                      <div className="mt-4 flex items-center gap-2 px-3 py-1.5 rounded-xl bg-primary/5 text-primary">
-                        <IconPhotoStar size={14} className="opacity-60" />
-                        <span className="text-[10px] font-black uppercase tracking-widest truncate">{banner.temple.nameEn}</span>
-                      </div>
-                    )}
                   </div>
                 </div>
               ))}

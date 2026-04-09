@@ -1,21 +1,18 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { IconLoader2, IconPhoto } from "@tabler/icons-react";
 import {
-  IconPlus,
-  IconUpload,
-  IconLoader2,
-  IconX,
-  IconMapPin,
-  IconPhoto
-} from "@tabler/icons-react";
-import { darshanBannerValidationSchema, DarshanBannerFormData } from "@/lib/validations/darshanBanner";
+  darshanBannerValidationSchema,
+  updateDarshanBannerValidationSchema,
+  DarshanBannerFormData,
+} from "@/lib/validations/darshanBanner";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { twMerge } from "tailwind-merge";
 import { DarshanBanner } from "@/lib/services/darshanBannerService";
-import { templeService, Temple } from "@/lib/services/templeService";
+import { tourService, Tour } from "@/lib/services/tourService";
 
 interface DarshanBannerFormProps {
   initialData?: DarshanBanner | null;
@@ -27,45 +24,52 @@ export function DarshanBannerForm({ initialData, onSubmit, isLoading }: DarshanB
   const { t } = useLanguage();
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(initialData?.media?.url || null);
-  const [temples, setTemples] = useState<Temple[]>([]);
-  const [isLoadingTemples, setIsLoadingTemples] = useState(false);
+  const [tours, setTours] = useState<Tour[]>([]);
+  const [isLoadingTours, setIsLoadingTours] = useState(false);
+
+  const validationSchema = useMemo(
+    () => (initialData ? updateDarshanBannerValidationSchema : darshanBannerValidationSchema),
+    [initialData]
+  );
 
   const {
     register,
     handleSubmit,
     control,
+    watch,
     formState: { errors },
   } = useForm<DarshanBannerFormData>({
-    resolver: zodResolver(darshanBannerValidationSchema) as any,
-    defaultValues: initialData ? {
-      titleEn: initialData.titleEn || "",
-      titleHi: initialData.titleHi || "",
-      subtitleEn: initialData.subtitleEn || "",
-      subtitleHi: initialData.subtitleHi || "",
-      templeId: initialData.templeId,
-      isActive: initialData.isActive,
-    } : {
-      titleEn: "",
-      titleHi: "",
-      subtitleEn: "",
-      subtitleHi: "",
-      isActive: true,
-    },
+    resolver: zodResolver(validationSchema) as any,
+    defaultValues: initialData
+      ? {
+          isActive: initialData.isActive,
+          linkType: initialData.linkType === "whatsapp" ? "whatsapp" : "tour",
+          tourId: initialData.tourId ?? null,
+          whatsappNumber: initialData.whatsappNumber ?? "",
+        }
+      : {
+          isActive: true,
+          linkType: "tour",
+          tourId: null,
+          whatsappNumber: "",
+        },
   });
 
+  const linkType = watch("linkType");
+
   useEffect(() => {
-    const fetchTemples = async () => {
-      setIsLoadingTemples(true);
+    const fetchTours = async () => {
+      setIsLoadingTours(true);
       try {
-        const response = await templeService.listTemples(1, 100);
-        setTemples(response.temples);
+        const response = await tourService.listTours();
+        setTours(response.tours ?? []);
       } catch (err) {
-        console.error("Failed to fetch temples:", err);
+        console.error("Failed to fetch tours:", err);
       } finally {
-        setIsLoadingTemples(false);
+        setIsLoadingTours(false);
       }
     };
-    fetchTemples();
+    fetchTours();
   }, []);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -88,43 +92,78 @@ export function DarshanBannerForm({ initialData, onSubmit, isLoading }: DarshanB
     <form onSubmit={handleSubmit(handleFormSubmit)} className="space-y-6">
       <div className="grid gap-6 md:grid-cols-2">
         <div className="space-y-4">
-          <div>
-            <label className={labelClasses}>{t("darshanBanners.titleEn")}</label>
-            <input {...register("titleEn")} className={inputClasses} placeholder="Morning Special" />
-          </div>
-          <div>
-            <label className={labelClasses}>{t("darshanBanners.titleHi")}</label>
-            <input {...register("titleHi")} className={inputClasses} placeholder="सुबह का विशेष" />
-          </div>
-          <div>
-            <label className={labelClasses}>{t("darshanBanners.subtitleEn")}</label>
-            <input {...register("subtitleEn")} className={inputClasses} placeholder="Live Darshan" />
-          </div>
-          <div>
-            <label className={labelClasses}>{t("darshanBanners.subtitleHi")}</label>
-            <input {...register("subtitleHi")} className={inputClasses} placeholder="लाइव दर्शन" />
-          </div>
-          
-          <div>
-            <label className={labelClasses}>{t("darshanBanners.temple")}</label>
-            <select 
-              {...register("templeId")} 
-              className={twMerge(inputClasses, "appearance-none bg-no-repeat bg-right")}
-              style={{ backgroundImage: 'url("data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' fill=\'none\' viewBox=\'0 0 24 24\' stroke=\'currentColor\'%3E%3Cpath stroke-linecap=\'round\' stroke-linejoin=\'round\' stroke-width=\'2\' d=\'M19 9l-7 7-7-7\'%3E%3C/path%3E%3C/svg%3E")', backgroundSize: '1.25rem', backgroundPosition: 'calc(100% - 1rem)' }}
-            >
-              <option value="">Select a temple (Optional)</option>
-              {temples.map(temple => (
-                <option key={temple.id} value={temple.id}>{temple.nameEn} ({temple.nameHi})</option>
-              ))}
-            </select>
-          </div>
+          <fieldset className="space-y-2 rounded-2xl border border-border bg-muted/10 p-4">
+            <legend className={twMerge(labelClasses, "px-1")}>{t("darshanBanners.linkType")}</legend>
+            <div className="flex flex-wrap gap-4">
+              <label className="flex items-center gap-2 text-sm font-bold cursor-pointer">
+                <input type="radio" value="tour" {...register("linkType")} className="h-4 w-4 text-primary" />
+                {t("darshanBanners.linkTypeTour")}
+              </label>
+              <label className="flex items-center gap-2 text-sm font-bold cursor-pointer">
+                <input type="radio" value="whatsapp" {...register("linkType")} className="h-4 w-4 text-primary" />
+                {t("darshanBanners.linkTypeWhatsapp")}
+              </label>
+            </div>
+          </fieldset>
+
+          {linkType === "tour" ? (
+            <div>
+              <label className={labelClasses}>{t("darshanBanners.tour")}</label>
+              <select
+                {...register("tourId", {
+                  setValueAs: (v) => {
+                    if (v === "" || v === null || v === undefined) return null;
+                    const n = Number(v);
+                    return Number.isNaN(n) ? null : n;
+                  },
+                })}
+                disabled={isLoadingTours}
+                className={twMerge(inputClasses, "appearance-none bg-no-repeat bg-right")}
+                style={{
+                  backgroundImage:
+                    'url("data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' fill=\'none\' viewBox=\'0 0 24 24\' stroke=\'currentColor\'%3E%3Cpath stroke-linecap=\'round\' stroke-linejoin=\'round\' stroke-width=\'2\' d=\'M19 9l-7 7-7-7\'%3E%3C/path%3E%3C/svg%3E")',
+                  backgroundSize: "1.25rem",
+                  backgroundPosition: "calc(100% - 1rem)",
+                }}
+              >
+                <option value="">{t("darshanBanners.selectTour")}</option>
+                {tours.map((tour) => (
+                  <option key={tour.id} value={tour.id}>
+                    {tour.titleEn} ({tour.titleHi})
+                  </option>
+                ))}
+              </select>
+              {errors.tourId && <p className={errorClasses}>{errors.tourId.message}</p>}
+            </div>
+          ) : (
+            <div>
+              <label className={labelClasses}>{t("darshanBanners.whatsappNumber")}</label>
+              <input
+                {...register("whatsappNumber")}
+                className={inputClasses}
+                placeholder="9198xxxxxxx"
+                inputMode="tel"
+                autoComplete="tel"
+              />
+              {errors.whatsappNumber && <p className={errorClasses}>{errors.whatsappNumber.message}</p>}
+            </div>
+          )}
 
           <div className="flex items-center gap-3 p-4 rounded-2xl border border-border bg-muted/20">
-            <input
-              type="checkbox"
-              id="isActive"
-              {...register("isActive")}
-              className="h-5 w-5 rounded-lg border-border text-primary focus:ring-primary/20"
+            <Controller
+              name="isActive"
+              control={control}
+              render={({ field }) => (
+                <input
+                  type="checkbox"
+                  id="isActive"
+                  checked={Boolean(field.value)}
+                  onChange={(e) => field.onChange(e.target.checked)}
+                  onBlur={field.onBlur}
+                  ref={field.ref}
+                  className="h-5 w-5 rounded-lg border-border text-primary focus:ring-primary/20"
+                />
+              )}
             />
             <label htmlFor="isActive" className="text-sm font-bold text-foreground cursor-pointer select-none">
               {t("darshanBanners.active")}
@@ -137,25 +176,25 @@ export function DarshanBannerForm({ initialData, onSubmit, isLoading }: DarshanB
           <div className="relative group aspect-video rounded-3xl overflow-hidden border-2 border-dashed border-border flex items-center justify-center bg-muted/10 transition-all hover:bg-muted/20 hover:border-primary/50">
             {imagePreview ? (
               <>
-                <img src={imagePreview} className="h-full w-full object-cover" />
+                <img src={imagePreview} alt="" className="h-full w-full object-cover" />
                 <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
                   <span className="text-xs font-black text-white px-4 py-2 bg-white/20 backdrop-blur rounded-xl border border-white/30">
-                    Change Image
+                    {t("darshanBanners.changeImage")}
                   </span>
                 </div>
               </>
             ) : (
               <div className="flex flex-col items-center gap-2 text-muted-foreground">
                 <IconPhoto size={48} stroke={1} />
-                <span className="text-[10px] font-bold uppercase tracking-widest">Upload Banner (Required)</span>
+                <span className="text-[10px] font-bold uppercase tracking-widest">{t("darshanBanners.uploadRequired")}</span>
               </div>
             )}
-            <input 
-              type="file" 
-              accept="image/*" 
-              className="absolute inset-0 opacity-0 cursor-pointer" 
+            <input
+              type="file"
+              accept="image/*"
+              className="absolute inset-0 opacity-0 cursor-pointer"
               onChange={handleFileChange}
-              required={!initialData} 
+              required={!initialData}
             />
           </div>
         </div>
