@@ -56,6 +56,8 @@ export function TempleForm({ initialData, onSubmitBasic, onSubmitFiles, onRemove
     defaultValues: initialData ? {
       nameEn: initialData.nameEn,
       nameHi: initialData.nameHi,
+      shortTitleEn: initialData.shortTitleEn ?? "",
+      shortTitleHi: initialData.shortTitleHi ?? "",
       addressEn: initialData.addressEn,
       addressHi: initialData.addressHi,
       cityEn: initialData.cityEn,
@@ -64,18 +66,26 @@ export function TempleForm({ initialData, onSubmitBasic, onSubmitFiles, onRemove
       stateHi: initialData.stateHi,
       lat: initialData.lat,
       long: initialData.long,
-      descriptionEn: initialData.descriptionEn,
-      descriptionHi: initialData.descriptionHi,
       establishedEn: initialData.establishedEn || "",
       establishedHi: initialData.establishedHi || "",
       morningTimings: initialData.morningTimings || [],
       eveningTimings: initialData.eveningTimings || [],
       imageIds: initialData.imageIds || [],
+      thumbnailId: initialData.thumbnailId ?? null,
+      audioGuideEnId: initialData.audioGuideEnId ?? null,
+      audioGuideHiId: initialData.audioGuideHiId ?? null,
+      documentaryVideoId: initialData.documentaryVideoId ?? null,
       audioGuideEn: initialData.audioGuideEn?.url || "",
       audioGuideHi: initialData.audioGuideHi?.url || "",
       documentaryVideoUrl: initialData.documentaryVideoUrl || initialData.documentaryVideo?.url || "",
+      documentaryTitleEn: initialData.documentaryTitleEn || "",
+      documentaryTitleHi: initialData.documentaryTitleHi || "",
+      documentarySubtitleEn: initialData.documentarySubtitleEn || "",
+      documentarySubtitleHi: initialData.documentarySubtitleHi || "",
       bestTimeEn: initialData.bestTimeEn || "",
       bestTimeHi: initialData.bestTimeHi || "",
+      bestTimeDetailEn: initialData.bestTimeDetailEn || "",
+      bestTimeDetailHi: initialData.bestTimeDetailHi || "",
       historyEn: initialData.historyEn || "",
       historyHi: initialData.historyHi || "",
       listenToHistoryUrlEn: initialData.listenToHistoryUrlEn || "",
@@ -87,6 +97,20 @@ export function TempleForm({ initialData, onSubmitBasic, onSubmitFiles, onRemove
       eveningTimings: [],
       isActive: true,
       sortOrder: 0,
+      shortTitleEn: "",
+      shortTitleHi: "",
+      thumbnailId: null,
+      audioGuideEnId: null,
+      audioGuideHiId: null,
+      documentaryVideoId: null,
+      documentaryTitleEn: "",
+      documentaryTitleHi: "",
+      documentarySubtitleEn: "",
+      documentarySubtitleHi: "",
+      bestTimeEn: "",
+      bestTimeHi: "",
+      bestTimeDetailEn: "",
+      bestTimeDetailHi: "",
     },
   });
 
@@ -209,7 +233,7 @@ export function TempleForm({ initialData, onSubmitBasic, onSubmitFiles, onRemove
             )}
           >
             {t("temples.basicDetails")}
-            {(errors.nameEn || errors.nameHi || errors.addressEn || errors.addressHi || errors.cityEn || errors.cityHi || errors.stateEn || errors.stateHi || errors.lat || errors.long || errors.descriptionEn || errors.descriptionHi) && (
+            {(errors.nameEn || errors.nameHi || errors.shortTitleEn || errors.shortTitleHi || errors.addressEn || errors.addressHi || errors.cityEn || errors.cityHi || errors.stateEn || errors.stateHi || errors.lat || errors.long || errors.bestTimeEn || errors.bestTimeHi || errors.bestTimeDetailEn || errors.bestTimeDetailHi) && (
               <span className="absolute top-2 right-2 flex h-2 w-2 rounded-full bg-destructive" />
             )}
           </Tabs.Trigger>
@@ -240,6 +264,17 @@ export function TempleForm({ initialData, onSubmitBasic, onSubmitFiles, onRemove
               <label className={labelClasses}>{t("temples.nameHi")}</label>
               <input {...register("nameHi")} className={inputClasses} placeholder="वृंदावन मंदिर" />
               {errors.nameHi && <p className={errorClasses}>{errors.nameHi.message}</p>}
+            </div>
+
+            <div>
+              <label className={labelClasses}>{t("temples.shortTitleEn")}</label>
+              <input {...register("shortTitleEn")} className={inputClasses} placeholder="Prem Mandir" />
+              {errors.shortTitleEn && <p className={errorClasses}>{errors.shortTitleEn.message}</p>}
+            </div>
+            <div>
+              <label className={labelClasses}>{t("temples.shortTitleHi")}</label>
+              <input {...register("shortTitleHi")} className={inputClasses} placeholder="प्रेम मंदिर" />
+              {errors.shortTitleHi && <p className={errorClasses}>{errors.shortTitleHi.message}</p>}
             </div>
 
             <div>
@@ -309,25 +344,24 @@ export function TempleForm({ initialData, onSubmitBasic, onSubmitFiles, onRemove
 
           <div className="grid gap-6 md:grid-cols-2">
             <div>
-              <label className={labelClasses}>Best Time to Visit (EN)</label>
+              <label className={labelClasses}>{t("temples.bestTimeEn")}</label>
               <input {...register("bestTimeEn")} className={inputClasses} placeholder="October to March" />
+              {errors.bestTimeEn && <p className={errorClasses}>{errors.bestTimeEn.message}</p>}
             </div>
             <div>
-              <label className={labelClasses}>Best Time to Visit (HI)</label>
+              <label className={labelClasses}>{t("temples.bestTimeHi")}</label>
               <input {...register("bestTimeHi")} className={inputClasses} placeholder="अक्टूबर से मार्च" />
-            </div>
-          </div>
-
-          <div className="grid gap-6 md:grid-cols-2">
-            <div>
-              <label className={labelClasses}>{t("temples.descriptionEn")}</label>
-              <textarea {...register("descriptionEn")} className={twMerge(inputClasses, "min-h-[120px]")} />
-              {errors.descriptionEn && <p className={errorClasses}>{errors.descriptionEn.message}</p>}
+              {errors.bestTimeHi && <p className={errorClasses}>{errors.bestTimeHi.message}</p>}
             </div>
             <div>
-              <label className={labelClasses}>{t("temples.descriptionHi")}</label>
-              <textarea {...register("descriptionHi")} className={twMerge(inputClasses, "min-h-[120px]")} />
-              {errors.descriptionHi && <p className={errorClasses}>{errors.descriptionHi.message}</p>}
+              <label className={labelClasses}>{t("temples.bestTimeDetailEn")}</label>
+              <textarea {...register("bestTimeDetailEn")} className={twMerge(inputClasses, "min-h-[100px]")} placeholder="Cool mornings, festive evenings…" />
+              {errors.bestTimeDetailEn && <p className={errorClasses}>{errors.bestTimeDetailEn.message}</p>}
+            </div>
+            <div>
+              <label className={labelClasses}>{t("temples.bestTimeDetailHi")}</label>
+              <textarea {...register("bestTimeDetailHi")} className={twMerge(inputClasses, "min-h-[100px]")} placeholder="ठंडी सुबहें, उत्सवपूर्ण शामें…" />
+              {errors.bestTimeDetailHi && <p className={errorClasses}>{errors.bestTimeDetailHi.message}</p>}
             </div>
           </div>
 
@@ -613,6 +647,24 @@ export function TempleForm({ initialData, onSubmitBasic, onSubmitFiles, onRemove
                   )}
                 </div>
               )}
+              <div className="grid gap-3 sm:grid-cols-2 pt-3 mt-1 border-t border-border/60">
+                <div>
+                  <label className={labelClasses}>{t("temples.documentaryTitleEn")}</label>
+                  <input {...register("documentaryTitleEn")} className={inputClasses} placeholder="Documentary title" />
+                </div>
+                <div>
+                  <label className={labelClasses}>{t("temples.documentaryTitleHi")}</label>
+                  <input {...register("documentaryTitleHi")} className={inputClasses} placeholder="डॉक्यूमेंट्री शीर्षक" />
+                </div>
+                <div>
+                  <label className={labelClasses}>{t("temples.documentarySubtitleEn")}</label>
+                  <input {...register("documentarySubtitleEn")} className={inputClasses} placeholder="Subtitle" />
+                </div>
+                <div>
+                  <label className={labelClasses}>{t("temples.documentarySubtitleHi")}</label>
+                  <input {...register("documentarySubtitleHi")} className={inputClasses} placeholder="उपशीर्षक" />
+                </div>
+              </div>
             </div>
 
             {/* Audio EN Section */}

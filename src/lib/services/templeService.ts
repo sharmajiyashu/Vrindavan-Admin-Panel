@@ -11,6 +11,8 @@ export interface Temple {
   id: number;
   nameEn: string;
   nameHi: string;
+  shortTitleEn?: string | null;
+  shortTitleHi?: string | null;
   addressEn: string;
   addressHi: string;
   cityEn: string;
@@ -19,8 +21,6 @@ export interface Temple {
   stateHi: string;
   lat: number;
   long: number;
-  descriptionEn: string;
-  descriptionHi: string;
   establishedEn?: string | null;
   establishedHi?: string | null;
   morningTimings: any[];
@@ -28,6 +28,10 @@ export interface Temple {
   thumbnailId?: number | null;
   documentaryVideoId?: number | null;
   documentaryVideoUrl?: string | null;
+  documentaryTitleEn?: string | null;
+  documentaryTitleHi?: string | null;
+  documentarySubtitleEn?: string | null;
+  documentarySubtitleHi?: string | null;
   audioGuideEnId?: number | null;
   audioGuideHiId?: number | null;
   imageIds: number[];
@@ -35,6 +39,8 @@ export interface Temple {
   sortOrder: number;
   bestTimeEn?: string | null;
   bestTimeHi?: string | null;
+  bestTimeDetailEn?: string | null;
+  bestTimeDetailHi?: string | null;
   historyEn?: string | null;
   historyHi?: string | null;
   listenToHistoryUrlEn?: string | null;
