@@ -33,23 +33,23 @@ export function FooterPromoForm({ initialData, onSubmit, isLoading }: FooterProm
     resolver: zodResolver(footerPromoValidationSchema) as any,
     defaultValues: initialData
       ? {
-          linkType: (initialData as any).linkType === "whatsapp" ? "whatsapp" : "tour",
-          tourId: initialData.tourId ?? null,
-          whatsappUrl: (initialData as any).whatsappUrl ?? "",
-          buttonNameEn: (initialData as any).buttonNameEn ?? "",
-          buttonNameHi: (initialData as any).buttonNameHi ?? "",
-          showTimes: initialData.showTimes ?? 1,
-          isActive: initialData.isActive,
-        }
+        linkType: (initialData as any).linkType === "whatsapp" ? "whatsapp" : "tour",
+        tourId: initialData.tourId ?? null,
+        whatsappUrl: (initialData as any).whatsappUrl ?? "",
+        buttonNameEn: (initialData as any).buttonNameEn ?? "",
+        buttonNameHi: (initialData as any).buttonNameHi ?? "",
+        showTimes: initialData.showTimes ?? 1,
+        isActive: initialData.isActive,
+      }
       : {
-          linkType: "tour",
-          tourId: null,
-          whatsappUrl: "",
-          buttonNameEn: "",
-          buttonNameHi: "",
-          showTimes: 1,
-          isActive: true,
-        },
+        linkType: "tour",
+        tourId: null,
+        whatsappUrl: "",
+        buttonNameEn: "",
+        buttonNameHi: "",
+        showTimes: 1,
+        isActive: true,
+      },
   });
 
   const linkType = watch("linkType");

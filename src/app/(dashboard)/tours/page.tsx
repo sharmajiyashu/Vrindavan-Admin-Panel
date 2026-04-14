@@ -315,7 +315,7 @@ export default function ToursPage() {
                       className="h-12 rounded-xl bg-destructive text-sm font-black text-white shadow-lg shadow-destructive/20 hover:opacity-90 transition-all active:scale-95 flex items-center justify-center gap-2"
                     >
                       {deleteMutation.isPending ? <IconLoader2 className="h-4 w-4 animate-spin" /> : <IconTrash className="h-4 w-4" />}
-                      Delete Tour
+                      {t("common.delete")}
                     </button>
                   </div>
                 </Dialog.Content>

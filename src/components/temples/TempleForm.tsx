@@ -340,6 +340,14 @@ export function TempleForm({ initialData, onSubmitBasic, onSubmitFiles, onRemove
               <input type="number" {...register("sortOrder")} className={inputClasses} placeholder="0" />
               <p className="text-[9px] text-muted-foreground mt-1 font-bold uppercase tracking-widest leading-tight">Higher numbers appear first in the main list.</p>
             </div>
+
+            <div className="flex items-center gap-3 pt-6">
+              <label className="flex items-center gap-3 cursor-pointer group">
+                <input type="checkbox" {...register("isActive")} className="sr-only peer" />
+                <div className="w-11 h-6 bg-muted rounded-full peer-checked:bg-emerald-500 after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:after:translate-x-full relative" />
+                <span className="text-xs font-black uppercase tracking-widest text-muted-foreground group-hover:text-foreground transition-colors">Temple Active</span>
+              </label>
+            </div>
           </div>
 
           <div className="grid gap-6 md:grid-cols-2">

@@ -246,9 +246,10 @@ export default function DarshanBannersPage() {
               <button
                 onClick={() => bannerToDelete && deleteMutation.mutate(bannerToDelete.id)}
                 disabled={deleteMutation.isPending}
-                className="h-12 rounded-2xl bg-destructive text-sm font-black text-white shadow-lg shadow-destructive/20 transition-all hover:opacity-90 active:scale-95"
+                className="h-12 rounded-2xl bg-destructive text-sm font-black text-white shadow-lg shadow-destructive/20 transition-all hover:opacity-90 active:scale-95 flex items-center justify-center gap-2"
               >
-                {deleteMutation.isPending ? <IconLoader2 className="h-4 w-4 animate-spin" /> : t("common.delete")}
+                {deleteMutation.isPending ? <IconLoader2 className="h-4 w-4 animate-spin" /> : <IconTrash className="h-4 w-4" />}
+                {t("common.delete")}
               </button>
             </div>
           </Dialog.Content>
