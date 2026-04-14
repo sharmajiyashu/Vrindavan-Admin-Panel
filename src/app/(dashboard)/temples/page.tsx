@@ -112,6 +112,18 @@ export default function TemplesPage() {
       toast.error(error.message || "Failed to delete temple");
     },
   });
+ 
+  const statusMutation = useMutation({
+    mutationFn: ({ id, isActive }: { id: number; isActive: boolean }) => 
+      templeService.updateTemple(id, { isActive }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["temples"] });
+      toast.success(t("temples.saveSuccess"));
+    },
+    onError: (error: any) => {
+      toast.error(error.message || "Failed to update status");
+    },
+  });
 
   const updateSortMutation = useMutation({
     mutationFn: async (updates: { id: number; sortOrder: number }[]) => {
@@ -355,15 +367,24 @@ export default function TemplesPage() {
                       </div>
                     </td>
                     <td className="px-4 py-3.5">
-                      <div className={twMerge(
-                        "inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[9px] font-black uppercase tracking-wider",
-                        temple.isActive
-                          ? "bg-emerald-50 text-emerald-600 ring-1 ring-inset ring-emerald-500/10"
-                          : "bg-red-50 text-red-600 ring-1 ring-inset ring-red-500/10"
-                      )}>
-                        <div className={twMerge("h-1 w-1 rounded-full", temple.isActive ? "bg-emerald-500" : "bg-red-500")} />
+                      <button
+                        type="button"
+                        onClick={() => statusMutation.mutate({ id: temple.id, isActive: !temple.isActive })}
+                        disabled={statusMutation.isPending && statusMutation.variables?.id === temple.id}
+                        className={twMerge(
+                          "inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[9px] font-black uppercase tracking-wider transition-all active:scale-95 disabled:opacity-50",
+                          temple.isActive
+                            ? "bg-emerald-50 text-emerald-600 ring-1 ring-inset ring-emerald-500/10 hover:bg-emerald-100"
+                            : "bg-red-50 text-red-600 ring-1 ring-inset ring-red-500/10 hover:bg-red-100"
+                        )}
+                      >
+                        {statusMutation.isPending && statusMutation.variables?.id === temple.id ? (
+                          <IconLoader2 className="h-2 w-2 animate-spin" />
+                        ) : (
+                          <div className={twMerge("h-1 w-1 rounded-full", temple.isActive ? "bg-emerald-500" : "bg-red-500")} />
+                        )}
                         {temple.isActive ? "Active" : "Inactive"}
-                      </div>
+                      </button>
                     </td>
                     <td className="px-5 py-3.5 text-right">
                       <div className="flex items-center justify-end gap-2">

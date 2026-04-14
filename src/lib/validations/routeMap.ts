@@ -6,6 +6,8 @@ const coerceBoolean = z.coerce.boolean();
 export const routeMapValidationSchema = z.object({
   nameEn: z.string().min(1, 'Name in English is required'),
   nameHi: z.string().min(1, 'Name in Hindi is required'),
+  subtitleEn: z.string().optional().nullable(),
+  subtitleHi: z.string().optional().nullable(),
 
   totalDistanceEn: z.string().optional().nullable(),
   totalDistanceHi: z.string().optional().nullable(),

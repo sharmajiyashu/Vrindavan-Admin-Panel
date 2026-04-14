@@ -45,13 +45,17 @@ export function DarshanBannerForm({ initialData, onSubmit, isLoading }: DarshanB
           isActive: initialData.isActive,
           linkType: initialData.linkType === "whatsapp" ? "whatsapp" : "tour",
           tourId: initialData.tourId ?? null,
-          whatsappNumber: initialData.whatsappNumber ?? "",
+          whatsappUrl: (initialData as any).whatsappUrl ?? "",
+          buttonNameEn: (initialData as any).buttonNameEn ?? "",
+          buttonNameHi: (initialData as any).buttonNameHi ?? "",
         }
       : {
           isActive: true,
           linkType: "tour",
           tourId: null,
-          whatsappNumber: "",
+          whatsappUrl: "",
+          buttonNameEn: "",
+          buttonNameHi: "",
         },
   });
 
@@ -137,17 +141,33 @@ export function DarshanBannerForm({ initialData, onSubmit, isLoading }: DarshanB
             </div>
           ) : (
             <div>
-              <label className={labelClasses}>{t("darshanBanners.whatsappNumber")}</label>
+              <label className={labelClasses}>{t("darshanBanners.whatsappUrl")}</label>
               <input
-                {...register("whatsappNumber")}
+                {...register("whatsappUrl" as any)}
                 className={inputClasses}
-                placeholder="9198xxxxxxx"
-                inputMode="tel"
-                autoComplete="tel"
+                placeholder="https://wa.me/9198xxxxxxx"
               />
-              {errors.whatsappNumber && <p className={errorClasses}>{errors.whatsappNumber.message}</p>}
+              {(errors as any).whatsappUrl && <p className={errorClasses}>{(errors as any).whatsappUrl.message}</p>}
             </div>
           )}
+
+          <div>
+            <label className={labelClasses}>{t("darshanBanners.buttonNameEn")}</label>
+            <input
+              {...register("buttonNameEn" as any)}
+              className={inputClasses}
+              placeholder="e.g. Book Now"
+            />
+          </div>
+
+          <div>
+            <label className={labelClasses}>{t("darshanBanners.buttonNameHi")}</label>
+            <input
+              {...register("buttonNameHi" as any)}
+              className={inputClasses}
+              placeholder="जैसे. अभी बुक करें"
+            />
+          </div>
 
           <div className="flex items-center gap-3 p-4 rounded-2xl border border-border bg-muted/20">
             <Controller

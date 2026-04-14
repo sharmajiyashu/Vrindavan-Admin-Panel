@@ -19,6 +19,8 @@ export interface RouteMap {
   id: number;
   nameEn: string;
   nameHi: string;
+  subtitleEn?: string | null;
+  subtitleHi?: string | null;
   totalDistanceEn?: string | null;
   totalDistanceHi?: string | null;
   approxTimeEn?: string | null;

@@ -195,13 +195,25 @@ export default function DarshanBannersPage() {
                     </h3>
                     <p className="text-[10px] font-bold text-muted-foreground/60 mt-0.5 truncate uppercase tracking-widest">
                       {banner.linkType === "whatsapp"
-                        ? banner.whatsappNumber || "—"
+                        ? banner.whatsappUrl || "—"
                         : banner.tour
                           ? `${banner.tour.titleEn} (${banner.tour.titleHi})`
                           : banner.tourId != null
                             ? `${t("darshanBanners.tour")} #${banner.tourId}`
                             : "—"}
                     </p>
+                    <div className="mt-4 flex flex-wrap gap-2">
+                      {banner.buttonNameEn && (
+                        <span className="text-[9px] font-black uppercase tracking-widest bg-primary/10 text-primary px-2 py-0.5 rounded-lg border border-primary/20">
+                          {banner.buttonNameEn}
+                        </span>
+                      )}
+                      {banner.buttonNameHi && (
+                        <span className="text-[9px] font-black uppercase tracking-widest bg-primary/10 text-primary px-2 py-0.5 rounded-lg border border-primary/20">
+                          {banner.buttonNameHi}
+                        </span>
+                      )}
+                    </div>
                   </div>
                 </div>
               ))}

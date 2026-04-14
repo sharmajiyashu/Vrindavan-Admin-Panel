@@ -27,31 +27,32 @@ export function FooterPromoForm({ initialData, onSubmit, isLoading }: FooterProm
     register,
     handleSubmit,
     control,
+    watch,
     formState: { errors },
   } = useForm<FooterPromoFormData>({
     resolver: zodResolver(footerPromoValidationSchema) as any,
     defaultValues: initialData
       ? {
-          titleEn: initialData.titleEn ?? "",
-          titleHi: initialData.titleHi ?? "",
-          subtitleEn: initialData.subtitleEn ?? "",
-          subtitleHi: initialData.subtitleHi ?? "",
+          linkType: (initialData as any).linkType === "whatsapp" ? "whatsapp" : "tour",
           tourId: initialData.tourId ?? null,
+          whatsappUrl: (initialData as any).whatsappUrl ?? "",
+          buttonNameEn: (initialData as any).buttonNameEn ?? "",
+          buttonNameHi: (initialData as any).buttonNameHi ?? "",
           showTimes: initialData.showTimes ?? 1,
-          sortOrder: initialData.sortOrder ?? 0,
           isActive: initialData.isActive,
         }
       : {
-          titleEn: "",
-          titleHi: "",
-          subtitleEn: "",
-          subtitleHi: "",
+          linkType: "tour",
           tourId: null,
+          whatsappUrl: "",
+          buttonNameEn: "",
+          buttonNameHi: "",
           showTimes: 1,
-          sortOrder: 0,
           isActive: true,
         },
   });
+
+  const linkType = watch("linkType");
 
   useEffect(() => {
     let cancelled = false;
@@ -89,67 +90,86 @@ export function FooterPromoForm({ initialData, onSubmit, isLoading }: FooterProm
 
       <div className="grid gap-6 md:grid-cols-2">
         <div className="space-y-4">
+
+          <fieldset className="space-y-2 rounded-2xl border border-border bg-muted/10 p-4">
+            <legend className={twMerge(labelClasses, "px-1")}>{t("darshanBanners.linkType")}</legend>
+            <div className="flex flex-wrap gap-4">
+              <label className="flex items-center gap-2 text-sm font-bold cursor-pointer">
+                <input type="radio" value="tour" {...register("linkType")} className="h-4 w-4 text-primary" />
+                {t("darshanBanners.linkTypeTour")}
+              </label>
+              <label className="flex items-center gap-2 text-sm font-bold cursor-pointer">
+                <input type="radio" value="whatsapp" {...register("linkType")} className="h-4 w-4 text-primary" />
+                {t("darshanBanners.linkTypeWhatsapp")}
+              </label>
+            </div>
+          </fieldset>
+
+          {linkType === "tour" ? (
+            <div>
+              <label className={labelClasses}>{t("footerPromos.tourOptional")}</label>
+              <select
+                {...register("tourId", {
+                  setValueAs: (v) => {
+                    if (v === "" || v == null) return null;
+                    const n = Number(v);
+                    return Number.isNaN(n) ? null : n;
+                  },
+                })}
+                disabled={loadingTours}
+                className={twMerge(inputClasses, "appearance-none bg-no-repeat bg-right")}
+                style={{
+                  backgroundImage:
+                    'url("data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' fill=\'none\' viewBox=\'0 0 24 24\' stroke=\'currentColor\'%3E%3Cpath stroke-linecap=\'round\' stroke-linejoin=\'round\' stroke-width=\'2\' d=\'M19 9l-7 7-7-7\'%3E%3C/path%3E%3C/svg%3E")',
+                  backgroundSize: "1.25rem",
+                  backgroundPosition: "calc(100% - 1rem)",
+                }}
+              >
+                <option value="">{t("footerPromos.noTour")}</option>
+                {tours.map((x) => (
+                  <option key={x.id} value={x.id}>
+                    {x.titleEn} ({x.titleHi})
+                  </option>
+                ))}
+              </select>
+              {errors.tourId && <p className={errorClasses}>{errors.tourId.message}</p>}
+            </div>
+          ) : (
+            <div>
+              <label className={labelClasses}>{t("darshanBanners.whatsappUrl")}</label>
+              <input
+                {...register("whatsappUrl" as any)}
+                className={inputClasses}
+                placeholder="https://wa.me/9198xxxxxxx"
+              />
+              {(errors as any).whatsappUrl && <p className={errorClasses}>{(errors as any).whatsappUrl.message}</p>}
+            </div>
+          )}
+
           <div>
-            <label className={labelClasses}>{t("footerPromos.titleEn")}</label>
-            <input {...register("titleEn")} className={inputClasses} />
-            {errors.titleEn && <p className={errorClasses}>{errors.titleEn.message}</p>}
-          </div>
-          <div>
-            <label className={labelClasses}>{t("footerPromos.titleHi")}</label>
-            <input {...register("titleHi")} className={inputClasses} />
-            {errors.titleHi && <p className={errorClasses}>{errors.titleHi.message}</p>}
-          </div>
-          <div>
-            <label className={labelClasses}>{t("footerPromos.subtitleEn")}</label>
-            <input {...register("subtitleEn")} className={inputClasses} />
-            {errors.subtitleEn && <p className={errorClasses}>{errors.subtitleEn.message}</p>}
-          </div>
-          <div>
-            <label className={labelClasses}>{t("footerPromos.subtitleHi")}</label>
-            <input {...register("subtitleHi")} className={inputClasses} />
-            {errors.subtitleHi && <p className={errorClasses}>{errors.subtitleHi.message}</p>}
+            <label className={labelClasses}>{t("darshanBanners.buttonNameEn")}</label>
+            <input
+              {...register("buttonNameEn" as any)}
+              className={inputClasses}
+              placeholder="e.g. Book Now"
+            />
           </div>
 
           <div>
-            <label className={labelClasses}>{t("footerPromos.tourOptional")}</label>
-            <select
-              {...register("tourId", {
-                setValueAs: (v) => {
-                  if (v === "" || v == null) return null;
-                  const n = Number(v);
-                  return Number.isNaN(n) ? null : n;
-                },
-              })}
-              disabled={loadingTours}
-              className={twMerge(inputClasses, "appearance-none bg-no-repeat bg-right")}
-              style={{
-                backgroundImage:
-                  'url("data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' fill=\'none\' viewBox=\'0 0 24 24\' stroke=\'currentColor\'%3E%3Cpath stroke-linecap=\'round\' stroke-linejoin=\'round\' stroke-width=\'2\' d=\'M19 9l-7 7-7-7\'%3E%3C/path%3E%3C/svg%3E")',
-                backgroundSize: "1.25rem",
-                backgroundPosition: "calc(100% - 1rem)",
-              }}
-            >
-              <option value="">{t("footerPromos.noTour")}</option>
-              {tours.map((x) => (
-                <option key={x.id} value={x.id}>
-                  {x.titleEn} ({x.titleHi})
-                </option>
-              ))}
-            </select>
+            <label className={labelClasses}>{t("darshanBanners.buttonNameHi")}</label>
+            <input
+              {...register("buttonNameHi" as any)}
+              className={inputClasses}
+              placeholder="जैसे. अभी बुक करें"
+            />
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
             <div>
               <label className={labelClasses}>{t("footerPromos.showTimes")}</label>
               <input type="number" min={1} {...register("showTimes")} className={inputClasses} />
               <p className="text-[9px] text-muted-foreground mt-1 font-medium">{t("footerPromos.showTimesHint")}</p>
               {errors.showTimes && <p className={errorClasses}>{errors.showTimes.message}</p>}
-            </div>
-            <div>
-              <label className={labelClasses}>{t("footerPromos.sortOrder")}</label>
-              <input type="number" {...register("sortOrder")} className={inputClasses} />
-              <p className="text-[9px] text-muted-foreground mt-1 font-medium">{t("footerPromos.sortOrderHint")}</p>
-              {errors.sortOrder && <p className={errorClasses}>{errors.sortOrder.message}</p>}
             </div>
           </div>
 

@@ -192,6 +192,11 @@ export default function RouteMapsPage() {
                       <div className="space-y-0.5">
                         <p className="text-xs font-black text-foreground uppercase tracking-wide">{route.nameEn}</p>
                         <p className="text-[10px] font-bold text-muted-foreground opacity-60 tracking-wider font-hindi">{route.nameHi}</p>
+                        {(route.subtitleEn || route.subtitleHi) && (
+                          <p className="text-[9px] font-medium text-muted-foreground/40 mt-0.5 truncate max-w-[200px]">
+                            {route.subtitleEn} {route.subtitleHi && `| ${route.subtitleHi}`}
+                          </p>
+                        )}
                       </div>
                     </td>
                     <td className="px-6 py-5">

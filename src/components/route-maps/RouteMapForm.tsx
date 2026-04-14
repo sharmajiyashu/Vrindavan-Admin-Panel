@@ -52,6 +52,8 @@ export function RouteMapForm({ initialData, onSubmit, onComplete, isLoading }: R
     defaultValues: initialData ? {
       nameEn: initialData.nameEn,
       nameHi: initialData.nameHi,
+      subtitleEn: initialData.subtitleEn ?? "",
+      subtitleHi: initialData.subtitleHi ?? "",
       totalDistanceEn: initialData.totalDistanceEn,
       totalDistanceHi: initialData.totalDistanceHi,
       approxTimeEn: initialData.approxTimeEn,
@@ -137,6 +139,17 @@ export function RouteMapForm({ initialData, onSubmit, onComplete, isLoading }: R
               <label className={labelClasses}>{t("routeMaps.nameHi")}</label>
               <input {...register("nameHi")} className={inputClasses} placeholder="ब्रह्मोत्सव मार्ग" />
               {errors.nameHi && <p className={errorClasses}>{errors.nameHi.message}</p>}
+            </div>
+          </div>
+ 
+           <div className="grid gap-6 md:grid-cols-2">
+            <div>
+              <label className={labelClasses}>{t("routeMaps.subtitleEn")}</label>
+              <input {...register("subtitleEn")} className={inputClasses} placeholder="Example Subtitle" />
+            </div>
+            <div>
+              <label className={labelClasses}>{t("routeMaps.subtitleHi")}</label>
+              <input {...register("subtitleHi")} className={inputClasses} placeholder="उदाहरण उपशीर्षक" />
             </div>
           </div>
 

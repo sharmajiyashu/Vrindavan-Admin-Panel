@@ -24,7 +24,15 @@ export const darshanBannerValidationSchema = z
     ),
     linkType: z.preprocess(emptyToUndefined, z.enum(["tour", "whatsapp"])),
     tourId: z.preprocess(emptyToUndefined, coerceNumber.optional().nullable()),
-    whatsappNumber: z.preprocess(
+    whatsappUrl: z.preprocess(
+      (v) => (v === "" || v === undefined || v === null ? undefined : String(v).trim()),
+      z.string().optional().nullable()
+    ),
+    buttonNameEn: z.preprocess(
+      (v) => (v === "" || v === undefined || v === null ? undefined : String(v).trim()),
+      z.string().optional().nullable()
+    ),
+    buttonNameHi: z.preprocess(
       (v) => (v === "" || v === undefined || v === null ? undefined : String(v).trim()),
       z.string().optional().nullable()
     ),
@@ -39,12 +47,12 @@ export const darshanBannerValidationSchema = z
         });
       }
     } else {
-      const w = (data.whatsappNumber ?? "").trim();
-      if (w.length < 8) {
+      const w = (data.whatsappUrl ?? "").trim();
+      if (w.length < 5) {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
-          message: "WhatsApp number is required (include country code, e.g. 9198xxxxxxx)",
-          path: ["whatsappNumber"],
+          message: "WhatsApp URL is required (e.g. https://wa.me/...)",
+          path: ["whatsappUrl"],
         });
       }
     }
@@ -61,7 +69,15 @@ export const updateDarshanBannerValidationSchema = z
     isActive: z.preprocess(boolFromMultipart, z.boolean().optional()),
     linkType: z.preprocess(emptyToUndefined, z.enum(["tour", "whatsapp"]).optional()),
     tourId: z.preprocess(emptyToUndefined, coerceNumber.optional().nullable()),
-    whatsappNumber: z.preprocess(
+    whatsappUrl: z.preprocess(
+      (v) => (v === "" || v === undefined || v === null ? undefined : String(v).trim()),
+      z.string().optional().nullable()
+    ),
+    buttonNameEn: z.preprocess(
+      (v) => (v === "" || v === undefined || v === null ? undefined : String(v).trim()),
+      z.string().optional().nullable()
+    ),
+    buttonNameHi: z.preprocess(
       (v) => (v === "" || v === undefined || v === null ? undefined : String(v).trim()),
       z.string().optional().nullable()
     ),
@@ -77,12 +93,12 @@ export const updateDarshanBannerValidationSchema = z
       }
     }
     if (data.linkType === "whatsapp") {
-      const w = (data.whatsappNumber ?? "").trim();
-      if (w.length < 8) {
+      const w = (data.whatsappUrl ?? "").trim();
+      if (w.length < 5) {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
-          message: "WhatsApp number is required when link type is whatsapp",
-          path: ["whatsappNumber"],
+          message: "WhatsApp URL is required when link type is whatsapp",
+          path: ["whatsappUrl"],
         });
       }
     }
@@ -95,11 +111,13 @@ export function toDarshanBannerMultipartBody(data: DarshanBannerFormData): Recor
   const body: Record<string, string | boolean> = {
     isActive: data.isActive,
     linkType: data.linkType,
+    buttonNameEn: (data.buttonNameEn ?? "").trim(),
+    buttonNameHi: (data.buttonNameHi ?? "").trim(),
   };
   if (data.linkType === "tour") {
     body.tourId = data.tourId != null ? String(data.tourId) : "";
   } else {
-    body.whatsappNumber = (data.whatsappNumber ?? "").trim();
+    body.whatsappUrl = (data.whatsappUrl ?? "").trim();
   }
   return body;
 }
