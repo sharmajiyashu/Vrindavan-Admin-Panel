@@ -15,13 +15,12 @@ export interface FooterPromoTour {
 
 export interface FooterPromo {
   id: number;
-  titleEn?: string | null;
-  titleHi?: string | null;
-  subtitleEn?: string | null;
-  subtitleHi?: string | null;
+  linkType?: "tour" | "whatsapp";
   tourId?: number | null;
+  whatsappUrl?: string | null;
+  buttonNameEn?: string | null;
+  buttonNameHi?: string | null;
   mediaId?: number | null;
-  sortOrder: number;
   /** Max times the app should show this promo (client-enforced). */
   showTimes?: number;
   isActive: boolean;

@@ -169,7 +169,7 @@ export default function DarshansPage() {
       </div>
 
       {/* Filters */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 px-2">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 px-2">
         <div className="relative group">
           <div className="absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-foreground/30 group-focus-within:text-primary transition-colors">
             <IconBuildingSkyscraper size={14} />

@@ -24,7 +24,9 @@ export interface DarshanBanner {
   id: number;
   linkType?: "tour" | "whatsapp";
   tourId?: number | null;
-  whatsappNumber?: string | null;
+  whatsappUrl?: string | null;
+  buttonNameEn?: string | null;
+  buttonNameHi?: string | null;
   mediaId: number;
   isActive: boolean;
   createdAt: string;
