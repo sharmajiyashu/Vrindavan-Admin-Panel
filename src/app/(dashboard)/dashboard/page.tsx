@@ -136,106 +136,108 @@ export default function DashboardPage() {
         ))}
       </section>
 
-      <div className="grid gap-6 lg:grid-cols-3 px-2">
-        {/* Recent Upcoming Bookings */}
-        <section className="lg:col-span-2 rounded-3xl border-2 border-border bg-card p-8 shadow-sm overflow-hidden">
-          <div className="flex items-center justify-between mb-8">
-            <h2 className="text-xl font-black tracking-tight text-foreground">
-              {t("dashboard.recentUpcoming")}
-            </h2>
-            <Link href="/bookings" className="text-[10px] font-black uppercase tracking-widest text-primary hover:underline flex items-center gap-1.5 leading-none">
-              View All <IconArrowRight size={14} />
-            </Link>
-          </div>
+      {false && (
+        <div className="grid gap-6 lg:grid-cols-3 px-2">
+          {/* Recent Upcoming Bookings */}
+          <section className="lg:col-span-2 rounded-3xl border-2 border-border bg-card p-8 shadow-sm overflow-hidden">
+            <div className="flex items-center justify-between mb-8">
+              <h2 className="text-xl font-black tracking-tight text-foreground">
+                {t("dashboard.recentUpcoming")}
+              </h2>
+              <Link href="/bookings" className="text-[10px] font-black uppercase tracking-widest text-primary hover:underline flex items-center gap-1.5 leading-none">
+                View All <IconArrowRight size={14} />
+              </Link>
+            </div>
 
-          <div className="space-y-4">
-            {isLoading ? (
-              <div className="h-64 flex flex-col items-center justify-center gap-3">
-                <IconLoader2 size={32} className="animate-spin text-primary/30" />
-                <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/40">Fetching schedules...</p>
-              </div>
-            ) : recentBookings.length === 0 ? (
-              <div className="h-64 flex flex-col items-center justify-center gap-4 text-center">
-                <div className="h-16 w-16 rounded-3xl bg-muted/30 flex items-center justify-center text-muted-foreground">
-                  <IconReceipt2 size={32} stroke={1.5} />
+            <div className="space-y-4">
+              {isLoading ? (
+                <div className="h-64 flex flex-col items-center justify-center gap-3">
+                  <IconLoader2 size={32} className="animate-spin text-primary/30" />
+                  <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/40">Fetching schedules...</p>
                 </div>
-                <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest leading-relaxed">No upcoming itineraries<br />found for this week.</p>
-              </div>
-            ) : (
-              <div className="divide-y divide-border/40">
-                {recentBookings.map((booking) => (
-                  <div key={booking.id} className="py-4 first:pt-0 last:pb-0 flex items-center justify-between group transition-all">
-                    <div className="flex items-center gap-4">
-                      <div className="h-12 w-12 rounded-2xl bg-muted/50 border border-border/40 flex items-center justify-center text-muted-foreground group-hover:bg-primary/5 group-hover:text-primary transition-colors">
-                        <IconCalendarEvent size={24} stroke={1.5} />
-                      </div>
-                      <div className="space-y-1">
-                        <p className="text-xs font-black text-foreground line-clamp-1">{booking.tour.titleEn}</p>
-                        <div className="flex items-center gap-3 text-[10px] font-bold text-muted-foreground opacity-60">
-                          <span className="flex items-center gap-1 text-primary"><IconUser size={10} /> {booking.user.name}</span>
-                          <span className="flex items-center gap-1"><IconPhone size={10} /> {booking.user.mobile}</span>
+              ) : recentBookings.length === 0 ? (
+                <div className="h-64 flex flex-col items-center justify-center gap-4 text-center">
+                  <div className="h-16 w-16 rounded-3xl bg-muted/30 flex items-center justify-center text-muted-foreground">
+                    <IconReceipt2 size={32} stroke={1.5} />
+                  </div>
+                  <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest leading-relaxed">No upcoming itineraries<br />found for this week.</p>
+                </div>
+              ) : (
+                <div className="divide-y divide-border/40">
+                  {recentBookings.map((booking) => (
+                    <div key={booking.id} className="py-4 first:pt-0 last:pb-0 flex items-center justify-between group transition-all">
+                      <div className="flex items-center gap-4">
+                        <div className="h-12 w-12 rounded-2xl bg-muted/50 border border-border/40 flex items-center justify-center text-muted-foreground group-hover:bg-primary/5 group-hover:text-primary transition-colors">
+                          <IconCalendarEvent size={24} stroke={1.5} />
+                        </div>
+                        <div className="space-y-1">
+                          <p className="text-xs font-black text-foreground line-clamp-1">{booking.tour.titleEn}</p>
+                          <div className="flex items-center gap-3 text-[10px] font-bold text-muted-foreground opacity-60">
+                            <span className="flex items-center gap-1 text-primary"><IconUser size={10} /> {booking.user.name}</span>
+                            <span className="flex items-center gap-1"><IconPhone size={10} /> {booking.user.mobile}</span>
+                          </div>
                         </div>
                       </div>
-                    </div>
-                    <div className="text-right">
-                      <div className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-2 py-0.5 text-[9px] font-black uppercase tracking-wider text-emerald-600 ring-1 ring-inset ring-emerald-500/10">
-                        <IconCircleCheck size={10} />
-                        {booking.status}
+                      <div className="text-right">
+                        <div className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-2 py-0.5 text-[9px] font-black uppercase tracking-wider text-emerald-600 ring-1 ring-inset ring-emerald-500/10">
+                          <IconCircleCheck size={10} />
+                          {booking.status}
+                        </div>
+                        <p className="text-[10px] font-bold text-muted-foreground/40 mt-1 uppercase tracking-widest tabular-nums">
+                          {new Date(booking.createdAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+                        </p>
                       </div>
-                      <p className="text-[10px] font-bold text-muted-foreground/40 mt-1 uppercase tracking-widest tabular-nums">
-                        {new Date(booking.createdAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
-                      </p>
                     </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        </section>
-
-        {/* Quick Actions Sidebar */}
-        <div className="space-y-6">
-          <section className="rounded-3xl border-2 border-border bg-card p-8 shadow-sm h-full">
-            <div className="flex items-center justify-between mb-8">
-              <h3 className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/40 leading-none">Administrative Shortcuts</h3>
-            </div>
-            <div className="grid gap-3">
-              <Link href="/temples" className="flex items-center justify-between p-4 rounded-2xl bg-amber-50 border-2 border-amber-200 text-amber-900 group transition-all hover:bg-amber-100 active:scale-[0.98]">
-                <div className="flex items-center gap-3">
-                  <div className="h-8 w-8 rounded-lg bg-white shadow-sm flex items-center justify-center">
-                    <IconMapPin size={18} className="text-amber-600" />
-                  </div>
-                  <span className="text-[11px] font-black uppercase tracking-widest">Manage Temples</span>
+                  ))}
                 </div>
-                <IconArrowRight size={14} className="opacity-30 group-hover:translate-x-1 transition-transform" />
-              </Link>
-              <Link href="/tours" className="flex items-center justify-between p-4 rounded-2xl bg-purple-50 border-2 border-purple-200 text-purple-900 group transition-all hover:bg-purple-100 active:scale-[0.98]">
-                <div className="flex items-center gap-3">
-                  <div className="h-8 w-8 rounded-lg bg-white shadow-sm flex items-center justify-center">
-                    <IconCalendarCheck size={18} className="text-purple-600" />
-                  </div>
-                  <span className="text-[11px] font-black uppercase tracking-widest">Manage Tours</span>
-                </div>
-                <IconArrowRight size={14} className="opacity-30 group-hover:translate-x-1 transition-transform" />
-              </Link>
-              <Link href="/users" className="flex items-center justify-between p-4 rounded-2xl bg-blue-50 border-2 border-blue-200 text-blue-900 group transition-all hover:bg-blue-100 active:scale-[0.98]">
-                <div className="flex items-center gap-3">
-                  <div className="h-8 w-8 rounded-lg bg-white shadow-sm flex items-center justify-center">
-                    <IconUser size={18} className="text-blue-600" />
-                  </div>
-                  <span className="text-[11px] font-black uppercase tracking-widest">Customer Base</span>
-                </div>
-                <IconArrowRight size={14} className="opacity-30 group-hover:translate-x-1 transition-transform" />
-              </Link>
-            </div>
-            <div className="mt-8 pt-8 border-t border-border/40">
-              <p className="text-[10px] font-bold text-muted-foreground/40 uppercase tracking-[0.2em] text-center leading-relaxed">
-                Vrindavan Admin Protocol<br />v2.4.0 — Secure Access
-              </p>
+              )}
             </div>
           </section>
+
+          {/* Quick Actions Sidebar */}
+          <div className="space-y-6">
+            <section className="rounded-3xl border-2 border-border bg-card p-8 shadow-sm h-full">
+              <div className="flex items-center justify-between mb-8">
+                <h3 className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/40 leading-none">Administrative Shortcuts</h3>
+              </div>
+              <div className="grid gap-3">
+                <Link href="/temples" className="flex items-center justify-between p-4 rounded-2xl bg-amber-50 border-2 border-amber-200 text-amber-900 group transition-all hover:bg-amber-100 active:scale-[0.98]">
+                  <div className="flex items-center gap-3">
+                    <div className="h-8 w-8 rounded-lg bg-white shadow-sm flex items-center justify-center">
+                      <IconMapPin size={18} className="text-amber-600" />
+                    </div>
+                    <span className="text-[11px] font-black uppercase tracking-widest">Manage Temples</span>
+                  </div>
+                  <IconArrowRight size={14} className="opacity-30 group-hover:translate-x-1 transition-transform" />
+                </Link>
+                <Link href="/tours" className="flex items-center justify-between p-4 rounded-2xl bg-purple-50 border-2 border-purple-200 text-purple-900 group transition-all hover:bg-purple-100 active:scale-[0.98]">
+                  <div className="flex items-center gap-3">
+                    <div className="h-8 w-8 rounded-lg bg-white shadow-sm flex items-center justify-center">
+                      <IconCalendarCheck size={18} className="text-purple-600" />
+                    </div>
+                    <span className="text-[11px] font-black uppercase tracking-widest">Manage Tours</span>
+                  </div>
+                  <IconArrowRight size={14} className="opacity-30 group-hover:translate-x-1 transition-transform" />
+                </Link>
+                <Link href="/users" className="flex items-center justify-between p-4 rounded-2xl bg-blue-50 border-2 border-blue-200 text-blue-900 group transition-all hover:bg-blue-100 active:scale-[0.98]">
+                  <div className="flex items-center gap-3">
+                    <div className="h-8 w-8 rounded-lg bg-white shadow-sm flex items-center justify-center">
+                      <IconUser size={18} className="text-blue-600" />
+                    </div>
+                    <span className="text-[11px] font-black uppercase tracking-widest">Customer Base</span>
+                  </div>
+                  <IconArrowRight size={14} className="opacity-30 group-hover:translate-x-1 transition-transform" />
+                </Link>
+              </div>
+              <div className="mt-8 pt-8 border-t border-border/40">
+                <p className="text-[10px] font-bold text-muted-foreground/40 uppercase tracking-[0.2em] text-center leading-relaxed">
+                  Vrindavan Admin Protocol<br />v2.4.0 — Secure Access
+                </p>
+              </div>
+            </section>
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }
