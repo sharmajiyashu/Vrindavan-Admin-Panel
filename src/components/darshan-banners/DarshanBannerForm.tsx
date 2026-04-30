@@ -158,6 +158,7 @@ export function DarshanBannerForm({ initialData, onSubmit, isLoading }: DarshanB
               className={inputClasses}
               placeholder="e.g. Book Now"
             />
+            {errors.buttonNameEn && <p className={errorClasses}>{errors.buttonNameEn.message as string}</p>}
           </div>
 
           <div>
@@ -167,6 +168,7 @@ export function DarshanBannerForm({ initialData, onSubmit, isLoading }: DarshanB
               className={inputClasses}
               placeholder="जैसे. अभी बुक करें"
             />
+            {errors.buttonNameHi && <p className={errorClasses}>{errors.buttonNameHi.message as string}</p>}
           </div>
 
           <div className="flex items-center gap-3 p-4 rounded-2xl border border-border bg-muted/20">

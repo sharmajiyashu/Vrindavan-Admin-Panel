@@ -30,11 +30,11 @@ export const darshanBannerValidationSchema = z
     ),
     buttonNameEn: z.preprocess(
       (v) => (v === "" || v === undefined || v === null ? undefined : String(v).trim()),
-      z.string().optional().nullable()
+      z.string().min(1, 'Button Name (English) is required')
     ),
     buttonNameHi: z.preprocess(
       (v) => (v === "" || v === undefined || v === null ? undefined : String(v).trim()),
-      z.string().optional().nullable()
+      z.string().min(1, 'Button Name (Hindi) is required')
     ),
   })
   .superRefine((data, ctx) => {

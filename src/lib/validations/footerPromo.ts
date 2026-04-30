@@ -24,8 +24,8 @@ export const footerPromoValidationSchema = z.object({
   linkType: z.preprocess(emptyToUndefined, z.enum(["tour", "whatsapp"]).default("tour")),
   tourId: optionalTourId,
   whatsappUrl: optionalText,
-  buttonNameEn: optionalText,
-  buttonNameHi: optionalText,
+  buttonNameEn: z.preprocess(emptyToUndefined, z.string().min(1, "Button Name (English) is required")),
+  buttonNameHi: z.preprocess(emptyToUndefined, z.string().min(1, "Button Name (Hindi) is required")),
   showTimes: z.preprocess(
     emptyToUndefined,
     z.coerce.number().int().min(1, "Show times must be at least 1").default(1)
