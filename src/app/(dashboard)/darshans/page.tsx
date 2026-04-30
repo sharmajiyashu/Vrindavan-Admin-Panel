@@ -64,8 +64,8 @@ export default function DarshansPage() {
   });
 
   const updateMutation = useMutation({
-    mutationFn: ({ id, data }: { id: number; data: Partial<DarshanFormData> }) =>
-      darshanService.updateDarshan(id, data),
+    mutationFn: ({ id, formData }: { id: number; formData: FormData }) =>
+      darshanService.updateDarshan(id, formData),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["darshans"] });
       toast.success(t("darshans.saveSuccess"));
@@ -139,19 +139,13 @@ export default function DarshansPage() {
                 <DarshanForm
                   initialData={editingDarshan}
                   isLoading={createMutation.isPending || updateMutation.isPending}
-                  onSubmitBasic={async (data) => {
-                    const id = (data as any).id || editingDarshan?.id;
+                  onSubmit={async (formData) => {
+                    const id = editingDarshan?.id;
                     if (id) {
-                      await updateMutation.mutateAsync({ id, data });
-                      return id;
+                      await updateMutation.mutateAsync({ id, formData });
                     } else {
-                      const result = await createMutation.mutateAsync(data);
-                      return result.id;
+                      await createMutation.mutateAsync(formData);
                     }
-                  }}
-                  onSubmitFiles={async (id, files) => {
-                    await darshanService.uploadGallery(id, files);
-                    queryClient.invalidateQueries({ queryKey: ["darshans"] });
                   }}
                   onRemoveMedia={async (id, mediaId) => {
                     await darshanService.deleteGalleryMedia(id, mediaId);
@@ -193,12 +187,23 @@ export default function DarshansPage() {
           <div className="absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-foreground/30 group-focus-within:text-primary transition-colors">
             <IconCalendar size={14} />
           </div>
-          <input
-            type="date"
-            value={date}
-            onChange={(e) => { setDate(e.target.value); setCurrentPage(1); }}
-            className="h-11 w-full rounded-xl border-2 border-border bg-card pl-10 pr-4 text-[11px] font-bold shadow-sm outline-none transition-all focus:border-primary focus:ring-4 focus:ring-primary/5"
-          />
+          {(() => {
+            const today = new Date();
+            const maxDate = today.toISOString().split("T")[0];
+            const minDateObj = new Date(today);
+            minDateObj.setDate(today.getDate() - 4);
+            const minDate = minDateObj.toISOString().split("T")[0];
+            return (
+              <input
+                type="date"
+                min={minDate}
+                max={maxDate}
+                value={date}
+                onChange={(e) => { setDate(e.target.value); setCurrentPage(1); }}
+                className="h-11 w-full rounded-xl border-2 border-border bg-card pl-10 pr-4 text-[11px] font-bold shadow-sm outline-none transition-all focus:border-primary focus:ring-4 focus:ring-primary/5"
+              />
+            );
+          })()}
         </div>
 
         <div className="relative group">
