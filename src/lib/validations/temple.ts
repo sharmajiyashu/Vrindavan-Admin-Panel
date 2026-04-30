@@ -86,9 +86,8 @@ export const templeValidationSchema = z.object({
   audioGuideEnId: optionalCoerceId,
   audioGuideHiId: optionalCoerceId,
   documentaryVideoId: optionalCoerceId,
-
-  audioGuideEn: z.string().url().optional().nullable().or(z.literal("")),
-  audioGuideHi: z.string().url().optional().nullable().or(z.literal("")),
+  audioGuideUrlEn: z.string().url().optional().nullable().or(z.literal("")),
+  audioGuideUrlHi: z.string().url().optional().nullable().or(z.literal("")),
   documentaryVideoUrl: z.string().url().optional().nullable().or(z.literal("")),
   documentaryTitleEn: z.string().optional().nullable(),
   documentaryTitleHi: z.string().optional().nullable(),
@@ -99,12 +98,8 @@ export const templeValidationSchema = z.object({
   bestTimeHi: z.string().trim().min(1, "Best time in Hindi is required"),
   bestTimeDetailEn: z.string().trim().min(1, "Best time detail in English is required"),
   bestTimeDetailHi: z.string().trim().min(1, "Best time detail in Hindi is required"),
-
   historyEn: z.string().optional().nullable(),
   historyHi: z.string().optional().nullable(),
-
-  listenToHistoryUrlEn: z.string().optional().nullable(),
-  listenToHistoryUrlHi: z.string().optional().nullable(),
 
   sortOrder: z.preprocess(
     (val) => (val === "" || val === null || val === undefined ? 0 : val),

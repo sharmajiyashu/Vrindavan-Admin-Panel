@@ -39,6 +39,8 @@ export function TempleForm({ initialData, onSubmitBasic, onSubmitFiles, onRemove
   const [deletingMediaIds, setDeletingMediaIds] = useState<number[]>([]);
   const [isUploading, setIsUploading] = useState(false);
   const [videoMode, setVideoMode] = useState<"file" | "url">(initialData?.documentaryVideoUrl ? "url" : "file");
+  const [audioEnMode, setAudioEnMode] = useState<"file" | "url">(initialData?.audioGuideUrlEn ? "url" : "file");
+  const [audioHiMode, setAudioHiMode] = useState<"file" | "url">(initialData?.audioGuideUrlHi ? "url" : "file");
 
   React.useEffect(() => {
     if (initialData?.gallery) {
@@ -75,8 +77,8 @@ export function TempleForm({ initialData, onSubmitBasic, onSubmitFiles, onRemove
       audioGuideEnId: initialData.audioGuideEnId ?? null,
       audioGuideHiId: initialData.audioGuideHiId ?? null,
       documentaryVideoId: initialData.documentaryVideoId ?? null,
-      audioGuideEn: initialData.audioGuideEn?.url || "",
-      audioGuideHi: initialData.audioGuideHi?.url || "",
+      audioGuideUrlEn: initialData.audioGuideUrlEn || "",
+      audioGuideUrlHi: initialData.audioGuideUrlHi || "",
       documentaryVideoUrl: initialData.documentaryVideoUrl || initialData.documentaryVideo?.url || "",
       documentaryTitleEn: initialData.documentaryTitleEn || "",
       documentaryTitleHi: initialData.documentaryTitleHi || "",
@@ -88,8 +90,6 @@ export function TempleForm({ initialData, onSubmitBasic, onSubmitFiles, onRemove
       bestTimeDetailHi: initialData.bestTimeDetailHi || "",
       historyEn: initialData.historyEn || "",
       historyHi: initialData.historyHi || "",
-      listenToHistoryUrlEn: initialData.listenToHistoryUrlEn || "",
-      listenToHistoryUrlHi: initialData.listenToHistoryUrlHi || "",
       sortOrder: initialData.sortOrder || 0,
       isActive: initialData.isActive ?? true,
     } : {
@@ -384,16 +384,7 @@ export function TempleForm({ initialData, onSubmitBasic, onSubmitFiles, onRemove
             </div>
           </div>
 
-          <div className="grid gap-6 md:grid-cols-2">
-            <div>
-              <label className={labelClasses}>Listen to History URL (EN)</label>
-              <input {...register("listenToHistoryUrlEn")} className={inputClasses} placeholder="https://cloud.com/audio-en.mp3" />
-            </div>
-            <div>
-              <label className={labelClasses}>Listen to History URL (HI)</label>
-              <input {...register("listenToHistoryUrlHi")} className={inputClasses} placeholder="https://cloud.com/audio-hi.mp3" />
-            </div>
-          </div>
+
 
           <div className="space-y-6">
             <div className="space-y-4">
@@ -677,146 +668,226 @@ export function TempleForm({ initialData, onSubmitBasic, onSubmitFiles, onRemove
 
             {/* Audio EN Section */}
             <div className="space-y-3">
-              <label className={labelClasses}>{t("temples.audioEn")}</label>
-              <div className={twMerge(
-                "relative overflow-hidden p-4 rounded-2xl border-2 bg-card flex items-center gap-3 transition-all shadow-sm",
-                (files.audioGuideEn || initialData?.audioGuideEn) ? "border-emerald-200" : "border-border"
-              )}>
-                {(isLoading || isUploading) && files.audioGuideEn && (
-                  <div className="absolute inset-x-0 bottom-0 h-1 bg-emerald-100">
-                    <div className="h-full bg-emerald-500 animate-progress-indeterminate w-1/3" />
-                  </div>
-                )}
-                <div className="h-10 w-10 shrink-0 rounded-xl bg-emerald-100/50 flex items-center justify-center text-emerald-600">
-                  {(isLoading || isUploading) && files.audioGuideEn ? <IconLoader2 className="h-5 w-5 animate-spin" /> : <IconMusic className="h-5 w-5" />}
-                </div>
-                <div className="min-w-0 flex-1">
-                  {files.audioGuideEn ? (
-                    <p className="text-xs font-bold truncate">{(files.audioGuideEn as File).name}</p>
-                  ) : initialData?.audioGuideEn ? (
-                    <div className="flex flex-col gap-0.5 min-w-0">
-                      <p className="text-xs font-bold text-emerald-600 truncate uppercase tracking-tighter">Audio (EN)</p>
-                      <a
-                        href={initialData.audioGuideEn?.url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-[10px] text-muted-foreground hover:text-emerald-600 underline truncate"
-                      >
-                        Listen to current
-                      </a>
-                    </div>
-                  ) : (
-                    <p className="text-xs font-bold text-muted-foreground">No audio selected</p>
-                  )}
-                </div>
-                {files.audioGuideEn ? (
-                  <button type="button" disabled={isLoading || isUploading} onClick={() => removeFile("audioGuideEn")} className="p-1 text-destructive disabled:opacity-30">
-                    <IconTrash className="h-4 w-4" />
-                  </button>
-                ) : initialData?.audioGuideEn ? (
+              <div className="flex items-center justify-between mb-2">
+                <label className={labelClasses}>{t("temples.audioEn")}</label>
+                <div className="flex bg-muted/30 p-0.5 rounded-lg">
                   <button
                     type="button"
-                    disabled={deletingMediaIds.includes(initialData.audioGuideEn?.id || 0) || isLoading || isUploading}
-                    onClick={async () => {
-                      if (onRemoveMedia && templeId && initialData.audioGuideEn) {
-                        try {
-                          const mediaId = initialData.audioGuideEn.id;
-                          setDeletingMediaIds(prev => [...prev, mediaId]);
-                          await onRemoveMedia(templeId, mediaId);
-                        } catch (err) {
-                          console.error("Failed to remove audio:", err);
-                        } finally {
-                          setDeletingMediaIds(prev => prev.filter(id => id !== initialData.audioGuideEn?.id));
-                        }
-                      }
-                    }}
-                    className="p-1 text-destructive disabled:opacity-30"
-                  >
-                    {deletingMediaIds.includes(initialData.audioGuideEn?.id || 0) ? (
-                      <IconLoader2 className="h-4 w-4 animate-spin" />
-                    ) : (
-                      <IconTrash className="h-4 w-4" />
+                    onClick={() => setAudioEnMode("file")}
+                    className={twMerge(
+                      "px-2.5 py-1 text-[9px] font-black uppercase tracking-widest rounded-md transition-all",
+                      audioEnMode === "file" ? "bg-card text-emerald-600 shadow-sm" : "text-muted-foreground"
                     )}
+                  >
+                    File
                   </button>
-                ) : (
-                  <label className={twMerge("cursor-pointer p-1 text-primary", (isLoading || isUploading) && "opacity-30 pointer-events-none")}>
-                    <IconUpload className="h-4 w-4" />
-                    <input type="file" accept="audio/*" className="hidden" disabled={isLoading || isUploading} onChange={(e) => handleFileChange(e, "audioGuideEn")} />
-                  </label>
-                )}
+                  <button
+                    type="button"
+                    onClick={() => setAudioEnMode("url")}
+                    className={twMerge(
+                      "px-2.5 py-1 text-[9px] font-black uppercase tracking-widest rounded-md transition-all",
+                      audioEnMode === "url" ? "bg-card text-emerald-600 shadow-sm" : "text-muted-foreground"
+                    )}
+                  >
+                    URL
+                  </button>
+                </div>
               </div>
+
+              {audioEnMode === "url" ? (
+                <div className="space-y-2">
+                  <div className="relative group">
+                    <IconMusic size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground/40 group-focus-within:text-emerald-500 transition-colors" />
+                    <input
+                      {...register("audioGuideUrlEn")}
+                      disabled={isLoading || isUploading}
+                      className={twMerge(inputClasses, "pl-9")}
+                      placeholder="https://example.com/audio-en.mp3"
+                    />
+                  </div>
+                  {errors.audioGuideUrlEn && <p className={errorClasses}>{errors.audioGuideUrlEn.message}</p>}
+                </div>
+              ) : (
+                <div className={twMerge(
+                  "relative overflow-hidden p-4 rounded-2xl border-2 bg-card flex items-center gap-3 transition-all shadow-sm",
+                  (files.audioGuideEn || initialData?.audioGuideEn) ? "border-emerald-200" : "border-border"
+                )}>
+                  {(isLoading || isUploading) && files.audioGuideEn && (
+                    <div className="absolute inset-x-0 bottom-0 h-1 bg-emerald-100">
+                      <div className="h-full bg-emerald-500 animate-progress-indeterminate w-1/3" />
+                    </div>
+                  )}
+                  <div className="h-10 w-10 shrink-0 rounded-xl bg-emerald-100/50 flex items-center justify-center text-emerald-600">
+                    {(isLoading || isUploading) && files.audioGuideEn ? <IconLoader2 className="h-5 w-5 animate-spin" /> : <IconMusic className="h-5 w-5" />}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    {files.audioGuideEn ? (
+                      <p className="text-xs font-bold truncate">{(files.audioGuideEn as File).name}</p>
+                    ) : initialData?.audioGuideEn ? (
+                      <div className="flex flex-col gap-0.5 min-w-0">
+                        <p className="text-xs font-bold text-emerald-600 truncate uppercase tracking-tighter">Audio (EN)</p>
+                        <a
+                          href={initialData.audioGuideEn?.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-[10px] text-muted-foreground hover:text-emerald-600 underline truncate"
+                        >
+                          Listen to current
+                        </a>
+                      </div>
+                    ) : (
+                      <p className="text-xs font-bold text-muted-foreground">No audio selected</p>
+                    )}
+                  </div>
+                  {files.audioGuideEn ? (
+                    <button type="button" disabled={isLoading || isUploading} onClick={() => removeFile("audioGuideEn")} className="p-1 text-destructive disabled:opacity-30">
+                      <IconTrash className="h-4 w-4" />
+                    </button>
+                  ) : initialData?.audioGuideEn ? (
+                    <button
+                      type="button"
+                      disabled={deletingMediaIds.includes(initialData.audioGuideEn?.id || 0) || isLoading || isUploading}
+                      onClick={async () => {
+                        if (onRemoveMedia && templeId && initialData.audioGuideEn) {
+                          try {
+                            const mediaId = initialData.audioGuideEn.id;
+                            setDeletingMediaIds(prev => [...prev, mediaId]);
+                            await onRemoveMedia(templeId, mediaId);
+                          } catch (err) {
+                            console.error("Failed to remove audio:", err);
+                          } finally {
+                            setDeletingMediaIds(prev => prev.filter(id => id !== initialData.audioGuideEn?.id));
+                          }
+                        }
+                      }}
+                      className="p-1 text-destructive disabled:opacity-30"
+                    >
+                      {deletingMediaIds.includes(initialData.audioGuideEn?.id || 0) ? (
+                        <IconLoader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <IconTrash className="h-4 w-4" />
+                      )}
+                    </button>
+                  ) : (
+                    <label className={twMerge("cursor-pointer p-1 text-primary", (isLoading || isUploading) && "opacity-30 pointer-events-none")}>
+                      <IconUpload className="h-4 w-4" />
+                      <input type="file" accept="audio/*" className="hidden" disabled={isLoading || isUploading} onChange={(e) => handleFileChange(e, "audioGuideEn")} />
+                    </label>
+                  )}
+                </div>
+              )}
             </div>
 
             {/* Audio HI Section */}
             <div className="space-y-3">
-              <label className={labelClasses}>{t("temples.audioHi")}</label>
-              <div className={twMerge(
-                "relative overflow-hidden p-4 rounded-2xl border-2 bg-card flex items-center gap-3 transition-all shadow-sm",
-                (files.audioGuideHi || initialData?.audioGuideHi) ? "border-orange-200" : "border-border"
-              )}>
-                {(isLoading || isUploading) && files.audioGuideHi && (
-                  <div className="absolute inset-x-0 bottom-0 h-1 bg-orange-100">
-                    <div className="h-full bg-orange-500 animate-progress-indeterminate w-1/3" />
-                  </div>
-                )}
-                <div className="h-10 w-10 shrink-0 rounded-xl bg-orange-100/50 flex items-center justify-center text-orange-600">
-                  {(isLoading || isUploading) && files.audioGuideHi ? <IconLoader2 className="h-5 w-5 animate-spin" /> : <IconMusic className="h-5 w-5" />}
-                </div>
-                <div className="min-w-0 flex-1">
-                  {files.audioGuideHi ? (
-                    <p className="text-xs font-bold truncate">{(files.audioGuideHi as File).name}</p>
-                  ) : initialData?.audioGuideHi ? (
-                    <div className="flex flex-col gap-0.5 min-w-0">
-                      <p className="text-xs font-bold text-orange-600 truncate uppercase tracking-tighter">Audio (HI)</p>
-                      <a
-                        href={initialData.audioGuideHi?.url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-[10px] text-muted-foreground hover:text-orange-600 underline truncate"
-                      >
-                        Listen to current
-                      </a>
-                    </div>
-                  ) : (
-                    <p className="text-xs font-bold text-muted-foreground">No audio selected</p>
-                  )}
-                </div>
-                {files.audioGuideHi ? (
-                  <button type="button" disabled={isLoading || isUploading} onClick={() => removeFile("audioGuideHi")} className="p-1 text-destructive disabled:opacity-30">
-                    <IconTrash className="h-4 w-4" />
-                  </button>
-                ) : initialData?.audioGuideHi ? (
+              <div className="flex items-center justify-between mb-2">
+                <label className={labelClasses}>{t("temples.audioHi")}</label>
+                <div className="flex bg-muted/30 p-0.5 rounded-lg">
                   <button
                     type="button"
-                    disabled={deletingMediaIds.includes(initialData.audioGuideHi?.id || 0) || isLoading || isUploading}
-                    onClick={async () => {
-                      if (onRemoveMedia && templeId && initialData.audioGuideHi) {
-                        try {
-                          const mediaId = initialData.audioGuideHi.id;
-                          setDeletingMediaIds(prev => [...prev, mediaId]);
-                          await onRemoveMedia(templeId, mediaId);
-                        } catch (err) {
-                          console.error("Failed to remove audio:", err);
-                        } finally {
-                          setDeletingMediaIds(prev => prev.filter(id => id !== initialData.audioGuideHi?.id));
-                        }
-                      }
-                    }}
-                    className="p-1 text-destructive disabled:opacity-30"
-                  >
-                    {deletingMediaIds.includes(initialData.audioGuideHi?.id || 0) ? (
-                      <IconLoader2 className="h-4 w-4 animate-spin" />
-                    ) : (
-                      <IconTrash className="h-4 w-4" />
+                    onClick={() => setAudioHiMode("file")}
+                    className={twMerge(
+                      "px-2.5 py-1 text-[9px] font-black uppercase tracking-widest rounded-md transition-all",
+                      audioHiMode === "file" ? "bg-card text-orange-600 shadow-sm" : "text-muted-foreground"
                     )}
+                  >
+                    File
                   </button>
-                ) : (
-                  <label className={twMerge("cursor-pointer p-1 text-primary", (isLoading || isUploading) && "opacity-30 pointer-events-none")}>
-                    <IconUpload className="h-4 w-4" />
-                    <input type="file" accept="audio/*" className="hidden" disabled={isLoading || isUploading} onChange={(e) => handleFileChange(e, "audioGuideHi")} />
-                  </label>
-                )}
+                  <button
+                    type="button"
+                    onClick={() => setAudioHiMode("url")}
+                    className={twMerge(
+                      "px-2.5 py-1 text-[9px] font-black uppercase tracking-widest rounded-md transition-all",
+                      audioHiMode === "url" ? "bg-card text-orange-600 shadow-sm" : "text-muted-foreground"
+                    )}
+                  >
+                    URL
+                  </button>
+                </div>
               </div>
+
+              {audioHiMode === "url" ? (
+                <div className="space-y-2">
+                  <div className="relative group">
+                    <IconMusic size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground/40 group-focus-within:text-orange-500 transition-colors" />
+                    <input
+                      {...register("audioGuideUrlHi")}
+                      disabled={isLoading || isUploading}
+                      className={twMerge(inputClasses, "pl-9")}
+                      placeholder="https://example.com/audio-hi.mp3"
+                    />
+                  </div>
+                  {errors.audioGuideUrlHi && <p className={errorClasses}>{errors.audioGuideUrlHi.message}</p>}
+                </div>
+              ) : (
+                <div className={twMerge(
+                  "relative overflow-hidden p-4 rounded-2xl border-2 bg-card flex items-center gap-3 transition-all shadow-sm",
+                  (files.audioGuideHi || initialData?.audioGuideHi) ? "border-orange-200" : "border-border"
+                )}>
+                  {(isLoading || isUploading) && files.audioGuideHi && (
+                    <div className="absolute inset-x-0 bottom-0 h-1 bg-orange-100">
+                      <div className="h-full bg-orange-500 animate-progress-indeterminate w-1/3" />
+                    </div>
+                  )}
+                  <div className="h-10 w-10 shrink-0 rounded-xl bg-orange-100/50 flex items-center justify-center text-orange-600">
+                    {(isLoading || isUploading) && files.audioGuideHi ? <IconLoader2 className="h-5 w-5 animate-spin" /> : <IconMusic className="h-5 w-5" />}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    {files.audioGuideHi ? (
+                      <p className="text-xs font-bold truncate">{(files.audioGuideHi as File).name}</p>
+                    ) : initialData?.audioGuideHi ? (
+                      <div className="flex flex-col gap-0.5 min-w-0">
+                        <p className="text-xs font-bold text-orange-600 truncate uppercase tracking-tighter">Audio (HI)</p>
+                        <a
+                          href={initialData.audioGuideHi?.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-[10px] text-muted-foreground hover:text-orange-600 underline truncate"
+                        >
+                          Listen to current
+                        </a>
+                      </div>
+                    ) : (
+                      <p className="text-xs font-bold text-muted-foreground">No audio selected</p>
+                    )}
+                  </div>
+                  {files.audioGuideHi ? (
+                    <button type="button" disabled={isLoading || isUploading} onClick={() => removeFile("audioGuideHi")} className="p-1 text-destructive disabled:opacity-30">
+                      <IconTrash className="h-4 w-4" />
+                    </button>
+                  ) : initialData?.audioGuideHi ? (
+                    <button
+                      type="button"
+                      disabled={deletingMediaIds.includes(initialData.audioGuideHi?.id || 0) || isLoading || isUploading}
+                      onClick={async () => {
+                        if (onRemoveMedia && templeId && initialData.audioGuideHi) {
+                          try {
+                            const mediaId = initialData.audioGuideHi.id;
+                            setDeletingMediaIds(prev => [...prev, mediaId]);
+                            await onRemoveMedia(templeId, mediaId);
+                          } catch (err) {
+                            console.error("Failed to remove audio:", err);
+                          } finally {
+                            setDeletingMediaIds(prev => prev.filter(id => id !== initialData.audioGuideHi?.id));
+                          }
+                        }
+                      }}
+                      className="p-1 text-destructive disabled:opacity-30"
+                    >
+                      {deletingMediaIds.includes(initialData.audioGuideHi?.id || 0) ? (
+                        <IconLoader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <IconTrash className="h-4 w-4" />
+                      )}
+                    </button>
+                  ) : (
+                    <label className={twMerge("cursor-pointer p-1 text-primary", (isLoading || isUploading) && "opacity-30 pointer-events-none")}>
+                      <IconUpload className="h-4 w-4" />
+                      <input type="file" accept="audio/*" className="hidden" disabled={isLoading || isUploading} onChange={(e) => handleFileChange(e, "audioGuideHi")} />
+                    </label>
+                  )}
+                </div>
+              )}
             </div>
           </div>
         </Tabs.Content>

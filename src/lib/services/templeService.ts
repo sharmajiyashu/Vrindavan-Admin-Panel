@@ -43,8 +43,8 @@ export interface Temple {
   bestTimeDetailHi?: string | null;
   historyEn?: string | null;
   historyHi?: string | null;
-  listenToHistoryUrlEn?: string | null;
-  listenToHistoryUrlHi?: string | null;
+  audioGuideUrlEn?: string | null;
+  audioGuideUrlHi?: string | null;
   createdAt: string;
   updatedAt: string;
   thumbnail?: TempleMedia;
