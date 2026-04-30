@@ -34,6 +34,12 @@ export const footerPromoValidationSchema = z.object({
     (v) => (v === "" || v === undefined ? undefined : boolFromMultipart(v)),
     coerceBoolean.default(true)
   ),
+}).superRefine((data, ctx) => {
+  const hasEn = !!data.buttonNameEn?.trim();
+  const hasHi = !!data.buttonNameHi?.trim();
+  if (hasEn !== hasHi) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Hindi and English must both be provided if one is filled.", path: [hasEn ? "buttonNameHi" : "buttonNameEn"] });
+  }
 });
 
 export type FooterPromoFormData = z.infer<typeof footerPromoValidationSchema>;
@@ -50,6 +56,12 @@ export const updateFooterPromoValidationSchema = z.object({
     z.coerce.number().int().min(1, "Show times must be at least 1").optional()
   ),
   isActive: z.preprocess(boolFromMultipart, z.boolean().optional()),
+}).superRefine((data, ctx) => {
+  const hasEn = !!data.buttonNameEn?.trim();
+  const hasHi = !!data.buttonNameHi?.trim();
+  if (hasEn !== hasHi) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Hindi and English must both be provided if one is filled.", path: [hasEn ? "buttonNameHi" : "buttonNameEn"] });
+  }
 });
 
 export type FooterPromoUpdateFormData = z.infer<typeof updateFooterPromoValidationSchema>;
@@ -74,6 +86,6 @@ export function toFooterPromoMultipartBody(data: FooterPromoFormData): Record<st
   } else {
     body.whatsappUrl = (data.whatsappUrl ?? "").trim();
   }
-  
+
   return body;
 }

@@ -56,6 +56,11 @@ export const darshanBannerValidationSchema = z
         });
       }
     }
+    const hasEn = !!data.buttonNameEn?.trim();
+    const hasHi = !!data.buttonNameHi?.trim();
+    if (hasEn !== hasHi) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Hindi and English must both be provided if one is filled.", path: [hasEn ? "buttonNameHi" : "buttonNameEn"] });
+    }
   });
 
 export type DarshanBannerFormData = z.infer<typeof darshanBannerValidationSchema>;
@@ -101,6 +106,11 @@ export const updateDarshanBannerValidationSchema = z
           path: ["whatsappUrl"],
         });
       }
+    }
+    const hasEn = !!data.buttonNameEn?.trim();
+    const hasHi = !!data.buttonNameHi?.trim();
+    if (hasEn !== hasHi) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Hindi and English must both be provided if one is filled.", path: [hasEn ? "buttonNameHi" : "buttonNameEn"] });
     }
   });
 

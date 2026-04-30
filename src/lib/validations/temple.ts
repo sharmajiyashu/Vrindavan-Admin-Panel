@@ -24,7 +24,7 @@ const timingEntrySchema = z.object({
   endTime: z.string().regex(timeRegex, "Invalid time format (HH:mm)"),
 });
 
-export const templeValidationSchema = z.object({
+const templeSchemaObject = z.object({
   nameEn: z.string().min(1, "Name in English is required"),
   nameHi: z.string().min(1, "Name in Hindi is required"),
   shortTitleEn: z.string().min(1, "Short title in English is required"),
@@ -109,6 +109,22 @@ export const templeValidationSchema = z.object({
   isActive: coerceBoolean.default(true),
 });
 
+const templeRefinement = (data: any, ctx: z.RefinementCtx) => {
+  const checkPair = (en: any, hi: any, basePath: string) => {
+    const hasEn = !!en?.trim();
+    const hasHi = !!hi?.trim();
+    if (hasEn !== hasHi) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Hindi and English must both be provided if one is filled.", path: [hasEn ? `${basePath}Hi` : `${basePath}En`] });
+    }
+  };
+  checkPair(data.establishedEn, data.establishedHi, "established");
+  checkPair(data.historyEn, data.historyHi, "history");
+  checkPair(data.documentaryTitleEn, data.documentaryTitleHi, "documentaryTitle");
+  checkPair(data.documentarySubtitleEn, data.documentarySubtitleHi, "documentarySubtitle");
+};
+
+export const templeValidationSchema = templeSchemaObject.superRefine(templeRefinement);
+
 export type TempleFormData = z.infer<typeof templeValidationSchema>;
 
-export const updateTempleValidationSchema = templeValidationSchema.partial();
+export const updateTempleValidationSchema = templeSchemaObject.partial().superRefine(templeRefinement);
