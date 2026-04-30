@@ -19,6 +19,7 @@ export const routeMapValidationSchema = z.object({
   recommendationHi: z.string().optional().nullable(),
 
   isActive: coerceBoolean.default(true),
+  isDefault: coerceBoolean.default(false),
 
   temples: z.array(z.object({
     templeId: coerceNumber,

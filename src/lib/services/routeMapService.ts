@@ -28,6 +28,7 @@ export interface RouteMap {
   recommendationEn?: string | null;
   recommendationHi?: string | null;
   isActive: boolean;
+  isDefault: boolean;
   createdAt: string;
   updatedAt: string;
   temples?: RouteMapTemple[]; // Detailed version nested temples

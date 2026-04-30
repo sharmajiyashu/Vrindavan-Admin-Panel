@@ -33,7 +33,6 @@ interface RouteMapFormProps {
 export function RouteMapForm({ initialData, onSubmit, onComplete, isLoading }: RouteMapFormProps) {
   const { t } = useLanguage();
   const [activeTab, setActiveTab] = useState("basic");
-  const [routeMapId, setRouteMapId] = useState<number | null>(initialData?.id || null);
 
   const { data: templesData } = useQuery({
     queryKey: ["temples", "all"],
@@ -61,6 +60,7 @@ export function RouteMapForm({ initialData, onSubmit, onComplete, isLoading }: R
       recommendationEn: initialData.recommendationEn,
       recommendationHi: initialData.recommendationHi,
       isActive: initialData.isActive,
+      isDefault: initialData.isDefault,
       temples: initialData.temples?.map(t => ({
         templeId: t.templeId,
         sortOrder: t.sortOrder ?? 0,
@@ -71,6 +71,7 @@ export function RouteMapForm({ initialData, onSubmit, onComplete, isLoading }: R
       })) ?? [],
     } : {
       isActive: true,
+      isDefault: false,
       temples: [],
     },
   });
@@ -81,14 +82,14 @@ export function RouteMapForm({ initialData, onSubmit, onComplete, isLoading }: R
   });
 
   const onFormSubmit: SubmitHandler<RouteMapFormData> = async (data) => {
+    if (activeTab === "basic") {
+      setActiveTab("sequence");
+      return;
+    }
+
     try {
-      const result = await onSubmit(data);
-      if (activeTab === "basic") {
-        setRouteMapId(result.id);
-        setActiveTab("sequence");
-      } else {
-        onComplete();
-      }
+      await onSubmit(data);
+      onComplete();
     } catch (error: any) {
       console.error("Form submission error:", error);
       toast.error(error.message || "Failed to save route map.");
@@ -117,11 +118,9 @@ export function RouteMapForm({ initialData, onSubmit, onComplete, isLoading }: R
           </Tabs.Trigger>
           <Tabs.Trigger
             value="sequence"
-            disabled={!routeMapId}
             className={twMerge(
               "relative px-8 py-4 text-xs font-black uppercase tracking-widest transition-all border-b-2 border-transparent",
-              activeTab === "sequence" ? "text-primary border-primary" : "text-muted-foreground hover:text-foreground",
-              !routeMapId && "opacity-50 cursor-not-allowed"
+              activeTab === "sequence" ? "text-primary border-primary" : "text-muted-foreground hover:text-foreground"
             )}
           >
             {t("routeMaps.temples")}
@@ -141,8 +140,8 @@ export function RouteMapForm({ initialData, onSubmit, onComplete, isLoading }: R
               {errors.nameHi && <p className={errorClasses}>{errors.nameHi.message}</p>}
             </div>
           </div>
- 
-           <div className="grid gap-6 md:grid-cols-2">
+
+          <div className="grid gap-6 md:grid-cols-2">
             <div>
               <label className={labelClasses}>{t("routeMaps.subtitleEn")}</label>
               <input {...register("subtitleEn")} className={inputClasses} placeholder="Example Subtitle" />
@@ -187,11 +186,18 @@ export function RouteMapForm({ initialData, onSubmit, onComplete, isLoading }: R
             </div>
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-center gap-8 pt-4">
             <label className="flex items-center gap-3 cursor-pointer group">
               <input type="checkbox" {...register("isActive")} className="sr-only peer" />
               <div className="w-11 h-6 bg-muted rounded-full peer-checked:bg-emerald-500 after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:after:translate-x-full relative" />
               <span className="text-xs font-black uppercase tracking-widest text-muted-foreground group-hover:text-foreground transition-colors">Route Active</span>
+            </label>
+
+            <label className="flex items-center gap-3 cursor-pointer group">
+              <input type="checkbox" {...register("isDefault")} className="sr-only peer" />
+              <div className="w-11 h-6 bg-muted rounded-full peer-checked:bg-primary after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:after:translate-x-full relative" />
+              <span className="text-xs font-black uppercase tracking-widest text-muted-foreground group-hover:text-foreground transition-colors">Default Route</span>
+              <span className="text-[10px] font-bold text-primary/40 uppercase tracking-tighter">(Shown first to users)</span>
             </label>
           </div>
         </Tabs.Content>
