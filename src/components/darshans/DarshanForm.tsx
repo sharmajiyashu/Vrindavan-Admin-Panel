@@ -23,14 +23,13 @@ import { templeService } from "@/lib/services/templeService";
 
 interface DarshanFormProps {
   initialData?: Darshan | null;
-  onSubmitBasic: (data: DarshanFormData) => Promise<number>;
-  onSubmitFiles: (id: number, files: File[]) => Promise<void>;
+  onSubmit: (formData: FormData) => Promise<void>;
   onRemoveMedia?: (darshanId: number, mediaId: number) => Promise<void>;
   onComplete: () => void;
   isLoading?: boolean;
 }
 
-export function DarshanForm({ initialData, onSubmitBasic, onSubmitFiles, onRemoveMedia, onComplete, isLoading }: DarshanFormProps) {
+export function DarshanForm({ initialData, onSubmit, onRemoveMedia, onComplete, isLoading }: DarshanFormProps) {
   const { t } = useLanguage();
   const [activeTab, setActiveTab] = useState("basic");
   const [darshanId, setDarshanId] = useState<number | null>(initialData?.id || null);
@@ -90,22 +89,23 @@ export function DarshanForm({ initialData, onSubmitBasic, onSubmitFiles, onRemov
   const onFormSubmit: SubmitHandler<DarshanFormData> = async (data) => {
     try {
       if (activeTab === "basic") {
-        const id = await onSubmitBasic(data);
-        setDarshanId(id);
         setActiveTab("gallery");
       } else {
-        if (darshanId) {
-          setIsUploading(true);
-          try {
-            // Also update basic details in case they were changed
-            await onSubmitBasic({ ...data, id: darshanId } as any);
-            if (files.length > 0) {
-              await onSubmitFiles(darshanId, files);
-            }
-            onComplete();
-          } finally {
-            setIsUploading(false);
-          }
+        setIsUploading(true);
+        try {
+          const formData = new FormData();
+          formData.append("templeId", String(data.templeId));
+          formData.append("date", data.date);
+          formData.append("shift", data.shift);
+          if (data.descriptionEn) formData.append("descriptionEn", data.descriptionEn);
+          if (data.descriptionHi) formData.append("descriptionHi", data.descriptionHi);
+
+          files.forEach((file) => formData.append("images", file));
+
+          await onSubmit(formData);
+          onComplete();
+        } finally {
+          setIsUploading(false);
         }
       }
     } catch (error: any) {
@@ -136,15 +136,12 @@ export function DarshanForm({ initialData, onSubmitBasic, onSubmitFiles, onRemov
           </Tabs.Trigger>
           <Tabs.Trigger
             value="gallery"
-            disabled={!darshanId}
             className={twMerge(
               "relative px-6 py-3 text-sm font-bold transition-all border-b-2 border-transparent",
               activeTab === "gallery" ? "text-primary border-primary" : "text-muted-foreground hover:text-foreground",
-              !darshanId && "opacity-50 cursor-not-allowed"
             )}
           >
             {t("darshans.gallery")}
-            {!darshanId && <div className="absolute inset-0 z-10" title="Complete basic details first" />}
           </Tabs.Trigger>
         </Tabs.List>
 
@@ -177,11 +174,22 @@ export function DarshanForm({ initialData, onSubmitBasic, onSubmitFiles, onRemov
                 <div className="absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-foreground/40">
                   <IconCalendar size={18} />
                 </div>
-                <input
-                  type="date"
-                  {...register("date")}
-                  className={twMerge(inputClasses, "pl-11")}
-                />
+                {(() => {
+                  const today = new Date();
+                  const maxDate = today.toISOString().split("T")[0];
+                  const minDateObj = new Date(today);
+                  minDateObj.setDate(today.getDate() - 4);
+                  const minDate = minDateObj.toISOString().split("T")[0];
+                  return (
+                    <input
+                      type="date"
+                      min={minDate}
+                      max={maxDate}
+                      {...register("date")}
+                      className={twMerge(inputClasses, "pl-11")}
+                    />
+                  );
+                })()}
               </div>
               {errors.date && <p className={errorClasses}>{errors.date.message}</p>}
             </div>

@@ -63,6 +63,7 @@ export const messages: Record<Locale, Record<string, string>> = {
     "nav.tourMap": "Tour Map",
     "nav.darshanManagement": "Darshan Management",
     "nav.footerPromos": "Footer promos",
+    "nav.aboutUs": "About Us",
 
 
     "header.userMenu": "User menu",

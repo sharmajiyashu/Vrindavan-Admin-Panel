@@ -206,14 +206,23 @@ export default function RouteMapsPage() {
                       <p className="text-[11px] font-bold text-muted-foreground">{route.approxTimeEn || "-"}</p>
                     </td>
                     <td className="px-6 py-5">
-                      <div className={twMerge(
-                        "inline-flex items-center gap-2 rounded-lg px-2.5 py-1 text-[9px] font-black uppercase tracking-wider",
-                        route.isActive
-                          ? "bg-emerald-50 text-emerald-600 ring-1 ring-inset ring-emerald-500/20"
-                          : "bg-muted text-muted-foreground ring-1 ring-inset ring-border/50"
-                      )}>
-                        <span className={twMerge("h-1 w-1 rounded-full", route.isActive ? "bg-emerald-500" : "bg-muted-foreground")} />
-                        {route.isActive ? "Active" : "Archived"}
+                      <div className="flex flex-wrap gap-2">
+                        <div className={twMerge(
+                          "inline-flex items-center gap-2 rounded-lg px-2.5 py-1 text-[9px] font-black uppercase tracking-wider",
+                          route.isActive
+                            ? "bg-emerald-50 text-emerald-600 ring-1 ring-inset ring-emerald-500/20"
+                            : "bg-muted text-muted-foreground ring-1 ring-inset ring-border/50"
+                        )}>
+                          <span className={twMerge("h-1 w-1 rounded-full", route.isActive ? "bg-emerald-500" : "bg-muted-foreground")} />
+                          {route.isActive ? "Active" : "Archived"}
+                        </div>
+
+                        {route.isDefault && (
+                          <div className="inline-flex items-center gap-2 rounded-lg px-2.5 py-1 text-[9px] font-black uppercase tracking-wider bg-primary/10 text-primary ring-1 ring-inset ring-primary/20">
+                            <IconDirections size={10} strokeWidth={3} />
+                            Default
+                          </div>
+                        )}
                       </div>
                     </td>
                     <td className="px-6 py-5 text-right">

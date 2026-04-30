@@ -55,12 +55,12 @@ export const darshanService = {
     return await get<Darshan>(`/darshans/${id}`);
   },
 
-  createDarshan: async (data: DarshanFormData) => {
-    return await post<Darshan>("/darshans", data);
+  createDarshan: async (formData: FormData) => {
+    return await postFormData<Darshan>("/darshans", formData);
   },
 
-  updateDarshan: async (id: number, data: Partial<DarshanFormData>) => {
-    return await put<Darshan>(`/darshans/${id}`, data);
+  updateDarshan: async (id: number, formData: FormData) => {
+    return await putFormData<Darshan>(`/darshans/${id}`, formData);
   },
 
   uploadGallery: async (id: number, files: File[]) => {

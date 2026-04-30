@@ -30,11 +30,11 @@ export const darshanBannerValidationSchema = z
     ),
     buttonNameEn: z.preprocess(
       (v) => (v === "" || v === undefined || v === null ? undefined : String(v).trim()),
-      z.string().optional().nullable()
+      z.string().min(1, 'Button Name (English) is required')
     ),
     buttonNameHi: z.preprocess(
       (v) => (v === "" || v === undefined || v === null ? undefined : String(v).trim()),
-      z.string().optional().nullable()
+      z.string().min(1, 'Button Name (Hindi) is required')
     ),
   })
   .superRefine((data, ctx) => {
@@ -55,6 +55,11 @@ export const darshanBannerValidationSchema = z
           path: ["whatsappUrl"],
         });
       }
+    }
+    const hasEn = !!data.buttonNameEn?.trim();
+    const hasHi = !!data.buttonNameHi?.trim();
+    if (hasEn !== hasHi) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Hindi and English must both be provided if one is filled.", path: [hasEn ? "buttonNameHi" : "buttonNameEn"] });
     }
   });
 
@@ -101,6 +106,11 @@ export const updateDarshanBannerValidationSchema = z
           path: ["whatsappUrl"],
         });
       }
+    }
+    const hasEn = !!data.buttonNameEn?.trim();
+    const hasHi = !!data.buttonNameHi?.trim();
+    if (hasEn !== hasHi) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Hindi and English must both be provided if one is filled.", path: [hasEn ? "buttonNameHi" : "buttonNameEn"] });
     }
   });
 
