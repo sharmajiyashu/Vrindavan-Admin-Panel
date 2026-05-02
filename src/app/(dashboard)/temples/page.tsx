@@ -56,10 +56,18 @@ export default function TemplesPage() {
 
       // Step 2: Upload Files (FormData)
       const uploadPromises = [];
-      if (Array.isArray(files.images) && files.images.length > 0) uploadPromises.push(templeService.uploadGallery(templeId, files.images));
-      if (files.documentaryVideo instanceof File) uploadPromises.push(templeService.uploadDocumentary(templeId, files.documentaryVideo));
-      if (files.audioGuideEn instanceof File) uploadPromises.push(templeService.uploadAudioGuide(templeId, "en", files.audioGuideEn));
-      if (files.audioGuideHi instanceof File) uploadPromises.push(templeService.uploadAudioGuide(templeId, "hi", files.audioGuideHi));
+      if (Array.isArray(files.images) && files.images.length > 0) {
+        uploadPromises.push(templeService.uploadGallery(templeId, files.images));
+      }
+      if (files.documentaryVideo && (files.documentaryVideo as File).size > 0) {
+        uploadPromises.push(templeService.uploadDocumentary(templeId, files.documentaryVideo as File));
+      }
+      if (files.audioGuideEn && (files.audioGuideEn as File).size > 0) {
+        uploadPromises.push(templeService.uploadAudioGuide(templeId, "en", files.audioGuideEn as File));
+      }
+      if (files.audioGuideHi && (files.audioGuideHi as File).size > 0) {
+        uploadPromises.push(templeService.uploadAudioGuide(templeId, "hi", files.audioGuideHi as File));
+      }
 
       await Promise.all(uploadPromises);
       return temple;
@@ -82,10 +90,18 @@ export default function TemplesPage() {
       // Step 2: Upload New Files (FormData)
       const uploadPromises = [];
 
-      if (Array.isArray(files.images) && files.images.length > 0) uploadPromises.push(templeService.uploadGallery(id, files.images));
-      if (files.documentaryVideo instanceof File) uploadPromises.push(templeService.uploadDocumentary(id, files.documentaryVideo));
-      if (files.audioGuideEn instanceof File) uploadPromises.push(templeService.uploadAudioGuide(id, "en", files.audioGuideEn));
-      if (files.audioGuideHi instanceof File) uploadPromises.push(templeService.uploadAudioGuide(id, "hi", files.audioGuideHi));
+      if (Array.isArray(files.images) && files.images.length > 0) {
+        uploadPromises.push(templeService.uploadGallery(id, files.images));
+      }
+      if (files.documentaryVideo && (files.documentaryVideo as File).size > 0) {
+        uploadPromises.push(templeService.uploadDocumentary(id, files.documentaryVideo as File));
+      }
+      if (files.audioGuideEn && (files.audioGuideEn as File).size > 0) {
+        uploadPromises.push(templeService.uploadAudioGuide(id, "en", files.audioGuideEn as File));
+      }
+      if (files.audioGuideHi && (files.audioGuideHi as File).size > 0) {
+        uploadPromises.push(templeService.uploadAudioGuide(id, "hi", files.audioGuideHi as File));
+      }
 
       await Promise.all(uploadPromises);
     },
@@ -112,9 +128,9 @@ export default function TemplesPage() {
       toast.error(error.message || "Failed to delete temple");
     },
   });
- 
+
   const statusMutation = useMutation({
-    mutationFn: ({ id, isActive }: { id: number; isActive: boolean }) => 
+    mutationFn: ({ id, isActive }: { id: number; isActive: boolean }) =>
       templeService.updateTemple(id, { isActive }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["temples"] });
@@ -272,10 +288,18 @@ export default function TemplesPage() {
 
                   onSubmitFiles={async (id, files) => {
                     const uploadPromises = [];
-                    if (Array.isArray(files.images) && files.images.length > 0) uploadPromises.push(templeService.uploadGallery(id, files.images));
-                    if (files.documentaryVideo instanceof File) uploadPromises.push(templeService.uploadDocumentary(id, files.documentaryVideo));
-                    if (files.audioGuideEn instanceof File) uploadPromises.push(templeService.uploadAudioGuide(id, "en", files.audioGuideEn));
-                    if (files.audioGuideHi instanceof File) uploadPromises.push(templeService.uploadAudioGuide(id, "hi", files.audioGuideHi));
+                    if (Array.isArray(files.images) && files.images.length > 0) {
+                      uploadPromises.push(templeService.uploadGallery(id, files.images));
+                    }
+                    if (files.documentaryVideo && (files.documentaryVideo as File).size > 0) {
+                      uploadPromises.push(templeService.uploadDocumentary(id, files.documentaryVideo as File));
+                    }
+                    if (files.audioGuideEn && (files.audioGuideEn as File).size > 0) {
+                      uploadPromises.push(templeService.uploadAudioGuide(id, "en", files.audioGuideEn as File));
+                    }
+                    if (files.audioGuideHi && (files.audioGuideHi as File).size > 0) {
+                      uploadPromises.push(templeService.uploadAudioGuide(id, "hi", files.audioGuideHi as File));
+                    }
 
                     await Promise.all(uploadPromises);
                     queryClient.invalidateQueries({ queryKey: ["temples"] });
@@ -287,6 +311,26 @@ export default function TemplesPage() {
                       toast.success(t("common.deleteSuccess"));
                     } catch (err: any) {
                       toast.error(err.message || "Failed to remove image");
+                      throw err;
+                    }
+                  }}
+                  onRemoveDocumentary={async (id) => {
+                    try {
+                      await templeService.deleteDocumentary(id);
+                      toast.success(t("common.deleteSuccess"));
+                      queryClient.invalidateQueries({ queryKey: ["temples"] });
+                    } catch (err: any) {
+                      toast.error(err.message || "Failed to remove documentary");
+                      throw err;
+                    }
+                  }}
+                  onRemoveAudioGuide={async (id, lang) => {
+                    try {
+                      await templeService.deleteAudioGuide(id, lang);
+                      toast.success(t("common.deleteSuccess"));
+                      queryClient.invalidateQueries({ queryKey: ["temples"] });
+                    } catch (err: any) {
+                      toast.error(err.message || "Failed to remove audio guide");
                       throw err;
                     }
                   }}

@@ -3,8 +3,8 @@ import axios, {
   type AxiosRequestConfig,
 } from "axios";
 
-// const BASE_URL = "http://localhost:3000/v1/api/admin";
-const BASE_URL = "https://vrindavan-node-jehn.vercel.app/v1/api/admin";
+const BASE_URL = "http://localhost:3000/v1/api/admin";
+// const BASE_URL = "https://vrindavan-node-jehn.vercel.app/v1/api/admin";
 
 
 const PUBLIC_PATHS = ["/health", "/auth/login", "/user/login", "/login"];

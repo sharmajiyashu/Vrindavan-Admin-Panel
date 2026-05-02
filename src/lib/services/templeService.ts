@@ -100,10 +100,18 @@ export const templeService = {
     return await putFormData<any>(`/temples/${id}/documentary`, formData);
   },
 
+  deleteDocumentary: async (id: number) => {
+    return await deleteRequest(`/temples/${id}/documentary`);
+  },
+
   uploadAudioGuide: async (id: number, lang: "en" | "hi", file: File) => {
     const formData = new FormData();
     formData.append("audio", file);
     return await putFormData<any>(`/temples/${id}/audio/${lang}`, formData);
+  },
+
+  deleteAudioGuide: async (id: number, lang: "en" | "hi") => {
+    return await deleteRequest(`/temples/${id}/audio/${lang}`);
   },
 
   deleteGalleryMedia: async (templeId: number, mediaId: number) => {
