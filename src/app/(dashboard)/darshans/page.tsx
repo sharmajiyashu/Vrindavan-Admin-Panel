@@ -177,7 +177,7 @@ export default function DarshansPage() {
             className="h-11 w-full rounded-xl border-2 border-border bg-card pl-10 pr-4 text-[11px] font-bold shadow-sm outline-none transition-all focus:border-primary focus:ring-4 focus:ring-primary/5 appearance-none cursor-pointer"
           >
             <option value="">All Temples</option>
-            {templesData?.temples?.map((t) => (
+            {templesData?.temples?.filter(t => t.showDarshan).map((t) => (
               <option key={t.id} value={t.id}>{t.nameEn}</option>
             ))}
           </select>

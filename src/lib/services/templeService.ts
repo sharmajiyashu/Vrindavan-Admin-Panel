@@ -36,6 +36,7 @@ export interface Temple {
   audioGuideHiId?: number | null;
   imageIds: number[];
   isActive: boolean;
+  showDarshan: boolean;
   sortOrder: number;
   bestTimeEn?: string | null;
   bestTimeHi?: string | null;

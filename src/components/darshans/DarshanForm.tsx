@@ -158,7 +158,7 @@ export function DarshanForm({ initialData, onSubmit, onRemoveMedia, onComplete, 
                   className={twMerge(inputClasses, "pl-11")}
                 >
                   <option value="">Select Temple</option>
-                  {temples.map((temple) => (
+                  {temples.filter(t => t.showDarshan).map((temple) => (
                     <option key={temple.id} value={temple.id}>
                       {temple.nameEn}
                     </option>

@@ -92,10 +92,12 @@ export function TempleForm({ initialData, onSubmitBasic, onSubmitFiles, onRemove
       historyHi: initialData.historyHi || "",
       sortOrder: initialData.sortOrder || 0,
       isActive: initialData.isActive ?? true,
+      showDarshan: initialData.showDarshan ?? false,
     } : {
       morningTimings: [],
       eveningTimings: [],
       isActive: true,
+      showDarshan: false,
       sortOrder: 0,
       shortTitleEn: "",
       shortTitleHi: "",
@@ -346,6 +348,12 @@ export function TempleForm({ initialData, onSubmitBasic, onSubmitFiles, onRemove
                 <input type="checkbox" {...register("isActive")} className="sr-only peer" />
                 <div className="w-11 h-6 bg-muted rounded-full peer-checked:bg-emerald-500 after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:after:translate-x-full relative" />
                 <span className="text-xs font-black uppercase tracking-widest text-muted-foreground group-hover:text-foreground transition-colors">Temple Active</span>
+              </label>
+
+              <label className="flex items-center gap-3 cursor-pointer group ml-6">
+                <input type="checkbox" {...register("showDarshan")} className="sr-only peer" />
+                <div className="w-11 h-6 bg-muted rounded-full peer-checked:bg-primary after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:after:translate-x-full relative" />
+                <span className="text-xs font-black uppercase tracking-widest text-muted-foreground group-hover:text-foreground transition-colors">Show Darshan</span>
               </label>
             </div>
           </div>
