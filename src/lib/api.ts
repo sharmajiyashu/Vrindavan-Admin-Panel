@@ -114,7 +114,7 @@ export function getToken(): string | null {
 
 export const api: AxiosInstance = axios.create({
   baseURL: BASE_URL,
-  timeout: 10000,
+  timeout: 600000, // 10 minutes for large file uploads
   headers: {
     "Content-Type": "application/json",
   },

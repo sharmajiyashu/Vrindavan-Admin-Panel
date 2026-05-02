@@ -107,6 +107,7 @@ const templeSchemaObject = z.object({
   ).default(0),
 
   isActive: coerceBoolean.default(true),
+  showDarshan: coerceBoolean.default(false),
 });
 
 const templeRefinement = (data: any, ctx: z.RefinementCtx) => {

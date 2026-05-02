@@ -329,6 +329,7 @@ export default function TemplesPage() {
                   <th className="px-4 py-4 min-w-[240px]">{t("temples.name")}</th>
                   <th className="px-4 py-4">{t("temples.city")} & {t("temples.state")}</th>
                   <th className="px-4 py-4">{t("temples.active")}</th>
+                  <th className="px-4 py-4">Darshan</th>
                   <th className="px-5 py-4 text-right">Actions</th>
                 </tr>
               </thead>
@@ -385,6 +386,16 @@ export default function TemplesPage() {
                         )}
                         {temple.isActive ? "Active" : "Inactive"}
                       </button>
+                    </td>
+                    <td className="px-4 py-3.5">
+                      <div className={twMerge(
+                        "inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[9px] font-black uppercase tracking-wider transition-all",
+                        temple.showDarshan
+                          ? "bg-primary/10 text-primary ring-1 ring-inset ring-primary/20"
+                          : "bg-muted text-muted-foreground ring-1 ring-inset ring-border"
+                      )}>
+                        {temple.showDarshan ? "Enabled" : "Disabled"}
+                      </div>
                     </td>
                     <td className="px-5 py-3.5 text-right">
                       <div className="flex items-center justify-end gap-2">
