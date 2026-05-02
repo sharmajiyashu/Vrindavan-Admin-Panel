@@ -25,11 +25,13 @@ interface TempleFormProps {
   onSubmitBasic: (data: TempleFormData) => Promise<number>;
   onSubmitFiles: (id: number, files: Record<string, File | File[] | undefined>) => Promise<void>;
   onRemoveMedia?: (templeId: number, mediaId: number) => Promise<void>;
+  onRemoveDocumentary?: (templeId: number) => Promise<void>;
+  onRemoveAudioGuide?: (templeId: number, lang: "en" | "hi") => Promise<void>;
   onComplete: () => void;
   isLoading?: boolean;
 }
 
-export function TempleForm({ initialData, onSubmitBasic, onSubmitFiles, onRemoveMedia, onComplete, isLoading }: TempleFormProps) {
+export function TempleForm({ initialData, onSubmitBasic, onSubmitFiles, onRemoveMedia, onRemoveDocumentary, onRemoveAudioGuide, onComplete, isLoading }: TempleFormProps) {
   const { t } = useLanguage();
   const [activeTab, setActiveTab] = useState("basic");
   const [templeId, setTempleId] = useState<number | null>(initialData?.id || null);
@@ -38,13 +40,26 @@ export function TempleForm({ initialData, onSubmitBasic, onSubmitFiles, onRemove
   const [existingGallery, setExistingGallery] = useState<any[]>(initialData?.gallery || []);
   const [deletingMediaIds, setDeletingMediaIds] = useState<number[]>([]);
   const [isUploading, setIsUploading] = useState(false);
-  const [videoMode, setVideoMode] = useState<"file" | "url">(initialData?.documentaryVideoUrl ? "url" : "file");
-  const [audioEnMode, setAudioEnMode] = useState<"file" | "url">(initialData?.audioGuideUrlEn ? "url" : "file");
-  const [audioHiMode, setAudioHiMode] = useState<"file" | "url">(initialData?.audioGuideUrlHi ? "url" : "file");
+  const [existingDocumentary, setExistingDocumentary] = useState(initialData?.documentaryVideo);
+  const [existingAudioEn, setExistingAudioEn] = useState(initialData?.audioGuideEn);
+  const [existingAudioHi, setExistingAudioHi] = useState(initialData?.audioGuideHi);
+  const [existingDocumentaryUrl, setExistingDocumentaryUrl] = useState(initialData?.documentaryVideoUrl);
+  const [existingAudioEnUrl, setExistingAudioEnUrl] = useState(initialData?.audioGuideUrlEn);
+  const [existingAudioHiUrl, setExistingAudioHiUrl] = useState(initialData?.audioGuideUrlHi);
+
+  const [videoMode, setVideoMode] = useState<"file" | "url">(initialData?.documentaryVideo ? "file" : initialData?.documentaryVideoUrl ? "url" : "file");
+  const [audioEnMode, setAudioEnMode] = useState<"file" | "url">(initialData?.audioGuideEn ? "file" : initialData?.audioGuideUrlEn ? "url" : "file");
+  const [audioHiMode, setAudioHiMode] = useState<"file" | "url">(initialData?.audioGuideHi ? "file" : initialData?.audioGuideUrlHi ? "url" : "file");
 
   React.useEffect(() => {
-    if (initialData?.gallery) {
-      setExistingGallery(initialData.gallery);
+    if (initialData) {
+      setExistingGallery(initialData.gallery || []);
+      setExistingDocumentary(initialData.documentaryVideo);
+      setExistingAudioEn(initialData.audioGuideEn);
+      setExistingAudioHi(initialData.audioGuideHi);
+      setExistingDocumentaryUrl(initialData.documentaryVideoUrl);
+      setExistingAudioEnUrl(initialData.audioGuideUrlEn);
+      setExistingAudioHiUrl(initialData.audioGuideUrlHi);
     }
   }, [initialData]);
 
@@ -52,6 +67,7 @@ export function TempleForm({ initialData, onSubmitBasic, onSubmitFiles, onRemove
     register,
     control,
     handleSubmit,
+    setValue,
     formState: { errors },
   } = useForm<TempleFormData>({
     resolver: zodResolver(templeValidationSchema) as any,
@@ -574,21 +590,58 @@ export function TempleForm({ initialData, onSubmitBasic, onSubmitFiles, onRemove
 
               {videoMode === "url" ? (
                 <div className="space-y-2">
-                  <div className="relative group">
-                    <IconVideo size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground/40 group-focus-within:text-primary transition-colors" />
-                    <input
-                      {...register("documentaryVideoUrl")}
-                      disabled={isLoading || isUploading}
-                      className={twMerge(inputClasses, "pl-9")}
-                      placeholder="https://www.youtube.com/watch?v=..."
-                    />
-                  </div>
+                  {existingDocumentaryUrl ? (
+                    <div className="relative overflow-hidden p-4 rounded-2xl border-2 border-primary/30 bg-card flex items-center gap-3 transition-all shadow-sm">
+                      <div className="h-10 w-10 shrink-0 rounded-xl bg-primary/10 flex items-center justify-center text-primary">
+                        <IconVideo className="h-5 w-5" />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-xs font-bold text-primary truncate uppercase tracking-tighter">Documentary Link</p>
+                        <a
+                          href={existingDocumentaryUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-[10px] text-muted-foreground hover:text-primary underline truncate block"
+                        >
+                          {existingDocumentaryUrl}
+                        </a>
+                      </div>
+                      <button
+                        type="button"
+                        disabled={isLoading || isUploading}
+                        onClick={async () => {
+                          if (onRemoveDocumentary && templeId) {
+                            try {
+                              await onRemoveDocumentary(templeId);
+                              setExistingDocumentaryUrl(null);
+                              setValue("documentaryVideoUrl", "");
+                            } catch (err) {
+                              console.error("Failed to remove video URL:", err);
+                            }
+                          }
+                        }}
+                        className="p-1 text-destructive hover:bg-destructive/10 rounded-lg transition-colors"
+                      >
+                        <IconTrash className="h-4 w-4" />
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="relative group">
+                      <IconVideo size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground/40 group-focus-within:text-primary transition-colors" />
+                      <input
+                        {...register("documentaryVideoUrl")}
+                        disabled={isLoading || isUploading}
+                        className={twMerge(inputClasses, "pl-9")}
+                        placeholder="https://www.youtube.com/watch?v=..."
+                      />
+                    </div>
+                  )}
                   {errors.documentaryVideoUrl && <p className={errorClasses}>{errors.documentaryVideoUrl.message}</p>}
                 </div>
               ) : (
                 <div className={twMerge(
                   "relative overflow-hidden p-4 rounded-2xl border-2 bg-card flex items-center gap-3 transition-all shadow-sm",
-                  (files.documentaryVideo || initialData?.documentaryVideo) ? "border-primary/30" : "border-border"
+                  (files.documentaryVideo || existingDocumentary) ? "border-primary/30" : "border-border"
                 )}>
                   {isLoading && files.documentaryVideo && (
                     <div className="absolute inset-x-0 bottom-0 h-1 bg-primary/20">
@@ -601,11 +654,11 @@ export function TempleForm({ initialData, onSubmitBasic, onSubmitFiles, onRemove
                   <div className="min-w-0 flex-1">
                     {files.documentaryVideo ? (
                       <p className="text-xs font-bold truncate">{(files.documentaryVideo as File).name}</p>
-                    ) : initialData?.documentaryVideo ? (
+                    ) : existingDocumentary ? (
                       <div className="flex flex-col gap-0.5 min-w-0">
                         <p className="text-xs font-bold text-primary truncate uppercase tracking-tighter">Documentary</p>
                         <a
-                          href={initialData.documentaryVideo?.url}
+                          href={existingDocumentary?.url}
                           target="_blank"
                           rel="noopener noreferrer"
                           className="text-[10px] text-muted-foreground hover:text-primary underline truncate"
@@ -621,26 +674,27 @@ export function TempleForm({ initialData, onSubmitBasic, onSubmitFiles, onRemove
                     <button type="button" disabled={isLoading || isUploading} onClick={() => removeFile("documentaryVideo")} className="p-1 text-destructive disabled:opacity-30">
                       <IconTrash className="h-4 w-4" />
                     </button>
-                  ) : initialData?.documentaryVideo ? (
+                  ) : existingDocumentary ? (
                     <button
                       type="button"
-                      disabled={deletingMediaIds.includes(initialData.documentaryVideo?.id || 0) || isLoading || isUploading}
+                      disabled={deletingMediaIds.includes(existingDocumentary?.id || 0) || isLoading || isUploading}
                       onClick={async () => {
-                        if (onRemoveMedia && templeId && initialData.documentaryVideo) {
+                        if (onRemoveDocumentary && templeId && existingDocumentary) {
                           try {
-                            const mediaId = initialData.documentaryVideo.id;
+                            const mediaId = existingDocumentary.id;
                             setDeletingMediaIds(prev => [...prev, mediaId]);
-                            await onRemoveMedia(templeId, mediaId);
+                            await onRemoveDocumentary(templeId);
+                            setExistingDocumentary(undefined);
                           } catch (err) {
                             console.error("Failed to remove video:", err);
                           } finally {
-                            setDeletingMediaIds(prev => prev.filter(id => id !== initialData.documentaryVideo?.id));
+                            setDeletingMediaIds(prev => prev.filter(id => id !== existingDocumentary?.id));
                           }
                         }
                       }}
                       className="p-1 text-destructive disabled:opacity-30"
                     >
-                      {deletingMediaIds.includes(initialData.documentaryVideo?.id || 0) ? (
+                      {deletingMediaIds.includes(existingDocumentary?.id || 0) ? (
                         <IconLoader2 className="h-4 w-4 animate-spin" />
                       ) : (
                         <IconTrash className="h-4 w-4" />
@@ -704,21 +758,58 @@ export function TempleForm({ initialData, onSubmitBasic, onSubmitFiles, onRemove
 
               {audioEnMode === "url" ? (
                 <div className="space-y-2">
-                  <div className="relative group">
-                    <IconMusic size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground/40 group-focus-within:text-emerald-500 transition-colors" />
-                    <input
-                      {...register("audioGuideUrlEn")}
-                      disabled={isLoading || isUploading}
-                      className={twMerge(inputClasses, "pl-9")}
-                      placeholder="https://example.com/audio-en.mp3"
-                    />
-                  </div>
+                  {existingAudioEnUrl ? (
+                    <div className="relative overflow-hidden p-4 rounded-2xl border-2 border-emerald-500/30 bg-card flex items-center gap-3 transition-all shadow-sm">
+                      <div className="h-10 w-10 shrink-0 rounded-xl bg-emerald-500/10 flex items-center justify-center text-emerald-600">
+                        <IconMusic className="h-5 w-5" />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-xs font-bold text-emerald-600 truncate uppercase tracking-tighter">Audio Guide (EN)</p>
+                        <a
+                          href={existingAudioEnUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-[10px] text-muted-foreground hover:text-emerald-600 underline truncate block"
+                        >
+                          {existingAudioEnUrl}
+                        </a>
+                      </div>
+                      <button
+                        type="button"
+                        disabled={isLoading || isUploading}
+                        onClick={async () => {
+                          if (onRemoveAudioGuide && templeId) {
+                            try {
+                              await onRemoveAudioGuide(templeId, "en");
+                              setExistingAudioEnUrl(null);
+                              setValue("audioGuideUrlEn", "");
+                            } catch (err) {
+                              console.error("Failed to remove audio URL:", err);
+                            }
+                          }
+                        }}
+                        className="p-1 text-destructive hover:bg-destructive/10 rounded-lg transition-colors"
+                      >
+                        <IconTrash className="h-4 w-4" />
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="relative group">
+                      <IconMusic size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground/40 group-focus-within:text-emerald-500 transition-colors" />
+                      <input
+                        {...register("audioGuideUrlEn")}
+                        disabled={isLoading || isUploading}
+                        className={twMerge(inputClasses, "pl-9")}
+                        placeholder="https://example.com/audio-en.mp3"
+                      />
+                    </div>
+                  )}
                   {errors.audioGuideUrlEn && <p className={errorClasses}>{errors.audioGuideUrlEn.message}</p>}
                 </div>
               ) : (
                 <div className={twMerge(
                   "relative overflow-hidden p-4 rounded-2xl border-2 bg-card flex items-center gap-3 transition-all shadow-sm",
-                  (files.audioGuideEn || initialData?.audioGuideEn) ? "border-emerald-200" : "border-border"
+                  (files.audioGuideEn || existingAudioEn) ? "border-emerald-200" : "border-border"
                 )}>
                   {(isLoading || isUploading) && files.audioGuideEn && (
                     <div className="absolute inset-x-0 bottom-0 h-1 bg-emerald-100">
@@ -731,11 +822,11 @@ export function TempleForm({ initialData, onSubmitBasic, onSubmitFiles, onRemove
                   <div className="min-w-0 flex-1">
                     {files.audioGuideEn ? (
                       <p className="text-xs font-bold truncate">{(files.audioGuideEn as File).name}</p>
-                    ) : initialData?.audioGuideEn ? (
+                    ) : existingAudioEn ? (
                       <div className="flex flex-col gap-0.5 min-w-0">
                         <p className="text-xs font-bold text-emerald-600 truncate uppercase tracking-tighter">Audio (EN)</p>
                         <a
-                          href={initialData.audioGuideEn?.url}
+                          href={existingAudioEn?.url}
                           target="_blank"
                           rel="noopener noreferrer"
                           className="text-[10px] text-muted-foreground hover:text-emerald-600 underline truncate"
@@ -751,26 +842,27 @@ export function TempleForm({ initialData, onSubmitBasic, onSubmitFiles, onRemove
                     <button type="button" disabled={isLoading || isUploading} onClick={() => removeFile("audioGuideEn")} className="p-1 text-destructive disabled:opacity-30">
                       <IconTrash className="h-4 w-4" />
                     </button>
-                  ) : initialData?.audioGuideEn ? (
+                  ) : existingAudioEn ? (
                     <button
                       type="button"
-                      disabled={deletingMediaIds.includes(initialData.audioGuideEn?.id || 0) || isLoading || isUploading}
+                      disabled={deletingMediaIds.includes(existingAudioEn?.id || 0) || isLoading || isUploading}
                       onClick={async () => {
-                        if (onRemoveMedia && templeId && initialData.audioGuideEn) {
+                        if (onRemoveAudioGuide && templeId && existingAudioEn) {
                           try {
-                            const mediaId = initialData.audioGuideEn.id;
+                            const mediaId = existingAudioEn.id;
                             setDeletingMediaIds(prev => [...prev, mediaId]);
-                            await onRemoveMedia(templeId, mediaId);
+                            await onRemoveAudioGuide(templeId, "en");
+                            setExistingAudioEn(undefined);
                           } catch (err) {
                             console.error("Failed to remove audio:", err);
                           } finally {
-                            setDeletingMediaIds(prev => prev.filter(id => id !== initialData.audioGuideEn?.id));
+                            setDeletingMediaIds(prev => prev.filter(id => id !== existingAudioEn?.id));
                           }
                         }
                       }}
                       className="p-1 text-destructive disabled:opacity-30"
                     >
-                      {deletingMediaIds.includes(initialData.audioGuideEn?.id || 0) ? (
+                      {deletingMediaIds.includes(existingAudioEn?.id || 0) ? (
                         <IconLoader2 className="h-4 w-4 animate-spin" />
                       ) : (
                         <IconTrash className="h-4 w-4" />
@@ -816,21 +908,58 @@ export function TempleForm({ initialData, onSubmitBasic, onSubmitFiles, onRemove
 
               {audioHiMode === "url" ? (
                 <div className="space-y-2">
-                  <div className="relative group">
-                    <IconMusic size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground/40 group-focus-within:text-orange-500 transition-colors" />
-                    <input
-                      {...register("audioGuideUrlHi")}
-                      disabled={isLoading || isUploading}
-                      className={twMerge(inputClasses, "pl-9")}
-                      placeholder="https://example.com/audio-hi.mp3"
-                    />
-                  </div>
+                  {existingAudioHiUrl ? (
+                    <div className="relative overflow-hidden p-4 rounded-2xl border-2 border-orange-500/30 bg-card flex items-center gap-3 transition-all shadow-sm">
+                      <div className="h-10 w-10 shrink-0 rounded-xl bg-orange-500/10 flex items-center justify-center text-orange-600">
+                        <IconMusic className="h-5 w-5" />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-xs font-bold text-orange-600 truncate uppercase tracking-tighter">Audio Guide (HI)</p>
+                        <a
+                          href={existingAudioHiUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-[10px] text-muted-foreground hover:text-orange-600 underline truncate block"
+                        >
+                          {existingAudioHiUrl}
+                        </a>
+                      </div>
+                      <button
+                        type="button"
+                        disabled={isLoading || isUploading}
+                        onClick={async () => {
+                          if (onRemoveAudioGuide && templeId) {
+                            try {
+                              await onRemoveAudioGuide(templeId, "hi");
+                              setExistingAudioHiUrl(null);
+                              setValue("audioGuideUrlHi", "");
+                            } catch (err) {
+                              console.error("Failed to remove audio URL:", err);
+                            }
+                          }
+                        }}
+                        className="p-1 text-destructive hover:bg-destructive/10 rounded-lg transition-colors"
+                      >
+                        <IconTrash className="h-4 w-4" />
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="relative group">
+                      <IconMusic size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground/40 group-focus-within:text-orange-500 transition-colors" />
+                      <input
+                        {...register("audioGuideUrlHi")}
+                        disabled={isLoading || isUploading}
+                        className={twMerge(inputClasses, "pl-9")}
+                        placeholder="https://example.com/audio-hi.mp3"
+                      />
+                    </div>
+                  )}
                   {errors.audioGuideUrlHi && <p className={errorClasses}>{errors.audioGuideUrlHi.message}</p>}
                 </div>
               ) : (
                 <div className={twMerge(
                   "relative overflow-hidden p-4 rounded-2xl border-2 bg-card flex items-center gap-3 transition-all shadow-sm",
-                  (files.audioGuideHi || initialData?.audioGuideHi) ? "border-orange-200" : "border-border"
+                  (files.audioGuideHi || existingAudioHi) ? "border-orange-200" : "border-border"
                 )}>
                   {(isLoading || isUploading) && files.audioGuideHi && (
                     <div className="absolute inset-x-0 bottom-0 h-1 bg-orange-100">
@@ -843,11 +972,11 @@ export function TempleForm({ initialData, onSubmitBasic, onSubmitFiles, onRemove
                   <div className="min-w-0 flex-1">
                     {files.audioGuideHi ? (
                       <p className="text-xs font-bold truncate">{(files.audioGuideHi as File).name}</p>
-                    ) : initialData?.audioGuideHi ? (
+                    ) : existingAudioHi ? (
                       <div className="flex flex-col gap-0.5 min-w-0">
                         <p className="text-xs font-bold text-orange-600 truncate uppercase tracking-tighter">Audio (HI)</p>
                         <a
-                          href={initialData.audioGuideHi?.url}
+                          href={existingAudioHi?.url}
                           target="_blank"
                           rel="noopener noreferrer"
                           className="text-[10px] text-muted-foreground hover:text-orange-600 underline truncate"
@@ -863,26 +992,27 @@ export function TempleForm({ initialData, onSubmitBasic, onSubmitFiles, onRemove
                     <button type="button" disabled={isLoading || isUploading} onClick={() => removeFile("audioGuideHi")} className="p-1 text-destructive disabled:opacity-30">
                       <IconTrash className="h-4 w-4" />
                     </button>
-                  ) : initialData?.audioGuideHi ? (
+                  ) : existingAudioHi ? (
                     <button
                       type="button"
-                      disabled={deletingMediaIds.includes(initialData.audioGuideHi?.id || 0) || isLoading || isUploading}
+                      disabled={deletingMediaIds.includes(existingAudioHi?.id || 0) || isLoading || isUploading}
                       onClick={async () => {
-                        if (onRemoveMedia && templeId && initialData.audioGuideHi) {
+                        if (onRemoveAudioGuide && templeId && existingAudioHi) {
                           try {
-                            const mediaId = initialData.audioGuideHi.id;
+                            const mediaId = existingAudioHi.id;
                             setDeletingMediaIds(prev => [...prev, mediaId]);
-                            await onRemoveMedia(templeId, mediaId);
+                            await onRemoveAudioGuide(templeId, "hi");
+                            setExistingAudioHi(undefined);
                           } catch (err) {
                             console.error("Failed to remove audio:", err);
                           } finally {
-                            setDeletingMediaIds(prev => prev.filter(id => id !== initialData.audioGuideHi?.id));
+                            setDeletingMediaIds(prev => prev.filter(id => id !== existingAudioHi?.id));
                           }
                         }
                       }}
                       className="p-1 text-destructive disabled:opacity-30"
                     >
-                      {deletingMediaIds.includes(initialData.audioGuideHi?.id || 0) ? (
+                      {deletingMediaIds.includes(existingAudioHi?.id || 0) ? (
                         <IconLoader2 className="h-4 w-4 animate-spin" />
                       ) : (
                         <IconTrash className="h-4 w-4" />
