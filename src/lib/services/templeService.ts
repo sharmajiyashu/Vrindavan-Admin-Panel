@@ -98,6 +98,8 @@ export const templeService = {
     return await postFormData<any>(`/temples/${id}/gallery`, formData);
   },
 
+
+
   uploadDocumentary: async (id: number, file: File) => {
     try {
       // 1. Get Signature from our backend
