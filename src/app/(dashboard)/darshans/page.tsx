@@ -191,7 +191,7 @@ export default function DarshansPage() {
             const today = new Date();
             const maxDate = today.toISOString().split("T")[0];
             const minDateObj = new Date(today);
-            minDateObj.setDate(today.getDate() - 4);
+            minDateObj.setDate(today.getDate() - 30);
             const minDate = minDateObj.toISOString().split("T")[0];
             return (
               <input
