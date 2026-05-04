@@ -88,6 +88,10 @@ export const templeService = {
   },
 
   // Document & File Uploads (Step 2)
+  getUploadSignature: async (folder = "temples") => {
+    return await get<any>(`/temples/upload-signature?folder=${folder}`);
+  },
+
   uploadGallery: async (id: number, files: File[]) => {
     const formData = new FormData();
     files.forEach(file => formData.append("images", file));
@@ -95,9 +99,44 @@ export const templeService = {
   },
 
   uploadDocumentary: async (id: number, file: File) => {
-    const formData = new FormData();
-    formData.append("documentaryVideo", file);
-    return await putFormData<any>(`/temples/${id}/documentary`, formData);
+    try {
+      // 1. Get Signature from our backend
+      const { timestamp, signature, apiKey, cloudName, folder } = await templeService.getUploadSignature("temples");
+
+      // 2. Upload directly to Cloudinary
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("timestamp", timestamp.toString());
+      formData.append("signature", signature);
+      formData.append("api_key", apiKey);
+      formData.append("folder", folder);
+
+      // Use native fetch or a clean axios instance to avoid our API base URL/interceptors
+      const cloudinaryUrl = `https://api.cloudinary.com/v1_1/${cloudName}/video/upload`;
+      const response = await fetch(cloudinaryUrl, {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error?.message || 'Cloudinary upload failed');
+      }
+
+      const uploadResult = await response.json();
+
+      // 3. Save the result info back to our backend
+      return await put<any>(`/temples/${id}/documentary-info`, {
+        url: uploadResult.secure_url,
+        size: uploadResult.bytes,
+        mimetype: file.type,
+        width: uploadResult.width,
+        height: uploadResult.height
+      });
+    } catch (error: any) {
+      console.error("Direct upload failed:", error);
+      throw new Error(error.message || "Failed to upload documentary video");
+    }
   },
 
   deleteDocumentary: async (id: number) => {
