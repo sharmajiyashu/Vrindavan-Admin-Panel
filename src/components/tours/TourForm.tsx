@@ -18,8 +18,9 @@ import {
 import { tourValidationSchema, TourFormData } from "@/lib/validations/tour";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { twMerge } from "tailwind-merge";
-import { Tour } from "@/lib/services/tourService";
+import { tourService, Tour } from "@/lib/services/tourService";
 import { templeService, Temple } from "@/lib/services/templeService";
+import { toast } from "react-toastify";
 
 interface TourFormProps {
   initialData?: Tour | null;
@@ -47,56 +48,11 @@ export function TourForm({ initialData, onSubmitBasic, onSubmitFiles, onRemoveMe
   const [existingGallery, setExistingGallery] = useState<any[]>(initialData?.gallery || []);
   const [deletingMediaIds, setDeletingMediaIds] = useState<number[]>([]);
   const [isUploading, setIsUploading] = useState(false);
-
-  // Temple selection state
-  const [allTemples, setAllTemples] = useState<Temple[]>([]);
-  const [selectedTempleIds, setSelectedTempleIds] = useState<number[]>(initialData?.temples?.map(t => t.id) || []);
-  const [selectedMorningSlots, setSelectedMorningSlots] = useState<string[]>(initialData?.morningSlots || []);
-  const [selectedEveningSlots, setSelectedEveningSlots] = useState<string[]>(initialData?.eveningSlots || []);
-  const [isLoadingTemples, setIsLoadingTemples] = useState(false);
-
-  const morningOptions = ["6:00 AM", "7:00 AM", "8:00 AM", "9:00 AM", "10:00 AM", "11:00 AM"];
-  const eveningOptions = ["4:00 PM", "5:00 PM", "6:00 PM", "7:00 PM", "8:00 PM", "9:00 PM"];
-
-  const toggleSlot = (slot: string, type: "morning" | "evening") => {
-    if (type === "morning") {
-      const next = selectedMorningSlots.includes(slot) ? selectedMorningSlots.filter(s => s !== slot) : [...selectedMorningSlots, slot];
-      setSelectedMorningSlots(next);
-      setValue("morningSlots", next);
-    } else {
-      const next = selectedEveningSlots.includes(slot) ? selectedEveningSlots.filter(s => s !== slot) : [...selectedEveningSlots, slot];
-      setSelectedEveningSlots(next);
-      setValue("eveningSlots", next);
-    }
-  };
-
-  useEffect(() => {
-    const fetchTemples = async () => {
-      setIsLoadingTemples(true);
-      try {
-        const response = await templeService.listTemples(1, 100);
-        setAllTemples(response.temples);
-      } catch (err) {
-        console.error("Failed to fetch temples:", err);
-      } finally {
-        setIsLoadingTemples(false);
-      }
-    };
-    fetchTemples();
-  }, []);
+  const [singlePreviews, setSinglePreviews] = useState<{ [key: string]: string }>({});
 
   useEffect(() => {
     if (initialData?.gallery) {
       setExistingGallery(initialData.gallery);
-    }
-    if (initialData?.temples) {
-      setSelectedTempleIds(initialData.temples.map(t => t.id));
-    }
-    if (initialData?.morningSlots) {
-      setSelectedMorningSlots(initialData.morningSlots);
-    }
-    if (initialData?.eveningSlots) {
-      setSelectedEveningSlots(initialData.eveningSlots);
     }
   }, [initialData]);
 
@@ -111,42 +67,87 @@ export function TourForm({ initialData, onSubmitBasic, onSubmitFiles, onRemoveMe
     resolver: zodResolver(tourValidationSchema) as any,
     defaultValues: initialData ? {
       ...initialData,
-      templeIds: initialData.temples?.map(t => t.id) || [],
-      descriptionEn: initialData.descriptionEn || "",
-      descriptionHi: initialData.descriptionHi || "",
-      cancellationPolicyEn: initialData.cancellationPolicyEn || "",
-      cancellationPolicyHi: initialData.cancellationPolicyHi || "",
+      subtitleEn: initialData.subtitleEn || "",
+      subtitleHi: initialData.subtitleHi || "",
+      subtextEn: initialData.subtextEn || "",
+      subtextHi: initialData.subtextHi || "",
+      locationNameEn: initialData.locationNameEn || "",
+      locationNameHi: initialData.locationNameHi || "",
+      lat: initialData.lat || null,
+      long: initialData.long || null,
+      templesCoveredCount: initialData.templesCoveredCount || 0,
+      durationEn: initialData.durationEn || "",
+      durationHi: initialData.durationHi || "",
+      slashedPrice: initialData.slashedPrice || null,
+      offerText: initialData.offerText || "",
+      discountConfig: initialData.discountConfig || null,
+      startingAddressEn: initialData.startingAddressEn || "",
+      startingAddressHi: initialData.startingAddressHi || "",
+      shortHighlightListing: initialData.shortHighlightListing || { titleEn: "", titleHi: "", iconId: null },
+      shortHighlightDetails: initialData.shortHighlightDetails || { titleEn: "", titleHi: "", iconId: null },
+      showOnReferralApp: initialData.showOnReferralApp ?? false,
+      referralTourSummaryEn: initialData.referralTourSummaryEn || "",
+      referralTourSummaryHi: initialData.referralTourSummaryHi || "",
+      customerPickupLines: initialData.customerPickupLines || [],
+      features: initialData.features || [],
+      itinerary: initialData.itinerary || [],
+      faqs: initialData.faqs || [],
+      slots: initialData.slots || [],
+      reviews: initialData.reviews || [],
       type: initialData.type || "group",
       minPersons: initialData.minPersons || null,
       maxPersons: initialData.maxPersons || null,
       badgeEn: initialData.badgeEn || "",
       badgeHi: initialData.badgeHi || "",
       cancellationBeforeHours: initialData.cancellationBeforeHours ?? 24,
+      shareDetailsBeforeHours: initialData.shareDetailsBeforeHours ?? 2,
       guideDetailsBeforeHours: initialData.guideDetailsBeforeHours ?? 24,
     } : {
       titleEn: "",
       titleHi: "",
+      subtitleEn: "",
+      subtitleHi: "",
+      subtextEn: "",
+      subtextHi: "",
+      locationNameEn: "",
+      locationNameHi: "",
+      lat: null,
+      long: null,
       price: 0,
+      slashedPrice: null,
+      offerText: "",
+      discountConfig: null,
       extraDiscountPerUser: 0,
       isActive: true,
-      templeIds: [],
-      descriptionEn: "",
-      descriptionHi: "",
-      cancellationPolicyEn: "",
-      cancellationPolicyHi: "",
-      morningSlots: [],
-      eveningSlots: [],
+      templesCoveredCount: 0,
+      durationEn: "",
+      durationHi: "",
+      startingAddressEn: "",
+      startingAddressHi: "",
+      shortHighlightListing: { titleEn: "", titleHi: "", iconId: null },
+      shortHighlightDetails: { titleEn: "", titleHi: "", iconId: null },
+      showOnReferralApp: false,
+      referralTourSummaryEn: "",
+      referralTourSummaryHi: "",
+      customerPickupLines: [],
+      features: [],
+      itinerary: [],
+      faqs: [],
+      slots: [],
+      reviews: [],
       type: "group",
       minPersons: null,
       maxPersons: null,
       badgeEn: "",
       badgeHi: "",
       cancellationBeforeHours: 24,
+      shareDetailsBeforeHours: 2,
       guideDetailsBeforeHours: 24,
     },
   });
 
   const tourType = watch("type");
+  const faqs = watch("faqs") || [];
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFiles = e.target.files;
@@ -164,27 +165,22 @@ export function TourForm({ initialData, onSubmitBasic, onSubmitFiles, onRemoveMe
     setGalleryPreviews((prev) => prev.filter((_, i) => i !== index));
   };
 
-  const toggleTemple = (id: number) => {
-    setSelectedTempleIds(prev => {
-      const next = prev.includes(id) ? prev.filter(tid => tid !== id) : [...prev, id];
-      setValue("templeIds", next);
-      return next;
-    });
+  const onFormError = (errors: any) => {
+    console.error("Form validation errors:", errors);
+    const errorCount = Object.keys(errors).length;
+    if (errorCount > 0) {
+      toast.error(`Please fix ${errorCount} invalid fields before proceeding.`);
+    }
   };
 
   const onFormSubmit: SubmitHandler<TourFormData> = async (data) => {
     try {
-      // Always save basic data first and preserve existing images and temples
       const id = await onSubmitBasic({
         ...data,
-        templeIds: selectedTempleIds,
         imageIds: existingGallery.map(m => m.id),
-        morningSlots: selectedMorningSlots,
-        eveningSlots: selectedEveningSlots
       });
       setTourId(id);
 
-      // On final tab, upload media if any and then finish
       if (activeTab === "media") {
         if (id) {
           setIsUploading(true);
@@ -198,16 +194,17 @@ export function TourForm({ initialData, onSubmitBasic, onSubmitFiles, onRemoveMe
           }
         }
       } else {
-        // Auto-advance the tab after every successful save (create or update)
-        if (activeTab === "basic") setActiveTab("content");
-        else if (activeTab === "content") setActiveTab("features");
-        else if (activeTab === "features") setActiveTab("logistics");
-        else if (activeTab === "logistics") setActiveTab("temples");
-        else if (activeTab === "temples") setActiveTab("slots");
-        else if (activeTab === "slots") setActiveTab("media");
+        // Auto-advance
+        const tabSequence = ["basic", "pricing", "logistics", "referral", "content", "media"];
+        const currentIndex = tabSequence.indexOf(activeTab);
+        const nextTab = tabSequence[currentIndex + 1];
+        if (nextTab) {
+          setActiveTab(nextTab);
+        }
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error("Form submission error:", error);
+      toast.error(error.message || "Failed to save tour details");
     }
   };
 
@@ -216,94 +213,68 @@ export function TourForm({ initialData, onSubmitBasic, onSubmitFiles, onRemoveMe
   const errorClasses = "text-[10px] font-bold text-destructive mt-1";
 
   return (
-    <form onSubmit={handleSubmit(onFormSubmit)} className="space-y-6">
+    <form onSubmit={handleSubmit(onFormSubmit, onFormError)} className="space-y-6">
       <Tabs.Root value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <Tabs.List className="flex border-b border-border mb-6 overflow-x-auto scrollbar-none">
-          <Tabs.Trigger
-            value="basic"
-            className={twMerge(
-              "relative px-6 py-3 text-sm font-bold transition-all border-b-2 border-transparent",
-              activeTab === "basic" ? "text-primary border-primary" : "text-muted-foreground hover:text-foreground"
-            )}
-          >
-            {t("tours.basicDetails")}
-            {(errors.titleEn || errors.titleHi || errors.price) && (
-              <span className="absolute top-2 right-2 flex h-2 w-2 rounded-full bg-destructive" />
-            )}
-          </Tabs.Trigger>
-          <Tabs.Trigger
-            value="content"
-            className={twMerge(
-              "relative px-6 py-3 text-sm font-bold transition-all border-b-2 border-transparent",
-              activeTab === "content" ? "text-primary border-primary" : "text-muted-foreground hover:text-foreground"
-            )}
-          >
-            {t("tours.content")}
-          </Tabs.Trigger>
-          <Tabs.Trigger
-            value="features"
-            className={twMerge(
-              "relative px-6 py-3 text-sm font-bold transition-all border-b-2 border-transparent",
-              activeTab === "features" ? "text-primary border-primary" : "text-muted-foreground hover:text-foreground"
-            )}
-          >
-            {t("tours.features")}
-          </Tabs.Trigger>
-          <Tabs.Trigger
-            value="logistics"
-            className={twMerge(
-              "relative px-6 py-3 text-sm font-bold transition-all border-b-2 border-transparent",
-              activeTab === "logistics" ? "text-primary border-primary" : "text-muted-foreground hover:text-foreground"
-            )}
-          >
-            {t("tours.logistics")}
-          </Tabs.Trigger>
-          <Tabs.Trigger
-            value="temples"
-            className={twMerge(
-              "relative px-6 py-3 text-sm font-bold transition-all border-b-2 border-transparent",
-              activeTab === "temples" ? "text-primary border-primary" : "text-muted-foreground hover:text-foreground"
-            )}
-          >
-            {t("tours.temples")}
-          </Tabs.Trigger>
-          <Tabs.Trigger
-            value="slots"
-            className={twMerge(
-              "relative px-6 py-3 text-sm font-bold transition-all border-b-2 border-transparent",
-              activeTab === "slots" ? "text-primary border-primary" : "text-muted-foreground hover:text-foreground"
-            )}
-          >
-            {t("tours.slots")}
-          </Tabs.Trigger>
-          <Tabs.Trigger
-            value="media"
-            disabled={!tourId}
-            className={twMerge(
-              "relative px-6 py-3 text-sm font-bold transition-all border-b-2 border-transparent",
-              activeTab === "media" ? "text-primary border-primary" : "text-muted-foreground hover:text-foreground",
-              !tourId && "opacity-50 cursor-not-allowed"
-            )}
-          >
-            {t("tours.media")}
-          </Tabs.Trigger>
+        <Tabs.List className="flex border-b border-border mb-6 overflow-x-auto scrollbar-none gap-2">
+          {[
+            { id: "basic", label: t("tours.basicDetails"), hasError: !!(errors.titleEn || errors.titleHi || errors.subtitleEn || errors.subtitleHi || errors.subtextEn || errors.subtextHi) },
+            { id: "pricing", label: "Pricing & Discounts", hasError: !!(errors.price || errors.slashedPrice || errors.minPersons || errors.maxPersons || errors.type) },
+            { id: "logistics", label: t("tours.logistics"), hasError: !!(errors.lat || errors.long || errors.durationEn || errors.durationHi || errors.startingAddressEn || errors.startingAddressHi) },
+            { id: "referral", label: "Referral App", hasError: !!(errors.referralTourSummaryEn || errors.referralTourSummaryHi || errors.customerPickupLines) },
+            { id: "content", label: t("tours.content"), hasError: !!(errors.features || errors.itinerary || errors.faqs) },
+            { id: "media", label: t("tours.media"), disabled: !tourId },
+          ].map((tab) => (
+            <Tabs.Trigger
+              key={tab.id}
+              value={tab.id}
+              disabled={tab.disabled}
+              className={twMerge(
+                "relative px-4 py-3 text-sm font-bold transition-all border-b-2 border-transparent whitespace-nowrap",
+                activeTab === tab.id ? "text-primary border-primary" : "text-muted-foreground hover:text-foreground",
+                tab.disabled && "opacity-50 cursor-not-allowed"
+              )}
+            >
+              {tab.label}
+              {tab.hasError && (
+                <span className="absolute top-2 right-1 h-1.5 w-1.5 rounded-full bg-destructive animate-pulse" />
+              )}
+            </Tabs.Trigger>
+          ))}
         </Tabs.List>
 
         <Tabs.Content value="basic" className="space-y-8 animate-in fade-in slide-in-from-bottom-2 duration-300">
           <div className="grid gap-6 md:grid-cols-2">
             <div>
               <label className={labelClasses}>{t("tours.titleEn")}</label>
-              <input {...register("titleEn")} className={inputClasses} placeholder="Traditional Braj Yatra" />
+              <input {...register("titleEn")} className={inputClasses} placeholder="Darshan of Vrindavan’s All Major Historic Temples" />
               {errors.titleEn && <p className={errorClasses}>{errors.titleEn.message}</p>}
             </div>
             <div>
               <label className={labelClasses}>{t("tours.titleHi")}</label>
-              <input {...register("titleHi")} className={inputClasses} placeholder="पारंपरिक ब्रज यात्रा" />
+              <input {...register("titleHi")} className={inputClasses} placeholder="वृंदावन के सभी प्रमुख ऐतिहासिक मंदिरों के दर्शन" />
               {errors.titleHi && <p className={errorClasses}>{errors.titleHi.message}</p>}
             </div>
 
+            <div>
+              <label className={labelClasses}>{t("tours.subtitleEn")}</label>
+              <input {...register("subtitleEn")} className={inputClasses} />
+            </div>
+            <div>
+              <label className={labelClasses}>{t("tours.subtitleHi")}</label>
+              <input {...register("subtitleHi")} className={inputClasses} />
+            </div>
+
+            <div className="md:col-span-2">
+              <label className={labelClasses}>{t("tours.subtextEn")}</label>
+              <input {...register("subtextEn")} className={inputClasses} placeholder="Example: Spiritual Journey" />
+            </div>
+            <div className="md:col-span-2">
+              <label className={labelClasses}>{t("tours.subtextHi")}</label>
+              <input {...register("subtextHi")} className={inputClasses} placeholder="उदाहरण: आध्यात्मिक यात्रा" />
+            </div>
+
             <div className="md:col-span-2 space-y-4">
-              <label className={labelClasses}>Select Badge</label>
+              <label className={labelClasses}>Tags / Badges Support</label>
               <div className="flex flex-wrap gap-2">
                 {PREDEFINED_BADGES.map((badge) => (
                   <button
@@ -336,60 +307,117 @@ export function TourForm({ initialData, onSubmitBasic, onSubmitFiles, onRemoveMe
               </div>
             </div>
 
-            <div>
-              <input type="hidden" {...register("badgeEn")} />
-            </div>
-            <div>
-              <input type="hidden" {...register("badgeHi")} />
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className={labelClasses}>{t("tours.price")}</label>
-                <input type="number" {...register("price")} className={inputClasses} placeholder="2500" />
-                {errors.price && <p className={errorClasses}>{errors.price.message}</p>}
-              </div>
-              <div>
-                <label className={labelClasses}>{t("tours.discountPrice")}</label>
-                <input type="number" {...register("discountPrice")} className={inputClasses} placeholder="1999" />
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className={labelClasses}>{t("tours.pricePerPerson")}</label>
-                <input type="number" {...register("pricePerPerson")} className={inputClasses} />
-              </div>
-              <div>
-                <label className={labelClasses}>{t("tours.extraDiscount")}</label>
-                <input type="number" {...register("extraDiscountPerUser")} className={inputClasses} />
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className={labelClasses}>{t("tours.tourType")}</label>
-                <select {...register("type")} className={twMerge(inputClasses, "appearance-none")}>
-                  <option value="group">Group Tour</option>
-                  <option value="private">Private Tour</option>
-                </select>
-                {errors.type && <p className={errorClasses}>{errors.type.message as string}</p>}
-              </div>
-
-              {tourType === "private" && (
-                <div className="grid grid-cols-2 gap-4">
+            <div className="md:col-span-2 grid gap-6 md:grid-cols-2 p-6 rounded-3xl border border-border bg-muted/20">
+              <div className="space-y-4">
+                <h4 className="text-[10px] font-black uppercase tracking-widest text-primary">Short Highlight For Tour Listing</h4>
+                <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className={labelClasses}>{t("tours.minPersons")}</label>
-                    <input type="number" {...register("minPersons")} className={inputClasses} placeholder="1" />
-                    {errors.minPersons && <p className={errorClasses}>{errors.minPersons.message as string}</p>}
+                    <label className={labelClasses}>Title (EN)</label>
+                    <input {...register("shortHighlightListing.titleEn")} className={inputClasses} placeholder="8 Temples" />
+                    {errors.shortHighlightListing?.titleEn && <p className={errorClasses}>{errors.shortHighlightListing.titleEn.message}</p>}
                   </div>
                   <div>
-                    <label className={labelClasses}>{t("tours.maxPersons")}</label>
-                    <input type="number" {...register("maxPersons")} className={inputClasses} placeholder="10" />
-                    {errors.maxPersons && <p className={errorClasses}>{errors.maxPersons.message as string}</p>}
+                    <label className={labelClasses}>Title (HI)</label>
+                    <input {...register("shortHighlightListing.titleHi")} className={inputClasses} placeholder="8 मंदिर" />
+                    {errors.shortHighlightListing?.titleHi && <p className={errorClasses}>{errors.shortHighlightListing.titleHi.message}</p>}
+                  </div>
+                  <div className="col-span-2">
+                    <label className={labelClasses}>Icon Image</label>
+                    <div className="flex items-center gap-3">
+                      <div className="h-10 w-10 rounded-lg border border-border bg-muted/30 flex items-center justify-center overflow-hidden">
+                        {singlePreviews["listing-icon"] || watch("shortHighlightListing.iconId") ? (
+                          <img
+                            src={singlePreviews["listing-icon"] || `https://res.cloudinary.com/dsaly9sls/image/upload/v1/tours/${watch("shortHighlightListing.iconId")}`}
+                            className="w-full h-full object-cover"
+                          />
+                        ) : (
+                          <IconPhoto className="h-5 w-5 text-muted-foreground/20" />
+                        )}
+                      </div>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        id="listing-icon-upload"
+                        className="hidden"
+                        onChange={async (e) => {
+                          const file = e.target.files?.[0];
+                          if (file) {
+                            try {
+                              const result = await tourService.uploadMedia(file);
+                              setValue("shortHighlightListing.iconId", result.id);
+                              setSinglePreviews(prev => ({ ...prev, "listing-icon": result.url }));
+                              toast.success("Listing icon uploaded");
+                            } catch (error) {
+                              toast.error("Upload failed");
+                            }
+                          }
+                        }}
+                      />
+                      <label
+                        htmlFor="listing-icon-upload"
+                        className="px-3 py-2 rounded-lg bg-primary/10 text-primary text-[10px] font-black uppercase tracking-wider cursor-pointer hover:bg-primary hover:text-white transition-all"
+                      >
+                        <IconUpload size={14} className="inline mr-1" /> Upload
+                      </label>
+                    </div>
                   </div>
                 </div>
-              )}
+              </div>
+              <div className="space-y-4">
+                <h4 className="text-[10px] font-black uppercase tracking-widest text-primary">Short Highlight For Tour Details</h4>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className={labelClasses}>Title (EN)</label>
+                    <input {...register("shortHighlightDetails.titleEn")} className={inputClasses} placeholder="8 Temples Covered" />
+                    {errors.shortHighlightDetails?.titleEn && <p className={errorClasses}>{errors.shortHighlightDetails.titleEn.message}</p>}
+                  </div>
+                  <div>
+                    <label className={labelClasses}>Title (HI)</label>
+                    <input {...register("shortHighlightDetails.titleHi")} className={inputClasses} placeholder="8 मंदिर कवर्ड" />
+                    {errors.shortHighlightDetails?.titleHi && <p className={errorClasses}>{errors.shortHighlightDetails.titleHi.message}</p>}
+                  </div>
+                  <div className="col-span-2">
+                    <label className={labelClasses}>Icon Image</label>
+                    <div className="flex items-center gap-3">
+                      <div className="h-10 w-10 rounded-lg border border-border bg-muted/30 flex items-center justify-center overflow-hidden">
+                        {singlePreviews["details-icon"] || watch("shortHighlightDetails.iconId") ? (
+                          <img
+                            src={singlePreviews["details-icon"] || `https://res.cloudinary.com/dsaly9sls/image/upload/v1/tours/${watch("shortHighlightDetails.iconId")}`}
+                            className="w-full h-full object-cover"
+                          />
+                        ) : (
+                          <IconPhoto className="h-5 w-5 text-muted-foreground/20" />
+                        )}
+                      </div>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        id="details-icon-upload"
+                        className="hidden"
+                        onChange={async (e) => {
+                          const file = e.target.files?.[0];
+                          if (file) {
+                            try {
+                              const result = await tourService.uploadMedia(file);
+                              setValue("shortHighlightDetails.iconId", result.id);
+                              setSinglePreviews(prev => ({ ...prev, "details-icon": result.url }));
+                              toast.success("Details icon uploaded");
+                            } catch (error) {
+                              toast.error("Upload failed");
+                            }
+                          }
+                        }}
+                      />
+                      <label
+                        htmlFor="details-icon-upload"
+                        className="px-3 py-2 rounded-lg bg-primary/10 text-primary text-[10px] font-black uppercase tracking-wider cursor-pointer hover:bg-primary hover:text-white transition-all"
+                      >
+                        <IconUpload size={14} className="inline mr-1" /> Upload
+                      </label>
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
 
             <div className="flex items-center gap-3 p-4 rounded-2xl border border-border bg-muted/20">
@@ -406,264 +434,430 @@ export function TourForm({ initialData, onSubmitBasic, onSubmitFiles, onRemoveMe
           </div>
         </Tabs.Content>
 
-        <Tabs.Content value="content" className="space-y-8 animate-in fade-in slide-in-from-bottom-2 duration-300">
-          <div className="space-y-6">
-            <div className="grid gap-6 md:grid-cols-2">
-              <div className="space-y-3">
-                <label className={labelClasses}>{t("tours.descriptionEn")}</label>
-                <Controller
-                  name="descriptionEn"
-                  control={control}
-                  render={({ field }) => (
-                    <RichTextEditor
-                      value={field.value || ""}
-                      onChange={field.onChange}
-                      placeholder="Describe the pilgrimage journey, highlights, and history..."
-                    />
-                  )}
-                />
-              </div>
-              <div className="space-y-3">
-                <label className={labelClasses}>{t("tours.descriptionHi")}</label>
-                <Controller
-                  name="descriptionHi"
-                  control={control}
-                  render={({ field }) => (
-                    <RichTextEditor
-                      value={field.value || ""}
-                      onChange={field.onChange}
-                      placeholder="तीर्थयात्रा, मुख्य आकर्षण और इतिहास का वर्णन करें..."
-                    />
-                  )}
-                />
-              </div>
-            </div>
-
-            <div className="grid gap-6 md:grid-cols-2 pt-6 border-t border-border/40">
-              <div className="space-y-3">
-                <label className={labelClasses}>{t("tours.cancellationPolicyEn")}</label>
-                <Controller
-                  name="cancellationPolicyEn"
-                  control={control}
-                  render={({ field }) => (
-                    <RichTextEditor
-                      value={field.value || ""}
-                      onChange={field.onChange}
-                      placeholder="Terms for refunds, cancellations, and rescheduling..."
-                    />
-                  )}
-                />
-              </div>
-              <div className="space-y-3">
-                <label className={labelClasses}>{t("tours.cancellationPolicyHi")}</label>
-                <Controller
-                  name="cancellationPolicyHi"
-                  control={control}
-                  render={({ field }) => (
-                    <RichTextEditor
-                      value={field.value || ""}
-                      onChange={field.onChange}
-                      placeholder="रिफंड, रद्दीकरण और पुनर्निर्धारण की शर्तें..."
-                    />
-                  )}
-                />
-              </div>
-            </div>
-          </div>
-        </Tabs.Content>
-
-        <Tabs.Content value="features" className="space-y-8 animate-in fade-in slide-in-from-bottom-2 duration-300">
+        <Tabs.Content value="pricing" className="space-y-8 animate-in fade-in slide-in-from-bottom-2 duration-300">
           <div className="grid gap-6 md:grid-cols-2">
             <div>
-              <label className={labelClasses}>{t("tours.expertGuidance")} (EN)</label>
-              <textarea {...register("expertGuidanceEn")} className={twMerge(inputClasses, "min-h-[80px]")} placeholder="Deep historical and mythological insights provided by expert guides..." />
+              <label className={labelClasses}>Tour Type</label>
+              <select {...register("type")} className={twMerge(inputClasses, "appearance-none")}>
+                <option value="group">Group Tour</option>
+                <option value="private">Private Tour</option>
+              </select>
+              {errors.type && <p className={errorClasses}>{errors.type.message}</p>}
+              <p className="text-[10px] text-muted-foreground mt-1">
+                {tourType === "private" ? "Private Won’t have per person pricing." : "Group Tour has per person pricing."}
+              </p>
             </div>
-            <div>
-              <label className={labelClasses}>{t("tours.expertGuidance")} (HI)</label>
-              <textarea {...register("expertGuidanceHi")} className={twMerge(inputClasses, "min-h-[80px]")} placeholder="विशेषज्ञों द्वारा विस्तृत ऐतिहासिक और पौराणिक जानकारी..." />
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className={labelClasses}>Min Persons</label>
+                <input type="number" {...register("minPersons")} className={inputClasses} placeholder="1" />
+                {errors.minPersons && <p className={errorClasses}>{errors.minPersons.message}</p>}
+              </div>
+              <div>
+                <label className={labelClasses}>Max Persons</label>
+                <input type="number" {...register("maxPersons")} className={inputClasses} placeholder="10" />
+                {errors.maxPersons && <p className={errorClasses}>{errors.maxPersons.message}</p>}
+              </div>
             </div>
 
             <div>
-              <label className={labelClasses}>{t("tours.spiritualImmersion")} (EN)</label>
-              <textarea {...register("spiritualImmersionEn")} className={twMerge(inputClasses, "min-h-[80px]")} placeholder="Experience sacred kirtans and deep meditation sessions..." />
-            </div>
-            <div>
-              <label className={labelClasses}>{t("tours.spiritualImmersion")} (HI)</label>
-              <textarea {...register("spiritualImmersionHi")} className={twMerge(inputClasses, "min-h-[80px]")} placeholder="पवित्र कीर्तन और गहन ध्यान सत्रों का अनुभव..." />
+              <label className={labelClasses}>Price ({tourType === "private" ? "Complete Price" : "Per Person Price"})</label>
+              <input type="number" {...register("price")} className={inputClasses} placeholder="99" />
+              {errors.price && <p className={errorClasses}>{errors.price.message}</p>}
             </div>
 
             <div>
-              <label className={labelClasses}>{t("tours.hassleFreePlanning")} (EN)</label>
-              <textarea {...register("hassleFreePlanningEn")} className={twMerge(inputClasses, "min-h-[80px]")} placeholder="Pre-booked transportation and VIP darshan for a smooth experience..." />
-            </div>
-            <div>
-              <label className={labelClasses}>{t("tours.hassleFreePlanning")} (HI)</label>
-              <textarea {...register("hassleFreePlanningHi")} className={twMerge(inputClasses, "min-h-[80px]")} placeholder="सुगम अनुभव के लिए पूर्व-आरक्षित परिवहन और वीआईपी दर्शन..." />
+              <label className={labelClasses}>Slashed Price ({tourType === "private" ? "Complete Price" : "Per Person Price"})</label>
+              <input type="number" {...register("slashedPrice")} className={inputClasses} placeholder="199" />
+              {errors.slashedPrice && <p className={errorClasses}>{errors.slashedPrice.message}</p>}
             </div>
 
             <div>
-              <label className={labelClasses}>{t("tours.localInsights")} (EN)</label>
-              <textarea {...register("localInsightsEn")} className={twMerge(inputClasses, "min-h-[80px]")} placeholder="Visit hidden temples and sample local braj cuisine..." />
+              <label className={labelClasses}>Offer Text</label>
+              <input {...register("offerText")} className={inputClasses} placeholder="50 % OFF" />
+              {errors.offerText && <p className={errorClasses}>{errors.offerText.message}</p>}
             </div>
+
             <div>
-              <label className={labelClasses}>{t("tours.localInsights")} (HI)</label>
-              <textarea {...register("localInsightsHi")} className={twMerge(inputClasses, "min-h-[80px]")} placeholder="छिपे हुए मंदिरों के दर्शन और स्थानीय ब्रज व्यंजनों का स्वाद..." />
+              <label className={labelClasses}>Extra Discount Per User</label>
+              <input type="number" {...register("extraDiscountPerUser")} className={inputClasses} placeholder="0" />
+              {errors.extraDiscountPerUser && <p className={errorClasses}>{errors.extraDiscountPerUser.message}</p>}
             </div>
           </div>
         </Tabs.Content>
 
         <Tabs.Content value="logistics" className="space-y-8 animate-in fade-in slide-in-from-bottom-2 duration-300">
           <div className="grid gap-6 md:grid-cols-2">
-            <div>
-              <label className={labelClasses}>{t("tours.totalWalkMinutes")}</label>
-              <input type="number" {...register("totalWalkMinutes")} className={inputClasses} placeholder="45" />
-            </div>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="md:col-span-2 grid grid-cols-2 gap-4">
               <div>
-                <label className={labelClasses}>{t("tours.distance")} (EN)</label>
-                <input {...register("distanceEn")} className={inputClasses} placeholder="5 km" />
+                <label className={labelClasses}>Starting Address (EN)</label>
+                <input {...register("startingAddressEn")} className={inputClasses} placeholder="Shree Banke Bihari Ji Maharaja Temple" />
               </div>
               <div>
-                <label className={labelClasses}>{t("tours.distance")} (HI)</label>
-                <input {...register("distanceHi")} className={inputClasses} placeholder="5 किमी" />
+                <label className={labelClasses}>Starting Address (HI)</label>
+                <input {...register("startingAddressHi")} className={inputClasses} placeholder="श्री बांके बिहारी जी महाराज मंदिर" />
               </div>
             </div>
 
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className={labelClasses}>{t("tours.approxTime")} (EN)</label>
-                <input {...register("approxTimeEn")} className={inputClasses} placeholder="4 Hours" />
+                <label className={labelClasses}>{t("tours.lat")}</label>
+                <input type="number" step="any" {...register("lat")} className={inputClasses} />
               </div>
               <div>
-                <label className={labelClasses}>{t("tours.approxTime")} (HI)</label>
-                <input {...register("approxTimeHi")} className={inputClasses} placeholder="4 घंटे" />
+                <label className={labelClasses}>{t("tours.long")}</label>
+                <input type="number" step="any" {...register("long")} className={inputClasses} />
               </div>
             </div>
 
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className={labelClasses}>{t("tours.recommendation")} (EN)</label>
-                <input {...register("recommendationEn")} className={inputClasses} placeholder="Carry water and wear comfortable shoes..." />
+                <label className={labelClasses}>{t("tours.durationEn")}</label>
+                <input {...register("durationEn")} className={inputClasses} />
               </div>
               <div>
-                <label className={labelClasses}>{t("tours.recommendation")} (HI)</label>
-                <input {...register("recommendationHi")} className={inputClasses} placeholder="पानी ले जाएँ और आरामदायक जूते पहनें..." />
+                <label className={labelClasses}>{t("tours.durationHi")}</label>
+                <input {...register("durationHi")} className={inputClasses} />
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-4 pt-4 border-t border-border/40">
+            <div className="md:col-span-2 grid grid-cols-3 gap-4 pt-4 border-t border-border/40">
               <div>
-                <label className={labelClasses}>{t("tours.cancellationBeforeHours")}</label>
+                <label className={labelClasses}>Tour Cancellation Deadline (Hours)</label>
                 <input type="number" {...register("cancellationBeforeHours")} className={inputClasses} />
-                <p className="text-[10px] text-muted-foreground mt-1">{t("tours.cancellationBeforeHoursHint")}</p>
+                <p className="text-[10px] text-muted-foreground mt-1">Users can cancel up to this many hours before slot.</p>
               </div>
               <div>
-                <label className={labelClasses}>{t("tours.guideDetailsBeforeHour")}</label>
+                <label className={labelClasses}>Share Final Details Deadline (Hours)</label>
+                <input type="number" {...register("shareDetailsBeforeHours")} className={inputClasses} />
+                <p className="text-[10px] text-muted-foreground mt-1">Final details shared x hours before start.</p>
+              </div>
+              <div>
+                <label className={labelClasses}>Guide Details Deadline (Hours)</label>
                 <input type="number" {...register("guideDetailsBeforeHours")} className={inputClasses} />
-                <p className="text-[10px] text-muted-foreground mt-1">{t("tours.guideDetailsBeforeHourHint")}</p>
+                <p className="text-[10px] text-muted-foreground mt-1">Reveal guide details to user.</p>
               </div>
             </div>
           </div>
         </Tabs.Content>
 
-        <Tabs.Content value="temples" className="space-y-8 animate-in fade-in slide-in-from-bottom-2 duration-300">
-          <div className="space-y-4">
-            <h3 className="text-sm font-black uppercase tracking-widest text-foreground">{t("tours.temples")}</h3>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-              {isLoadingTemples ? (
-                <div className="col-span-full py-10 flex flex-col items-center justify-center gap-3 text-muted-foreground">
-                  <IconLoader2 className="h-8 w-8 animate-spin" />
-                  <p className="text-xs font-bold uppercase tracking-widest">Loading Temples...</p>
-                </div>
-              ) : allTemples.map((temple) => (
-                <button
-                  key={temple.id}
-                  type="button"
-                  onClick={() => toggleTemple(temple.id)}
-                  className={twMerge(
-                    "flex items-center gap-3 p-3 rounded-2xl border transition-all text-left",
-                    selectedTempleIds.includes(temple.id)
-                      ? "border-primary bg-primary/5 ring-1 ring-primary shadow-sm"
-                      : "border-border bg-card hover:border-primary/50"
-                  )}
-                >
-                  <div className={twMerge(
-                    "h-10 w-10 shrink-0 rounded-xl overflow-hidden bg-muted flex items-center justify-center",
-                    selectedTempleIds.includes(temple.id) ? "ring-2 ring-primary/20" : ""
-                  )}>
-                    {temple.thumbnail ? (
-                      <img src={temple.thumbnail.url} className="h-full w-full object-cover" />
-                    ) : (
-                      <IconMapPin className="h-5 w-5 text-muted-foreground" />
-                    )}
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <p className={twMerge(
-                      "text-[11px] font-bold truncate leading-tight",
-                      selectedTempleIds.includes(temple.id) ? "text-primary" : "text-foreground"
-                    )}>
-                      {temple.nameEn}
-                    </p>
-                    <p className="text-[10px] text-muted-foreground truncate opacity-70">{temple.nameHi}</p>
-                  </div>
-                  {selectedTempleIds.includes(temple.id) && (
-                    <div className="h-5 w-5 rounded-full bg-primary flex items-center justify-center text-primary-foreground shadow-sm">
-                      <IconCheck className="h-3.5 w-3.5" strokeWidth={3} />
+        <Tabs.Content value="referral" className="space-y-8 animate-in fade-in slide-in-from-bottom-2 duration-300">
+          <div className="space-y-6">
+            <div className="flex items-center gap-3 p-4 rounded-2xl border border-primary/20 bg-primary/5">
+              <input
+                type="checkbox"
+                id="showOnReferralApp"
+                {...register("showOnReferralApp")}
+                className="h-5 w-5 rounded-lg border-primary text-primary focus:ring-primary/20"
+              />
+              <label htmlFor="showOnReferralApp" className="text-sm font-bold text-foreground cursor-pointer select-none">
+                Show On Referral App
+              </label>
+            </div>
+
+            {watch("showOnReferralApp") && (
+              <div className="grid gap-6 md:grid-cols-2">
+                <div className="md:col-span-2 space-y-4">
+                  <h4 className="text-xs font-black uppercase tracking-widest text-primary">Tour Summary for Referral App</h4>
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <div>
+                      <label className={labelClasses}>Summary (EN)</label>
+                      <textarea
+                        {...register("referralTourSummaryEn")}
+                        className={twMerge(inputClasses, "min-h-[150px] font-mono text-[12px]")}
+                        placeholder="🕒 3 hours trip..."
+                      />
                     </div>
-                  )}
-                </button>
+                    <div>
+                      <label className={labelClasses}>Summary (HI)</label>
+                      <textarea
+                        {...register("referralTourSummaryHi")}
+                        className={twMerge(inputClasses, "min-h-[150px] font-mono text-[12px]")}
+                        placeholder="🕒 3 घंटे की यात्रा..."
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="md:col-span-2 space-y-4">
+                  <h4 className="text-xs font-black uppercase tracking-widest text-primary">Customer Pickup Lines</h4>
+                  <div className="space-y-3">
+                    {watch("customerPickupLines").map((line, index) => (
+                      <div key={index} className="flex gap-2">
+                        <input
+                          className={inputClasses}
+                          value={line}
+                          onChange={(e) => {
+                            const newLines = [...watch("customerPickupLines")];
+                            newLines[index] = e.target.value;
+                            setValue("customerPickupLines", newLines);
+                          }}
+                        />
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const newLines = watch("customerPickupLines").filter((_, i) => i !== index);
+                            setValue("customerPickupLines", newLines);
+                          }}
+                          className="p-2.5 rounded-xl bg-destructive/10 text-destructive hover:bg-destructive/20 transition-all"
+                        >
+                          <IconTrash className="h-5 w-5" />
+                        </button>
+                      </div>
+                    ))}
+                    <button
+                      type="button"
+                      onClick={() => setValue("customerPickupLines", [...watch("customerPickupLines"), ""])}
+                      className="flex items-center gap-2 text-xs font-bold text-primary hover:opacity-80 transition-all"
+                    >
+                      <IconPlus className="h-4 w-4" /> Add Pickup Line
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        </Tabs.Content>
+
+        <Tabs.Content value="content" className="space-y-12 animate-in fade-in slide-in-from-bottom-2 duration-300">
+          {/* Features Section */}
+          <div className="space-y-6">
+            <div className="flex items-center justify-between">
+              <h3 className="text-sm font-black uppercase tracking-widest text-primary">Features (What People Say / Key Highlights)</h3>
+              <button
+                type="button"
+                onClick={() => setValue("features", [...(watch("features") || []), { iconId: null, titleEn: "", titleHi: "", descriptionEn: "", descriptionHi: "" }])}
+                className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-primary/10 text-primary text-xs font-bold hover:bg-primary/20 transition-all"
+              >
+                <IconPlus className="h-4 w-4" /> Add Feature
+              </button>
+            </div>
+            <div className="grid gap-4">
+              {(watch("features") || []).map((_, index) => (
+                <div key={index} className="p-6 rounded-2xl border border-border bg-card space-y-4 relative">
+                  <button
+                    type="button"
+                    onClick={() => setValue("features", watch("features").filter((_, i) => i !== index))}
+                    className="absolute top-4 right-4 p-2 text-destructive hover:bg-destructive/10 rounded-lg transition-all"
+                  >
+                    <IconTrash className="h-4 w-4" />
+                  </button>
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <div>
+                      <label className={labelClasses}>Title (EN)</label>
+                      <input {...register(`features.${index}.titleEn`)} className={inputClasses} />
+                      {errors.features?.[index]?.titleEn && <p className={errorClasses}>{errors.features[index].titleEn.message}</p>}
+                    </div>
+                    <div>
+                      <label className={labelClasses}>Title (HI)</label>
+                      <input {...register(`features.${index}.titleHi`)} className={inputClasses} />
+                      {errors.features?.[index]?.titleHi && <p className={errorClasses}>{errors.features[index].titleHi.message}</p>}
+                    </div>
+                    <div>
+                      <label className={labelClasses}>Description (EN)</label>
+                      <textarea {...register(`features.${index}.descriptionEn`)} className={twMerge(inputClasses, "min-h-[80px]")} />
+                      {errors.features?.[index]?.descriptionEn && <p className={errorClasses}>{errors.features[index].descriptionEn.message}</p>}
+                    </div>
+                    <div>
+                      <label className={labelClasses}>Description (HI)</label>
+                      <textarea {...register(`features.${index}.descriptionHi`)} className={twMerge(inputClasses, "min-h-[80px]")} />
+                      {errors.features?.[index]?.descriptionHi && <p className={errorClasses}>{errors.features[index].descriptionHi.message}</p>}
+                    </div>
+                    <div className="md:col-span-2">
+                      <label className={labelClasses}>Feature Icon/Image</label>
+                      <div className="flex items-center gap-4">
+                        <div className="h-16 w-16 rounded-xl border border-border bg-muted/30 overflow-hidden flex items-center justify-center">
+                          {singlePreviews[`feature-${index}`] || watch(`features.${index}.iconId`) ? (
+                            <img
+                              src={singlePreviews[`feature-${index}`] || `https://res.cloudinary.com/dsaly9sls/image/upload/v1/tours/${watch(`features.${index}.iconId`)}`}
+                              className="w-full h-full object-cover"
+                              onError={(e) => {
+                                (e.target as any).src = "";
+                                (e.target as any).parentElement.innerHTML = '<svg class="w-6 h-6 text-muted-foreground/20" ... />';
+                              }}
+                            />
+                          ) : (
+                            <IconPhoto className="h-6 w-6 text-muted-foreground/20" />
+                          )}
+                        </div>
+                        <div className="flex-1 space-y-2">
+                          <input
+                            type="file"
+                            accept="image/*"
+                            onChange={async (e) => {
+                              const file = e.target.files?.[0];
+                              if (file) {
+                                try {
+                                  const result = await tourService.uploadMedia(file);
+                                  setValue(`features.${index}.iconId`, result.id);
+                                  setSinglePreviews(prev => ({ ...prev, [`feature-${index}`]: result.url }));
+                                  toast.success("Icon uploaded");
+                                } catch (error) {
+                                  toast.error("Upload failed");
+                                }
+                              }
+                            }}
+                            className="hidden"
+                            id={`feature-icon-${index}`}
+                          />
+                          <label
+                            htmlFor={`feature-icon-${index}`}
+                            className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-primary/10 text-primary text-[10px] font-black uppercase tracking-wider cursor-pointer hover:bg-primary hover:text-white transition-all"
+                          >
+                            <IconUpload size={14} /> Upload Icon
+                          </label>
+                          <p className="text-[10px] text-muted-foreground">Recommended: Square PNG/SVG</p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Itinerary Section */}
+          <div className="space-y-6 pt-10 border-t border-border">
+            <div className="flex items-center justify-between">
+              <h3 className="text-sm font-black uppercase tracking-widest text-primary">Tour Itinerary / Temples Covered</h3>
+              <button
+                type="button"
+                onClick={() => setValue("itinerary", [...(watch("itinerary") || []), { imageId: null, titleEn: "", titleHi: "", descriptionEn: "", descriptionHi: "" }])}
+                className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-primary/10 text-primary text-xs font-bold hover:bg-primary/20 transition-all"
+              >
+                <IconPlus className="h-4 w-4" /> Add Itinerary Item
+              </button>
+            </div>
+            <div className="grid gap-4">
+              {(watch("itinerary") || []).map((_, index) => (
+                <div key={index} className="p-6 rounded-2xl border border-border bg-card space-y-4 relative">
+                  <button
+                    type="button"
+                    onClick={() => setValue("itinerary", watch("itinerary").filter((_, i) => i !== index))}
+                    className="absolute top-4 right-4 p-2 text-destructive hover:bg-destructive/10 rounded-lg transition-all"
+                  >
+                    <IconTrash className="h-4 w-4" />
+                  </button>
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <div>
+                      <label className={labelClasses}>Place/Step Name (EN)</label>
+                      <input {...register(`itinerary.${index}.titleEn`)} className={inputClasses} />
+                      {errors.itinerary?.[index]?.titleEn && <p className={errorClasses}>{errors.itinerary[index].titleEn.message}</p>}
+                    </div>
+                    <div>
+                      <label className={labelClasses}>Place/Step Name (HI)</label>
+                      <input {...register(`itinerary.${index}.titleHi`)} className={inputClasses} />
+                      {errors.itinerary?.[index]?.titleHi && <p className={errorClasses}>{errors.itinerary[index].titleHi.message}</p>}
+                    </div>
+                    <div>
+                      <label className={labelClasses}>Description (EN)</label>
+                      <textarea {...register(`itinerary.${index}.descriptionEn`)} className={twMerge(inputClasses, "min-h-[80px]")} />
+                      {errors.itinerary?.[index]?.descriptionEn && <p className={errorClasses}>{errors.itinerary[index].descriptionEn.message}</p>}
+                    </div>
+                    <div>
+                      <label className={labelClasses}>Description (HI)</label>
+                      <textarea {...register(`itinerary.${index}.descriptionHi`)} className={twMerge(inputClasses, "min-h-[80px]")} />
+                      {errors.itinerary?.[index]?.descriptionHi && <p className={errorClasses}>{errors.itinerary[index].descriptionHi.message}</p>}
+                    </div>
+                    <div className="md:col-span-2">
+                      <label className={labelClasses}>Place/Temple Image</label>
+                      <div className="flex items-center gap-4">
+                        <div className="h-20 w-32 rounded-xl border border-border bg-muted/30 overflow-hidden flex items-center justify-center">
+                          {singlePreviews[`itinerary-${index}`] || watch(`itinerary.${index}.imageId`) ? (
+                            <img
+                              src={singlePreviews[`itinerary-${index}`] || `https://res.cloudinary.com/dsaly9sls/image/upload/v1/tours/${watch(`itinerary.${index}.imageId`)}`}
+                              className="w-full h-full object-cover"
+                            />
+                          ) : (
+                            <IconPhoto className="h-8 w-8 text-muted-foreground/20" />
+                          )}
+                        </div>
+                        <div className="flex-1 space-y-2">
+                          <input
+                            type="file"
+                            accept="image/*"
+                            onChange={async (e) => {
+                              const file = e.target.files?.[0];
+                              if (file) {
+                                try {
+                                  const result = await tourService.uploadMedia(file);
+                                  setValue(`itinerary.${index}.imageId`, result.id);
+                                  setSinglePreviews(prev => ({ ...prev, [`itinerary-${index}`]: result.url }));
+                                  toast.success("Image uploaded");
+                                } catch (error) {
+                                  toast.error("Upload failed");
+                                }
+                              }
+                            }}
+                            className="hidden"
+                            id={`itinerary-image-${index}`}
+                          />
+                          <label
+                            htmlFor={`itinerary-image-${index}`}
+                            className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-primary/10 text-primary text-[10px] font-black uppercase tracking-wider cursor-pointer hover:bg-primary hover:text-white transition-all"
+                          >
+                            <IconUpload size={14} /> Upload Image
+                          </label>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* FAQs Section */}
+          <div className="space-y-6 pt-10 border-t border-border">
+            <div className="flex items-center justify-between">
+              <h3 className="text-sm font-black uppercase tracking-widest text-primary">{t("tours.faqs")}</h3>
+              <button
+                type="button"
+                onClick={() => setValue("faqs", [...(watch("faqs") || []), { questionEn: "", questionHi: "", answerEn: "", answerHi: "" }])}
+                className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-primary/10 text-primary text-xs font-bold hover:bg-primary/20 transition-all"
+              >
+                <IconPlus className="h-4 w-4" /> Add FAQ
+              </button>
+            </div>
+            <div className="space-y-4">
+              {(watch("faqs") || []).map((_, index) => (
+                <div key={index} className="p-6 rounded-2xl border border-border bg-card space-y-4 relative group">
+                  <button
+                    type="button"
+                    onClick={() => setValue("faqs", watch("faqs").filter((_, i) => i !== index))}
+                    className="absolute top-4 right-4 p-2 text-destructive hover:bg-destructive/10 rounded-lg transition-all"
+                  >
+                    <IconTrash className="h-4 w-4" />
+                  </button>
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <div>
+                      <label className={labelClasses}>Question (EN)</label>
+                      <input {...register(`faqs.${index}.questionEn`)} className={inputClasses} />
+                      {errors.faqs?.[index]?.questionEn && <p className={errorClasses}>{errors.faqs[index].questionEn.message}</p>}
+                    </div>
+                    <div>
+                      <label className={labelClasses}>Question (HI)</label>
+                      <input {...register(`faqs.${index}.questionHi`)} className={inputClasses} />
+                      {errors.faqs?.[index]?.questionHi && <p className={errorClasses}>{errors.faqs[index].questionHi.message}</p>}
+                    </div>
+                    <div>
+                      <label className={labelClasses}>Answer (EN)</label>
+                      <textarea {...register(`faqs.${index}.answerEn`)} className={twMerge(inputClasses, "min-h-[80px]")} />
+                      {errors.faqs?.[index]?.answerEn && <p className={errorClasses}>{errors.faqs[index].answerEn.message}</p>}
+                    </div>
+                    <div>
+                      <label className={labelClasses}>Answer (HI)</label>
+                      <textarea {...register(`faqs.${index}.answerHi`)} className={twMerge(inputClasses, "min-h-[80px]")} />
+                      {errors.faqs?.[index]?.answerHi && <p className={errorClasses}>{errors.faqs[index].answerHi.message}</p>}
+                    </div>
+                  </div>
+                </div>
               ))}
             </div>
           </div>
         </Tabs.Content>
 
-        <Tabs.Content value="slots" className="space-y-8 animate-in fade-in slide-in-from-bottom-2 duration-300">
-          <div className="grid gap-8 md:grid-cols-2">
-            <div className="space-y-4">
-              <h3 className="text-sm font-black uppercase tracking-widest text-primary">{t("tours.morningSlots")}</h3>
-              <div className="grid grid-cols-2 gap-3">
-                {morningOptions.map((slot) => (
-                  <button
-                    key={slot}
-                    type="button"
-                    onClick={() => toggleSlot(slot, "morning")}
-                    className={twMerge(
-                      "flex items-center justify-center p-3 rounded-2xl border transition-all text-sm font-bold",
-                      selectedMorningSlots.includes(slot)
-                        ? "border-primary bg-primary/5 ring-1 ring-primary text-primary"
-                        : "border-border bg-card hover:border-primary/50"
-                    )}
-                  >
-                    {slot}
-                    {selectedMorningSlots.includes(slot) && <IconCheck className="ml-2 h-4 w-4" />}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <div className="space-y-4">
-              <h3 className="text-sm font-black uppercase tracking-widest text-primary">{t("tours.eveningSlots")}</h3>
-              <div className="grid grid-cols-2 gap-3">
-                {eveningOptions.map((slot) => (
-                  <button
-                    key={slot}
-                    type="button"
-                    onClick={() => toggleSlot(slot, "evening")}
-                    className={twMerge(
-                      "flex items-center justify-center p-3 rounded-2xl border transition-all text-sm font-bold",
-                      selectedEveningSlots.includes(slot)
-                        ? "border-primary bg-primary/5 ring-1 ring-primary text-primary"
-                        : "border-border bg-card hover:border-primary/50"
-                    )}
-                  >
-                    {slot}
-                    {selectedEveningSlots.includes(slot) && <IconCheck className="ml-2 h-4 w-4" />}
-                  </button>
-                ))}
-              </div>
-            </div>
-          </div>
-        </Tabs.Content>
 
         <Tabs.Content value="media" className="space-y-8 animate-in fade-in slide-in-from-bottom-2 duration-300">
           <div className="space-y-4">

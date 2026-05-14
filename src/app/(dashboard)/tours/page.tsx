@@ -2,6 +2,7 @@
 
 import React, { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import Link from "next/link";
 import {
   IconPlus,
   IconSearch,
@@ -225,27 +226,16 @@ export default function ToursPage() {
                     <td className="px-4 py-3.5">
                       <div className="space-y-0.5">
                         <p className="text-xs font-black text-primary">₹{tour.price}</p>
-                        {tour.discountPrice && (
-                          <p className="text-[10px] text-muted-foreground line-through opacity-50">₹{tour.discountPrice}</p>
+                        {tour.slashedPrice && (
+                          <p className="text-[10px] text-muted-foreground line-through opacity-50">₹{tour.slashedPrice}</p>
                         )}
                       </div>
                     </td>
                     <td className="px-4 py-3.5">
-                      <div className="flex -space-x-2 overflow-hidden">
-                        {(tour.temples as any[])?.slice(0, 3).map((temple: any, idx: number) => (
-                          <div key={idx} className="inline-block h-7 w-7 rounded-lg ring-2 ring-card bg-muted flex items-center justify-center overflow-hidden" title={temple.nameEn}>
-                            {temple.thumbnail ? (
-                              <img src={temple.thumbnail.url} className="h-full w-full object-cover" />
-                            ) : (
-                              <IconMapPin size={12} className="text-muted-foreground" />
-                            )}
-                          </div>
-                        ))}
-                        {tour.temples && tour.temples.length > 3 && (
-                          <div className="inline-block h-7 w-7 rounded-lg ring-2 ring-card bg-muted/50 flex items-center justify-center text-[8px] font-black text-muted-foreground">
-                            +{tour.temples.length - 3}
-                          </div>
-                        )}
+                      <div className="flex items-center gap-2">
+                        <div className="h-7 px-2 rounded-lg bg-muted flex items-center justify-center text-[10px] font-bold text-muted-foreground">
+                          {tour.templesCoveredCount || 0} Temples
+                        </div>
                       </div>
                     </td>
                     <td className="px-4 py-3.5">
@@ -261,6 +251,13 @@ export default function ToursPage() {
                     </td>
                     <td className="px-5 py-3.5 text-right">
                       <div className="flex items-center justify-end gap-2">
+                        <Link
+                          href={`/tours/${tour.id}`}
+                          className="h-9 w-9 flex items-center justify-center rounded-xl bg-card text-muted-foreground shadow-sm ring-1 ring-border transition-all hover:bg-primary hover:text-primary-foreground active:scale-90"
+                          title="Manage Details"
+                        >
+                          <IconSettings size={16} />
+                        </Link>
                         <button
                           onClick={() => {
                             setEditingTour(tour);
