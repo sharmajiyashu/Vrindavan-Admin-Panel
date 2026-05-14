@@ -16,25 +16,78 @@ export const tourBaseSchema = z.object({
   titleEn: z.string().min(1, 'Title in English is required'),
   titleHi: z.string().min(1, 'Title in Hindi is required'),
 
-  descriptionEn: z.string().optional().nullable(),
-  descriptionHi: z.string().optional().nullable(),
+  subtitleEn: z.string().optional().nullable(),
+  subtitleHi: z.string().optional().nullable(),
+
+  subtextEn: z.string().optional().nullable(),
+  subtextHi: z.string().optional().nullable(),
+
+  locationNameEn: z.string().optional().nullable(),
+  locationNameHi: z.string().optional().nullable(),
+  lat: coerceNumber.optional().nullable(),
+  long: coerceNumber.optional().nullable(),
 
   badgeEn: z.string().optional().nullable(),
   badgeHi: z.string().optional().nullable(),
 
   price: coerceNumber.min(0),
-  discountPrice: coerceNumber.min(0).optional().nullable(),
-  pricePerPerson: coerceNumber.min(0).optional().nullable(),
+  slashedPrice: coerceNumber.min(0).optional().nullable(),
+  offerText: z.string().optional().nullable(),
+  discountConfig: z.object({
+    type: z.enum(['flat', 'percentage', 'flat_above']),
+    value: coerceNumber,
+    code: z.string(),
+    minAmount: coerceNumber.optional(),
+  }).optional().nullable(),
+
   extraDiscountPerUser: coerceNumber.min(0).default(0),
 
-  expertGuidanceEn: z.string().optional().nullable(),
-  expertGuidanceHi: z.string().optional().nullable(),
-  spiritualImmersionEn: z.string().optional().nullable(),
-  spiritualImmersionHi: z.string().optional().nullable(),
-  hassleFreePlanningEn: z.string().optional().nullable(),
-  hassleFreePlanningHi: z.string().optional().nullable(),
-  localInsightsEn: z.string().optional().nullable(),
-  localInsightsHi: z.string().optional().nullable(),
+  templesCoveredCount: coerceNumber.optional().nullable(),
+  durationEn: z.string().optional().nullable(),
+  durationHi: z.string().optional().nullable(),
+
+  startingAddressEn: z.string().optional().nullable(),
+  startingAddressHi: z.string().optional().nullable(),
+
+  shortHighlightListing: z.object({
+    titleEn: z.string().optional().nullable(),
+    titleHi: z.string().optional().nullable(),
+    iconId: z.number().optional().nullable(),
+  }).optional().nullable(),
+  shortHighlightDetails: z.object({
+    titleEn: z.string().optional().nullable(),
+    titleHi: z.string().optional().nullable(),
+    iconId: z.number().optional().nullable(),
+  }).optional().nullable(),
+
+  showOnReferralApp: coerceBoolean.default(false),
+  referralTourSummaryEn: z.string().optional().nullable(),
+  referralTourSummaryHi: z.string().optional().nullable(),
+
+  customerPickupLines: z.preprocess(jsonArrayPreprocess, z.array(z.string())).default([]),
+
+  features: z.preprocess(jsonArrayPreprocess, z.array(z.object({
+    iconId: z.number().optional().nullable(),
+    titleEn: z.string(),
+    titleHi: z.string(),
+    descriptionEn: z.string(),
+    descriptionHi: z.string(),
+  }))).default([]),
+
+  itinerary: z.preprocess(jsonArrayPreprocess, z.array(z.object({
+    imageId: z.number().optional().nullable(),
+    titleEn: z.string(),
+    titleHi: z.string(),
+    descriptionEn: z.string(),
+    descriptionHi: z.string(),
+  }))).default([]),
+
+  faqs: z.preprocess(jsonArrayPreprocess, z.array(z.object({
+    questionEn: z.string(),
+    questionHi: z.string(),
+    answerEn: z.string(),
+    answerHi: z.string(),
+  }))).default([]),
 
   totalWalkMinutes: coerceNumber.optional().nullable(),
   distanceEn: z.string().optional().nullable(),
@@ -44,11 +97,11 @@ export const tourBaseSchema = z.object({
   recommendationEn: z.string().optional().nullable(),
   recommendationHi: z.string().optional().nullable(),
 
-  cancellationBeforeHours: coerceNumber.default(24),
-  guideDetailsBeforeHours: coerceNumber.default(24),
 
-  cancellationPolicyEn: z.string().optional().nullable(),
-  cancellationPolicyHi: z.string().optional().nullable(),
+
+  cancellationBeforeHours: coerceNumber.default(24),
+  shareDetailsBeforeHours: coerceNumber.default(2),
+  guideDetailsBeforeHours: coerceNumber.default(24),
 
   type: z.enum(['group', 'private']).default('group'),
   minPersons: coerceNumber.optional().nullable(),
@@ -56,10 +109,27 @@ export const tourBaseSchema = z.object({
 
   isActive: coerceBoolean.default(true),
 
-  templeIds: z.preprocess(jsonArrayPreprocess, z.array(z.number())).default([]),
   imageIds: z.preprocess(jsonArrayPreprocess, z.array(z.number())).optional().default([]),
-  morningSlots: z.preprocess(jsonArrayPreprocess, z.array(z.string())).default([]),
-  eveningSlots: z.preprocess(jsonArrayPreprocess, z.array(z.string())).default([]),
+
+  // Slots & Reviews management in form
+  slots: z.array(z.object({
+    id: z.number().optional(),
+    date: z.string(),
+    startTime: z.string(),
+    slotDeadlineHours: z.number().default(2),
+    cancellationDeadlineHours: z.number().default(2),
+    guidePhoneNumber: z.string().optional().nullable(),
+    alternateNumber: z.string().optional().nullable(),
+  })).optional().default([]),
+
+  reviews: z.array(z.object({
+    id: z.number().optional(),
+    userName: z.string(),
+    date: z.string().optional(),
+    rating: z.number().min(1).max(5),
+    reviewText: z.string(),
+    isAdminAdded: z.boolean().default(true),
+  })).optional().default([]),
 });
 
 // Refine the full schema for creation/full validation
