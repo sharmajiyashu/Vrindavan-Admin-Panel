@@ -175,23 +175,31 @@ export function TourForm({ initialData, onSubmitBasic, onSubmitFiles, onRemoveMe
 
   const onFormSubmit: SubmitHandler<TourFormData> = async (data) => {
     try {
-      const id = await onSubmitBasic({
-        ...data,
-        imageIds: existingGallery.map(m => m.id),
-      });
-      setTourId(id);
+      let currentId = tourId;
+
+      // If we're on any tab OTHER than media, or if this is a new tour (no tourId),
+      // we must save the basic details first.
+      if (activeTab !== "media" || !currentId) {
+        currentId = await onSubmitBasic({
+          ...data,
+          imageIds: existingGallery.map(m => m.id),
+        });
+        setTourId(currentId);
+      }
 
       if (activeTab === "media") {
-        if (id) {
+        if (currentId) {
           setIsUploading(true);
           try {
             if (galleryFiles.length > 0) {
-              await onSubmitFiles(id, galleryFiles);
+              await onSubmitFiles(currentId, galleryFiles);
             }
             onComplete();
           } finally {
             setIsUploading(false);
           }
+        } else {
+          toast.error("Tour ID missing. Please save basic details first.");
         }
       } else {
         // Auto-advance

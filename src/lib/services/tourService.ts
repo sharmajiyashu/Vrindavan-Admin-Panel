@@ -11,8 +11,7 @@ export interface TourSlot {
   id?: number;
   date: string;
   startTime: string;
-  slotDeadlineHours: number;
-  cancellationDeadlineHours: number;
+  guideName?: string | null;
   guidePhoneNumber?: string | null;
   alternateNumber?: string | null;
 }
@@ -159,5 +158,35 @@ export const tourService = {
 
   deleteTour: async (id: number) => {
     return await deleteRequest(`/tours/${id}`);
+  },
+
+  getSlotBookingCount: async (tourId: number, date: string, time: string, slotId?: number) => {
+    if (!date || !time) return { count: 0 };
+    const query = slotId ? `?slotId=${slotId}` : '';
+    return await get<{ count: number }>(`/tours/${tourId}/slots/${encodeURIComponent(date)}/${encodeURIComponent(time)}/bookings/count${query}`);
+  },
+
+  getSlotBookings: async (tourId: number, date: string, time: string, slotId?: number) => {
+    if (!date || !time) return [];
+    const query = slotId ? `?slotId=${slotId}` : '';
+    return await get<any[]>(`/tours/${tourId}/slots/${encodeURIComponent(date)}/${encodeURIComponent(time)}/bookings${query}`);
+  },
+
+  cancelSlot: async (tourId: number, date: string, time: string, reason: string, slotId?: number) => {
+    if (!date || !time) throw new Error("Date and time are required to cancel a slot");
+    return await post<any>(`/tours/${tourId}/slots/${encodeURIComponent(date)}/${encodeURIComponent(time)}/cancel`, { reason, slotId });
+  },
+
+  getSlots: async (tourId: number, date?: string) => {
+    const query = date ? `?date=${date}` : '';
+    return await get<TourSlot[]>(`/tours/${tourId}/slots${query}`);
+  },
+
+  addSlot: async (tourId: number, slotData: Partial<TourSlot>) => {
+    return await post<TourSlot>(`/tours/${tourId}/slots`, slotData);
+  },
+
+  updateSlot: async (slotId: number, slotData: Partial<TourSlot>) => {
+    return await put<TourSlot>(`/tours/slots/${slotId}`, slotData);
   },
 };

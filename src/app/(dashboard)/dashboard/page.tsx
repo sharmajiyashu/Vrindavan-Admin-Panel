@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   IconUsers,
@@ -16,11 +17,16 @@ import {
   IconMapPin,
   IconPhone,
   IconCalendarStats,
+  IconClock,
+  IconX,
 } from "@tabler/icons-react";
 import { twMerge } from "tailwind-merge";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { dashboardService, DashboardResponse } from "@/lib/services/dashboardService";
+import { tourService } from "@/lib/services/tourService";
 import Link from "next/link";
+import { format, parse, isValid, differenceInMinutes } from "date-fns";
+import { toast } from "react-toastify";
 
 export default function DashboardPage() {
   const { t } = useLanguage();
@@ -32,7 +38,6 @@ export default function DashboardPage() {
   });
 
   const stats = data?.stats;
-  const recentBookings = data?.recentUpcomingBookings || [];
 
   const statCards = [
     {
@@ -136,108 +141,194 @@ export default function DashboardPage() {
         ))}
       </section>
 
-      {false && (
-        <div className="grid gap-6 lg:grid-cols-3 px-2">
-          {/* Recent Upcoming Bookings */}
-          <section className="lg:col-span-2 rounded-3xl border-2 border-border bg-card p-8 shadow-sm overflow-hidden">
-            <div className="flex items-center justify-between mb-8">
-              <h2 className="text-xl font-black tracking-tight text-foreground">
-                {t("dashboard.recentUpcoming")}
+      <div className="grid gap-6 lg:grid-cols-3 px-2">
+        {/* Upcoming Tours Operations */}
+        <section className="lg:col-span-2 rounded-[2.5rem] border border-border bg-card p-10 shadow-xl overflow-hidden space-y-8">
+          <div className="flex items-center justify-between">
+            <div className="space-y-1">
+              <h2 className="text-2xl font-black tracking-tight text-foreground">
+                Upcoming Tours Operations
               </h2>
-              <Link href="/bookings" className="text-[10px] font-black uppercase tracking-widest text-primary hover:underline flex items-center gap-1.5 leading-none">
-                View All <IconArrowRight size={14} />
-              </Link>
+              <p className="text-[10px] font-black uppercase tracking-widest text-primary">
+                Monitor deadlines and assign guides
+              </p>
             </div>
+            <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary">
+              <IconCalendarCheck size={20} />
+            </div>
+          </div>
 
-            <div className="space-y-4">
-              {isLoading ? (
-                <div className="h-64 flex flex-col items-center justify-center gap-3">
-                  <IconLoader2 size={32} className="animate-spin text-primary/30" />
-                  <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/40">Fetching schedules...</p>
+          <div className="space-y-4">
+            {isLoading ? (
+              <div className="h-64 flex flex-col items-center justify-center gap-3">
+                <IconLoader2 size={32} className="animate-spin text-primary/30" />
+                <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/40">Loading operations...</p>
+              </div>
+            ) : (data?.upcomingSlots || []).length === 0 ? (
+              <div className="h-64 flex flex-col items-center justify-center gap-4 text-center">
+                <div className="h-16 w-16 rounded-3xl bg-muted/30 flex items-center justify-center text-muted-foreground">
+                  <IconCalendarCheck size={32} stroke={1.5} />
                 </div>
-              ) : recentBookings.length === 0 ? (
-                <div className="h-64 flex flex-col items-center justify-center gap-4 text-center">
-                  <div className="h-16 w-16 rounded-3xl bg-muted/30 flex items-center justify-center text-muted-foreground">
-                    <IconReceipt2 size={32} stroke={1.5} />
-                  </div>
-                  <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest leading-relaxed">No upcoming itineraries<br />found for this week.</p>
-                </div>
-              ) : (
-                <div className="divide-y divide-border/40">
-                  {recentBookings.map((booking) => (
-                    <div key={booking.id} className="py-4 first:pt-0 last:pb-0 flex items-center justify-between group transition-all">
-                      <div className="flex items-center gap-4">
-                        <div className="h-12 w-12 rounded-2xl bg-muted/50 border border-border/40 flex items-center justify-center text-muted-foreground group-hover:bg-primary/5 group-hover:text-primary transition-colors">
-                          <IconCalendarEvent size={24} stroke={1.5} />
+                <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest leading-relaxed">No tours scheduled<br />for the next 48 hours.</p>
+              </div>
+            ) : (
+              <div className="grid gap-4">
+                {data?.upcomingSlots.map((slot: any) => {
+                  const dateTimeStr = `${slot.date} ${slot.startTime}`;
+                  const slotTime = parse(dateTimeStr, "yyyy-MM-dd hh:mm a", new Date());
+                  const deadlineHours = slot.tour?.shareDetailsBeforeHours || 2;
+                  const deadlineTime = new Date(slotTime.getTime() - deadlineHours * 60 * 60 * 1000);
+                  const minutesLeft = differenceInMinutes(deadlineTime, new Date());
+                  const isDeadlinePassed = minutesLeft <= 0;
+
+                  return (
+                    <div key={slot.id} className="p-6 rounded-3xl border border-border bg-muted/20 group hover:bg-card hover:shadow-2xl transition-all duration-500 relative overflow-hidden">
+                      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+                        <div className="flex items-center gap-5">
+                          <div className="h-14 w-14 rounded-2xl bg-primary/10 border border-primary/20 flex flex-col items-center justify-center text-primary group-hover:scale-110 transition-transform">
+                            <span className="text-[10px] font-black uppercase leading-none">{format(slotTime, "MMM")}</span>
+                            <span className="text-lg font-black leading-none mt-0.5">{format(slotTime, "dd")}</span>
+                          </div>
+                          <div className="space-y-1">
+                            <h4 className="text-sm font-black text-foreground group-hover:text-primary transition-colors">{slot.tour?.titleEn}</h4>
+                            <div className="flex items-center gap-3 text-[10px] font-bold text-muted-foreground uppercase tracking-widest">
+                              <span className="flex items-center gap-1"><IconClock size={12} /> {slot.startTime}</span>
+                              <span className="flex items-center gap-1"><IconMapPin size={12} /> {slot.tour?.locationNameEn || "Vrindavan"}</span>
+                            </div>
+                          </div>
                         </div>
-                        <div className="space-y-1">
-                          <p className="text-xs font-black text-foreground line-clamp-1">{booking.tour.titleEn}</p>
-                          <div className="flex items-center gap-3 text-[10px] font-bold text-muted-foreground opacity-60">
-                            <span className="flex items-center gap-1 text-primary"><IconUser size={10} /> {booking.user.name}</span>
-                            <span className="flex items-center gap-1"><IconPhone size={10} /> {booking.user.mobile}</span>
+
+                        <div className="flex flex-col md:items-end gap-3">
+                          <div className={twMerge(
+                            "px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest border shadow-sm flex items-center gap-2",
+                            isDeadlinePassed
+                              ? "bg-red-50 text-red-600 border-red-100"
+                              : "bg-emerald-50 text-emerald-600 border-emerald-100"
+                          )}>
+                            <IconCircleCheck size={12} />
+                            {isDeadlinePassed
+                              ? "Deadline Passed"
+                              : `Final Details in ${Math.floor(minutesLeft / 60)}h ${minutesLeft % 60}m`
+                            }
+                          </div>
+
+                          <div className="flex items-center gap-2">
+                            <div className="flex flex-col gap-2">
+                              <div className="relative group/input">
+                                <input
+                                  defaultValue={slot.guidePhoneNumber || ""}
+                                  placeholder="Guide Phone"
+                                  onBlur={async (e) => {
+                                    if (e.target.value !== slot.guidePhoneNumber) {
+                                      try {
+                                        const fullTour = await tourService.getTourById(slot.tourId);
+                                        const updatedSlots = (fullTour?.slots || []).map((s: any) =>
+                                          (s.date === slot.date && s.startTime === slot.startTime)
+                                            ? { ...s, guidePhoneNumber: e.target.value }
+                                            : s
+                                        );
+                                        await tourService.updateTour(slot.tourId, { slots: updatedSlots });
+                                        toast.success("Guide info updated");
+                                      } catch (err) {
+                                        toast.error("Failed to update guide");
+                                      }
+                                    }
+                                  }}
+                                  className="h-10 w-44 rounded-xl border border-border bg-card/50 px-4 text-xs font-bold outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all"
+                                />
+                              </div>
+                              <div className="relative group/input">
+                                <input
+                                  defaultValue={slot.alternateNumber || ""}
+                                  placeholder="Alt Phone *"
+                                  onBlur={async (e) => {
+                                    if (e.target.value !== slot.alternateNumber) {
+                                      try {
+                                        const fullTour = await tourService.getTourById(slot.tourId);
+                                        const updatedSlots = (fullTour?.slots || []).map((s: any) =>
+                                          (s.date === slot.date && s.startTime === slot.startTime)
+                                            ? { ...s, alternateNumber: e.target.value }
+                                            : s
+                                        );
+                                        await tourService.updateTour(slot.tourId, { slots: updatedSlots });
+                                        toast.success("Alternate contact updated");
+                                      } catch (err) {
+                                        toast.error("Failed to update alternate contact");
+                                      }
+                                    }
+                                  }}
+                                  className="h-10 w-44 rounded-xl border border-border bg-card/50 px-4 text-xs font-bold outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all border-destructive/20"
+                                />
+                              </div>
+                            </div>
+                            <Link
+                              href={`/tours/${slot.tourId}`}
+                              className="h-full min-h-[5.5rem] w-12 rounded-2xl bg-primary/5 flex items-center justify-center text-primary hover:bg-primary hover:text-white transition-all shadow-sm border border-primary/10"
+                            >
+                              <IconArrowRight size={24} />
+                            </Link>
                           </div>
                         </div>
                       </div>
-                      <div className="text-right">
-                        <div className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-2 py-0.5 text-[9px] font-black uppercase tracking-wider text-emerald-600 ring-1 ring-inset ring-emerald-500/10">
-                          <IconCircleCheck size={10} />
-                          {booking.status}
-                        </div>
-                        <p className="text-[10px] font-bold text-muted-foreground/40 mt-1 uppercase tracking-widest tabular-nums">
-                          {new Date(booking.createdAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
-                        </p>
-                      </div>
+
+                      {/* Background accent */}
+                      <div className="absolute top-0 right-0 w-32 h-32 bg-primary/5 rounded-full blur-3xl -mr-16 -mt-16 group-hover:scale-150 transition-transform duration-700" />
                     </div>
-                  ))}
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        </section>
+
+        {/* Quick Stats & Actions Sidebar */}
+        <div className="space-y-6">
+          <section className="rounded-[2.5rem] border border-border bg-card p-8 shadow-xl space-y-8">
+            <div className="space-y-1">
+              <h3 className="text-sm font-black uppercase tracking-widest text-muted-foreground/50">Quick Shortcuts</h3>
+            </div>
+            <div className="grid gap-4">
+              <Link href="/temples" className="flex items-center justify-between p-5 rounded-2xl bg-amber-50 border border-amber-100 text-amber-900 group transition-all hover:bg-amber-100 active:scale-[0.98]">
+                <div className="flex items-center gap-4">
+                  <div className="h-10 w-10 rounded-xl bg-white shadow-sm flex items-center justify-center">
+                    <IconMapPin size={20} className="text-amber-600" />
+                  </div>
+                  <span className="text-xs font-black uppercase tracking-widest">Temples</span>
                 </div>
-              )}
+                <IconArrowRight size={16} className="opacity-30 group-hover:translate-x-1 transition-transform" />
+              </Link>
+              <Link href="/tours" className="flex items-center justify-between p-5 rounded-2xl bg-purple-50 border border-purple-100 text-purple-900 group transition-all hover:bg-purple-100 active:scale-[0.98]">
+                <div className="flex items-center gap-4">
+                  <div className="h-10 w-10 rounded-xl bg-white shadow-sm flex items-center justify-center">
+                    <IconCalendarCheck size={20} className="text-purple-600" />
+                  </div>
+                  <span className="text-xs font-black uppercase tracking-widest">Tours</span>
+                </div>
+                <IconArrowRight size={16} className="opacity-30 group-hover:translate-x-1 transition-transform" />
+              </Link>
+              <Link href="/bookings" className="flex items-center justify-between p-5 rounded-2xl bg-emerald-50 border border-emerald-100 text-emerald-900 group transition-all hover:bg-emerald-100 active:scale-[0.98]">
+                <div className="flex items-center gap-4">
+                  <div className="h-10 w-10 rounded-xl bg-white shadow-sm flex items-center justify-center">
+                    <IconReceipt2 size={20} className="text-emerald-600" />
+                  </div>
+                  <span className="text-xs font-black uppercase tracking-widest">Bookings</span>
+                </div>
+                <IconArrowRight size={16} className="opacity-30 group-hover:translate-x-1 transition-transform" />
+              </Link>
+            </div>
+
+            <div className="pt-8 border-t border-border/40">
+              <div className="p-6 rounded-3xl bg-primary/5 border border-primary/10 text-center space-y-2">
+                <p className="text-[10px] font-black uppercase tracking-widest text-primary">System Status</p>
+                <div className="flex items-center justify-center gap-2">
+                  <div className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
+                  <p className="text-xs font-bold text-foreground">Operational v2.4</p>
+                </div>
+              </div>
             </div>
           </section>
-
-          {/* Quick Actions Sidebar */}
-          <div className="space-y-6">
-            <section className="rounded-3xl border-2 border-border bg-card p-8 shadow-sm h-full">
-              <div className="flex items-center justify-between mb-8">
-                <h3 className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/40 leading-none">Administrative Shortcuts</h3>
-              </div>
-              <div className="grid gap-3">
-                <Link href="/temples" className="flex items-center justify-between p-4 rounded-2xl bg-amber-50 border-2 border-amber-200 text-amber-900 group transition-all hover:bg-amber-100 active:scale-[0.98]">
-                  <div className="flex items-center gap-3">
-                    <div className="h-8 w-8 rounded-lg bg-white shadow-sm flex items-center justify-center">
-                      <IconMapPin size={18} className="text-amber-600" />
-                    </div>
-                    <span className="text-[11px] font-black uppercase tracking-widest">Manage Temples</span>
-                  </div>
-                  <IconArrowRight size={14} className="opacity-30 group-hover:translate-x-1 transition-transform" />
-                </Link>
-                <Link href="/tours" className="flex items-center justify-between p-4 rounded-2xl bg-purple-50 border-2 border-purple-200 text-purple-900 group transition-all hover:bg-purple-100 active:scale-[0.98]">
-                  <div className="flex items-center gap-3">
-                    <div className="h-8 w-8 rounded-lg bg-white shadow-sm flex items-center justify-center">
-                      <IconCalendarCheck size={18} className="text-purple-600" />
-                    </div>
-                    <span className="text-[11px] font-black uppercase tracking-widest">Manage Tours</span>
-                  </div>
-                  <IconArrowRight size={14} className="opacity-30 group-hover:translate-x-1 transition-transform" />
-                </Link>
-                <Link href="/users" className="flex items-center justify-between p-4 rounded-2xl bg-blue-50 border-2 border-blue-200 text-blue-900 group transition-all hover:bg-blue-100 active:scale-[0.98]">
-                  <div className="flex items-center gap-3">
-                    <div className="h-8 w-8 rounded-lg bg-white shadow-sm flex items-center justify-center">
-                      <IconUser size={18} className="text-blue-600" />
-                    </div>
-                    <span className="text-[11px] font-black uppercase tracking-widest">Customer Base</span>
-                  </div>
-                  <IconArrowRight size={14} className="opacity-30 group-hover:translate-x-1 transition-transform" />
-                </Link>
-              </div>
-              <div className="mt-8 pt-8 border-t border-border/40">
-                <p className="text-[10px] font-bold text-muted-foreground/40 uppercase tracking-[0.2em] text-center leading-relaxed">
-                  Vrindavan Admin Protocol<br />v2.4.0 — Secure Access
-                </p>
-              </div>
-            </section>
-          </div>
         </div>
-      )}
+      </div>
     </div>
   );
 }
