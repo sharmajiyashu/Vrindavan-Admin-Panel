@@ -122,6 +122,10 @@ export interface Tour {
   gallery?: TourMedia[];
   slots?: TourSlot[];
   reviews?: TourReview[];
+  averageRating?: number;
+  reviewCount?: number;
+  adminReviewCount?: number;
+  userReviewCount?: number;
 }
 
 export interface PaginatedTourResponse {

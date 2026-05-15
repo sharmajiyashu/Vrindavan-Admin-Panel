@@ -33,10 +33,9 @@ interface TourFormProps {
 
 const PREDEFINED_BADGES = [
   { en: "Bestseller", hi: "बेस्टसेलर" },
-  { en: "Value For Money", hi: "पैसे की कीमत" },
   { en: "Popular", hi: "लोकप्रिय" },
-  { en: "Private", hi: "निजी" },
-  { en: "Group", hi: "समूह" },
+  { en: "VIP Darshan", hi: "वीआईपी दर्शन" },
+  { en: "Private Tour", hi: "निजी टूर" },
 ];
 
 export function TourForm({ initialData, onSubmitBasic, onSubmitFiles, onRemoveMedia, onComplete, isLoading }: TourFormProps) {

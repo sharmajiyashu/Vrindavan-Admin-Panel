@@ -17,7 +17,8 @@ import {
   IconChevronRight,
   IconChevronLeft,
   IconReload,
-  IconMapPin
+  IconMapPin,
+  IconStar
 } from "@tabler/icons-react";
 import * as Dialog from "@radix-ui/react-dialog";
 import { tourService, Tour, PaginatedTourResponse } from "@/lib/services/tourService";
@@ -194,7 +195,7 @@ export default function ToursPage() {
                   <th className="px-5 py-4 w-[80px]">Image</th>
                   <th className="px-4 py-4 min-w-[240px]">Tour Name</th>
                   <th className="px-4 py-4">Price</th>
-                  <th className="px-4 py-4">Temples</th>
+                  <th className="px-4 py-4">Rating</th>
                   <th className="px-4 py-4">{t("tours.active")}</th>
                   <th className="px-5 py-4 text-right">Actions</th>
                 </tr>
@@ -219,7 +220,14 @@ export default function ToursPage() {
                     </td>
                     <td className="px-4 py-3.5">
                       <div className="min-w-0">
-                        <p className="truncate text-xs font-bold text-foreground leading-tight">{tour.titleEn}</p>
+                        <div className="flex items-center gap-2">
+                          <p className="truncate text-xs font-bold text-foreground leading-tight">{tour.titleEn}</p>
+                          {tour.badgeEn && (
+                            <span className="shrink-0 px-1.5 py-0.5 rounded-md bg-amber-50 text-amber-600 text-[8px] font-black uppercase tracking-widest border border-amber-100 shadow-sm">
+                              {tour.badgeEn}
+                            </span>
+                          )}
+                        </div>
                         <p className="truncate text-[10px] font-medium text-muted-foreground mt-1 opacity-70 tracking-wide">{tour.titleHi}</p>
                       </div>
                     </td>
@@ -232,10 +240,10 @@ export default function ToursPage() {
                       </div>
                     </td>
                     <td className="px-4 py-3.5">
-                      <div className="flex items-center gap-2">
-                        <div className="h-7 px-2 rounded-lg bg-muted flex items-center justify-center text-[10px] font-bold text-muted-foreground">
-                          {tour.templesCoveredCount || 0} Temples
-                        </div>
+                      <div className="flex items-center gap-1.5">
+                        <IconStar size={14} className="text-amber-400 fill-amber-400" />
+                        <span className="text-xs font-bold text-foreground">{tour.averageRating || "0.0"}</span>
+                        <span className="text-[10px] text-muted-foreground">({tour.reviewCount || 0})</span>
                       </div>
                     </td>
                     <td className="px-4 py-3.5">

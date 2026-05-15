@@ -36,6 +36,7 @@ export interface DashboardResponse {
   stats: DashboardStats;
   recentUpcomingBookings: RecentUpcomingBooking[];
   upcomingSlots: any[];
+  pendingGuideSlots: any[];
 }
 
 export const dashboardService = {

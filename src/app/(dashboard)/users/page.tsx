@@ -12,8 +12,6 @@ import {
   IconUser,
   IconPhone,
   IconMail,
-  IconWallet,
-  IconTicket,
   IconId,
   IconEdit,
   IconX,
@@ -133,8 +131,6 @@ export default function UsersPage() {
               <thead>
                 <tr className="border-b border-border/60 text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/50">
                   <th className="px-6 py-4">User</th>
-                  <th className="px-4 py-4">{t("users.walletBalance")}</th>
-                  <th className="px-4 py-4">{t("users.referralCode")}</th>
                   <th className="px-4 py-4">{t("users.totalBookings")}</th>
                   <th className="px-4 py-4">{t("users.role")}</th>
                   <th className="px-6 py-4 text-right">Actions</th>
@@ -161,15 +157,6 @@ export default function UsersPage() {
                             </p>
                           </div>
                         </div>
-                      </div>
-                    </td>
-                    <td className="px-4 py-4">
-                      <p className="text-xs font-black text-emerald-600">₹{user.walletBalance}</p>
-                    </td>
-                    <td className="px-4 py-4">
-                      <div className="inline-flex items-center gap-1.5 px-2 py-1 rounded-lg bg-primary/5 text-primary">
-                        <IconTicket size={12} />
-                        <span className="text-[10px] font-black tracking-widest uppercase">{user.referralCode || "NONE"}</span>
                       </div>
                     </td>
                     <td className="px-4 py-4">

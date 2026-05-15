@@ -397,6 +397,13 @@ export default function TourDetailPage() {
           <p className="text-[9px] font-bold text-primary uppercase tracking-wider">Total Slots</p>
           <p className="text-sm font-bold text-primary leading-tight">{tour.slots?.length || 0}</p>
         </div>
+        <div className="flex flex-col justify-center p-3 rounded-xl bg-amber-50 border border-amber-100">
+          <p className="text-[9px] font-bold text-amber-600 uppercase tracking-wider">Avg Rating</p>
+          <div className="flex items-center gap-1">
+            <IconStar size={12} className="text-amber-500 fill-amber-500" />
+            <p className="text-sm font-bold text-amber-600 leading-tight">{tour.averageRating || "0.0"}</p>
+          </div>
+        </div>
       </div>
 
       {/* Main Content: Full Width Tabs */}
@@ -653,6 +660,21 @@ export default function TourDetailPage() {
                     <div className="p-2 rounded-lg bg-emerald-50 border border-emerald-100">
                       <p className="text-[8px] font-bold text-emerald-600 uppercase">Active</p>
                       <p className="text-sm font-bold text-emerald-600">{tour.reviews?.filter(r => r.isActive).length || 0}</p>
+                    </div>
+                    <div className="p-2 rounded-lg bg-blue-50 border border-blue-100">
+                      <p className="text-[8px] font-bold text-blue-600 uppercase">Admin</p>
+                      <p className="text-sm font-bold text-blue-600">{tour.adminReviewCount || 0}</p>
+                    </div>
+                    <div className="p-2 rounded-lg bg-purple-50 border border-purple-100">
+                      <p className="text-[8px] font-bold text-purple-600 uppercase">Users</p>
+                      <p className="text-sm font-bold text-purple-600">{tour.userReviewCount || 0}</p>
+                    </div>
+                    <div className="p-2 rounded-lg bg-amber-50 border border-amber-100 col-span-2">
+                      <p className="text-[8px] font-bold text-amber-600 uppercase">Average Rating</p>
+                      <div className="flex items-center gap-1">
+                        <IconStar size={10} className="text-amber-500 fill-amber-500" />
+                        <p className="text-sm font-bold text-amber-600">{tour.averageRating || "0.0"}</p>
+                      </div>
                     </div>
                   </div>
 
