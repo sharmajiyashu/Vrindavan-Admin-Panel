@@ -48,6 +48,7 @@ export function TourForm({ initialData, onSubmitBasic, onSubmitFiles, onRemoveMe
   const [existingGallery, setExistingGallery] = useState<any[]>(initialData?.gallery || []);
   const [deletingMediaIds, setDeletingMediaIds] = useState<number[]>([]);
   const [isUploading, setIsUploading] = useState(false);
+  const [uploadingKeys, setUploadingKeys] = useState<string[]>([]);
   const [singlePreviews, setSinglePreviews] = useState<{ [key: string]: string }>({});
 
   useEffect(() => {
@@ -83,14 +84,30 @@ export function TourForm({ initialData, onSubmitBasic, onSubmitFiles, onRemoveMe
       discountConfig: initialData.discountConfig || null,
       startingAddressEn: initialData.startingAddressEn || "",
       startingAddressHi: initialData.startingAddressHi || "",
-      shortHighlightListing: initialData.shortHighlightListing || { titleEn: "", titleHi: "", iconId: null },
-      shortHighlightDetails: initialData.shortHighlightDetails || { titleEn: "", titleHi: "", iconId: null },
+      shortHighlightListing: {
+        titleEn: initialData.shortHighlightListing?.titleEn || "",
+        titleHi: initialData.shortHighlightListing?.titleHi || "",
+        iconId: initialData.shortHighlightListing?.iconId || null,
+        icon: typeof initialData.shortHighlightListing?.icon === 'object' ? initialData.shortHighlightListing?.icon : null,
+      },
+      shortHighlightDetails: {
+        titleEn: initialData.shortHighlightDetails?.titleEn || "",
+        titleHi: initialData.shortHighlightDetails?.titleHi || "",
+        iconId: initialData.shortHighlightDetails?.iconId || null,
+        icon: typeof initialData.shortHighlightDetails?.icon === 'object' ? initialData.shortHighlightDetails?.icon : null,
+      },
       showOnReferralApp: initialData.showOnReferralApp ?? false,
       referralTourSummaryEn: initialData.referralTourSummaryEn || "",
       referralTourSummaryHi: initialData.referralTourSummaryHi || "",
       customerPickupLines: initialData.customerPickupLines || [],
-      features: initialData.features || [],
-      itinerary: initialData.itinerary || [],
+      features: (initialData.features || []).map(f => ({
+        ...f,
+        icon: typeof f.icon === 'object' ? f.icon : null,
+      })),
+      itinerary: (initialData.itinerary || []).map(i => ({
+        ...i,
+        image: typeof i.image === 'object' ? i.image : null,
+      })),
       faqs: initialData.faqs || [],
       slots: initialData.slots || [],
       reviews: initialData.reviews || [],
@@ -177,15 +194,12 @@ export function TourForm({ initialData, onSubmitBasic, onSubmitFiles, onRemoveMe
     try {
       let currentId = tourId;
 
-      // If we're on any tab OTHER than media, or if this is a new tour (no tourId),
-      // we must save the basic details first.
-      if (activeTab !== "media" || !currentId) {
-        currentId = await onSubmitBasic({
-          ...data,
-          imageIds: existingGallery.map(m => m.id),
-        });
-        setTourId(currentId);
-      }
+      // Always save basic details first to ensure all changes (including icons/itinerary images) are persisted
+      currentId = await onSubmitBasic({
+        ...data,
+        imageIds: existingGallery.map(m => m.id),
+      });
+      setTourId(currentId);
 
       if (activeTab === "media") {
         if (currentId) {
@@ -332,10 +346,12 @@ export function TourForm({ initialData, onSubmitBasic, onSubmitFiles, onRemoveMe
                   <div className="col-span-2">
                     <label className={labelClasses}>Icon Image</label>
                     <div className="flex items-center gap-3">
-                      <div className="h-10 w-10 rounded-lg border border-border bg-muted/30 flex items-center justify-center overflow-hidden">
-                        {singlePreviews["listing-icon"] || watch("shortHighlightListing.iconId") ? (
+                      <div className="h-10 w-10 rounded-lg border border-border bg-muted/30 flex items-center justify-center overflow-hidden relative">
+                        {uploadingKeys.includes("listing-icon") ? (
+                          <IconLoader2 className="h-5 w-5 animate-spin text-primary" />
+                        ) : singlePreviews["listing-icon"] || watch("shortHighlightListing.icon")?.url ? (
                           <img
-                            src={singlePreviews["listing-icon"] || `https://res.cloudinary.com/dsaly9sls/image/upload/v1/tours/${watch("shortHighlightListing.iconId")}`}
+                            src={singlePreviews["listing-icon"] || watch("shortHighlightListing.icon")?.url || ""}
                             className="w-full h-full object-cover"
                           />
                         ) : (
@@ -350,13 +366,17 @@ export function TourForm({ initialData, onSubmitBasic, onSubmitFiles, onRemoveMe
                         onChange={async (e) => {
                           const file = e.target.files?.[0];
                           if (file) {
+                            setUploadingKeys(prev => [...prev, "listing-icon"]);
                             try {
                               const result = await tourService.uploadMedia(file);
                               setValue("shortHighlightListing.iconId", result.id);
+                              setValue("shortHighlightListing.icon", result);
                               setSinglePreviews(prev => ({ ...prev, "listing-icon": result.url }));
                               toast.success("Listing icon uploaded");
                             } catch (error) {
                               toast.error("Upload failed");
+                            } finally {
+                              setUploadingKeys(prev => prev.filter(k => k !== "listing-icon"));
                             }
                           }
                         }}
@@ -387,10 +407,12 @@ export function TourForm({ initialData, onSubmitBasic, onSubmitFiles, onRemoveMe
                   <div className="col-span-2">
                     <label className={labelClasses}>Icon Image</label>
                     <div className="flex items-center gap-3">
-                      <div className="h-10 w-10 rounded-lg border border-border bg-muted/30 flex items-center justify-center overflow-hidden">
-                        {singlePreviews["details-icon"] || watch("shortHighlightDetails.iconId") ? (
+                      <div className="h-10 w-10 rounded-lg border border-border bg-muted/30 flex items-center justify-center overflow-hidden relative">
+                        {uploadingKeys.includes("details-icon") ? (
+                          <IconLoader2 className="h-5 w-5 animate-spin text-primary" />
+                        ) : singlePreviews["details-icon"] || watch("shortHighlightDetails.icon")?.url ? (
                           <img
-                            src={singlePreviews["details-icon"] || `https://res.cloudinary.com/dsaly9sls/image/upload/v1/tours/${watch("shortHighlightDetails.iconId")}`}
+                            src={singlePreviews["details-icon"] || watch("shortHighlightDetails.icon")?.url || ""}
                             className="w-full h-full object-cover"
                           />
                         ) : (
@@ -405,13 +427,17 @@ export function TourForm({ initialData, onSubmitBasic, onSubmitFiles, onRemoveMe
                         onChange={async (e) => {
                           const file = e.target.files?.[0];
                           if (file) {
+                            setUploadingKeys(prev => [...prev, "details-icon"]);
                             try {
                               const result = await tourService.uploadMedia(file);
                               setValue("shortHighlightDetails.iconId", result.id);
+                              setValue("shortHighlightDetails.icon", result);
                               setSinglePreviews(prev => ({ ...prev, "details-icon": result.url }));
                               toast.success("Details icon uploaded");
                             } catch (error) {
                               toast.error("Upload failed");
+                            } finally {
+                              setUploadingKeys(prev => prev.filter(k => k !== "details-icon"));
                             }
                           }
                         }}
@@ -675,10 +701,12 @@ export function TourForm({ initialData, onSubmitBasic, onSubmitFiles, onRemoveMe
                     <div className="md:col-span-2">
                       <label className={labelClasses}>Feature Icon/Image</label>
                       <div className="flex items-center gap-4">
-                        <div className="h-16 w-16 rounded-xl border border-border bg-muted/30 overflow-hidden flex items-center justify-center">
-                          {singlePreviews[`feature-${index}`] || watch(`features.${index}.iconId`) ? (
+                        <div className="h-16 w-16 rounded-xl border border-border bg-muted/30 overflow-hidden flex items-center justify-center relative">
+                          {uploadingKeys.includes(`feature-${index}`) ? (
+                            <IconLoader2 className="h-6 w-6 animate-spin text-primary" />
+                          ) : singlePreviews[`feature-${index}`] || watch(`features.${index}.icon`)?.url ? (
                             <img
-                              src={singlePreviews[`feature-${index}`] || `https://res.cloudinary.com/dsaly9sls/image/upload/v1/tours/${watch(`features.${index}.iconId`)}`}
+                              src={singlePreviews[`feature-${index}`] || watch(`features.${index}.icon`)?.url || ""}
                               className="w-full h-full object-cover"
                               onError={(e) => {
                                 (e.target as any).src = "";
@@ -696,13 +724,17 @@ export function TourForm({ initialData, onSubmitBasic, onSubmitFiles, onRemoveMe
                             onChange={async (e) => {
                               const file = e.target.files?.[0];
                               if (file) {
+                                setUploadingKeys(prev => [...prev, `feature-${index}`]);
                                 try {
                                   const result = await tourService.uploadMedia(file);
                                   setValue(`features.${index}.iconId`, result.id);
+                                  setValue(`features.${index}.icon`, result);
                                   setSinglePreviews(prev => ({ ...prev, [`feature-${index}`]: result.url }));
                                   toast.success("Icon uploaded");
                                 } catch (error) {
                                   toast.error("Upload failed");
+                                } finally {
+                                  setUploadingKeys(prev => prev.filter(k => k !== `feature-${index}`));
                                 }
                               }
                             }}
@@ -771,10 +803,12 @@ export function TourForm({ initialData, onSubmitBasic, onSubmitFiles, onRemoveMe
                     <div className="md:col-span-2">
                       <label className={labelClasses}>Place/Temple Image</label>
                       <div className="flex items-center gap-4">
-                        <div className="h-20 w-32 rounded-xl border border-border bg-muted/30 overflow-hidden flex items-center justify-center">
-                          {singlePreviews[`itinerary-${index}`] || watch(`itinerary.${index}.imageId`) ? (
+                        <div className="h-20 w-32 rounded-xl border border-border bg-muted/30 overflow-hidden flex items-center justify-center relative">
+                          {uploadingKeys.includes(`itinerary-${index}`) ? (
+                            <IconLoader2 className="h-8 w-8 animate-spin text-primary" />
+                          ) : singlePreviews[`itinerary-${index}`] || watch(`itinerary.${index}.image`)?.url ? (
                             <img
-                              src={singlePreviews[`itinerary-${index}`] || `https://res.cloudinary.com/dsaly9sls/image/upload/v1/tours/${watch(`itinerary.${index}.imageId`)}`}
+                              src={singlePreviews[`itinerary-${index}`] || watch(`itinerary.${index}.image`)?.url || ""}
                               className="w-full h-full object-cover"
                             />
                           ) : (
@@ -788,13 +822,17 @@ export function TourForm({ initialData, onSubmitBasic, onSubmitFiles, onRemoveMe
                             onChange={async (e) => {
                               const file = e.target.files?.[0];
                               if (file) {
+                                setUploadingKeys(prev => [...prev, `itinerary-${index}`]);
                                 try {
                                   const result = await tourService.uploadMedia(file);
                                   setValue(`itinerary.${index}.imageId`, result.id);
+                                  setValue(`itinerary.${index}.image`, result);
                                   setSinglePreviews(prev => ({ ...prev, [`itinerary-${index}`]: result.url }));
                                   toast.success("Image uploaded");
                                 } catch (error) {
                                   toast.error("Upload failed");
+                                } finally {
+                                  setUploadingKeys(prev => prev.filter(k => k !== `itinerary-${index}`));
                                 }
                               }
                             }}

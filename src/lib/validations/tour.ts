@@ -11,6 +11,16 @@ const jsonArrayPreprocess = (val: any) => {
   return val;
 };
 
+const mediaObjectSchema = z.object({
+  id: z.number(),
+  url: z.string(),
+  mimetype: z.string().optional(),
+  type: z.string().optional(),
+  size: z.number().optional(),
+  width: z.number().optional(),
+  height: z.number().optional(),
+}).optional().nullable();
+
 // Define the base schema without refinements to allow `.partial()`
 export const tourBaseSchema = z.object({
   titleEn: z.string().min(1, 'Title in English is required'),
@@ -53,11 +63,13 @@ export const tourBaseSchema = z.object({
     titleEn: z.string().optional().nullable(),
     titleHi: z.string().optional().nullable(),
     iconId: z.number().optional().nullable(),
+    icon: mediaObjectSchema,
   }).optional().nullable(),
   shortHighlightDetails: z.object({
     titleEn: z.string().optional().nullable(),
     titleHi: z.string().optional().nullable(),
     iconId: z.number().optional().nullable(),
+    icon: mediaObjectSchema,
   }).optional().nullable(),
 
   showOnReferralApp: coerceBoolean.default(false),
@@ -68,6 +80,7 @@ export const tourBaseSchema = z.object({
 
   features: z.preprocess(jsonArrayPreprocess, z.array(z.object({
     iconId: z.number().optional().nullable(),
+    icon: mediaObjectSchema,
     titleEn: z.string(),
     titleHi: z.string(),
     descriptionEn: z.string(),
@@ -76,6 +89,7 @@ export const tourBaseSchema = z.object({
 
   itinerary: z.preprocess(jsonArrayPreprocess, z.array(z.object({
     imageId: z.number().optional().nullable(),
+    image: mediaObjectSchema,
     titleEn: z.string(),
     titleHi: z.string(),
     descriptionEn: z.string(),

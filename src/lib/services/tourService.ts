@@ -4,7 +4,11 @@ import { TourFormData } from "../validations/tour";
 export interface TourMedia {
   id: number;
   url: string;
-  type?: string;
+  mimetype?: string;
+  type?: 'image' | 'video' | 'audio' | 'document' | 'other' | 'gif' | 'sticker';
+  size?: number;
+  width?: number;
+  height?: number;
 }
 
 export interface TourSlot {
@@ -54,8 +58,8 @@ export interface Tour {
   startingAddressEn?: string | null;
   startingAddressHi?: string | null;
 
-  shortHighlightListing?: { titleEn: string; titleHi: string; icon: string } | null;
-  shortHighlightDetails?: { titleEn: string; titleHi: string; icon: string } | null;
+  shortHighlightListing?: { titleEn: string; titleHi: string; iconId?: number | null; icon?: TourMedia | null } | null;
+  shortHighlightDetails?: { titleEn: string; titleHi: string; iconId?: number | null; icon?: TourMedia | null } | null;
 
   showOnReferralApp: boolean;
   referralTourSummaryEn?: string | null;
@@ -65,6 +69,7 @@ export interface Tour {
 
   features: Array<{
     iconId: number | null;
+    icon?: TourMedia | null;
     titleEn: string;
     titleHi: string;
     descriptionEn: string;
@@ -73,6 +78,7 @@ export interface Tour {
 
   itinerary: Array<{
     imageId: number | null;
+    image?: TourMedia | null;
     titleEn: string;
     titleHi: string;
     descriptionEn: string;
