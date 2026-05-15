@@ -18,15 +18,20 @@ export interface TourSlot {
   guideName?: string | null;
   guidePhoneNumber?: string | null;
   alternateNumber?: string | null;
+  isCancelled?: boolean;
+  session?: 'morning' | 'evening';
+  cancellationReason?: string | null;
 }
 
 export interface TourReview {
   id?: number;
   userName: string;
+  userLocation?: string | null;
   date: string;
   rating: number;
   reviewText: string;
   isAdminAdded: boolean;
+  isActive: boolean;
 }
 
 export interface Tour {
@@ -194,5 +199,17 @@ export const tourService = {
 
   updateSlot: async (slotId: number, slotData: Partial<TourSlot>) => {
     return await put<TourSlot>(`/tours/slots/${slotId}`, slotData);
+  },
+
+  addReview: async (tourId: number, reviewData: any) => {
+    return await post<any>(`/tours/${tourId}/reviews`, reviewData);
+  },
+
+  updateReview: async (reviewId: number, reviewData: any) => {
+    return await put<any>(`/tours/reviews/${reviewId}`, reviewData);
+  },
+
+  deleteReview: async (reviewId: number) => {
+    return await deleteRequest(`/tours/reviews/${reviewId}`);
   },
 };

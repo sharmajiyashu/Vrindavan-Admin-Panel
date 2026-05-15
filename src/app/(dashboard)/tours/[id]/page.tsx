@@ -29,7 +29,7 @@ import { toast } from "react-toastify";
 import Link from "next/link";
 import * as AlertDialog from "@radix-ui/react-alert-dialog";
 import { bookingService } from "@/lib/services/bookingService";
-import { format, subHours, parse, isValid, addDays, subDays } from "date-fns";
+import { format, subHours, parse, isValid, addDays, subDays, isToday, isAfter } from "date-fns";
 import * as XLSX from "xlsx";
 
 export default function TourDetailPage() {
@@ -76,6 +76,35 @@ export default function TourDetailPage() {
     }
   });
 
+  const reviewMutation = useMutation({
+    mutationFn: async (review: any) => {
+      if (editingReviewIndex !== null && review.id) {
+        return tourService.updateReview(review.id, review);
+      }
+      return tourService.addReview(tourId, review);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["tour", tourId] });
+      setIsReviewModalOpen(false);
+      setEditingReviewIndex(null);
+      toast.success(editingReviewIndex !== null ? "Review updated" : "Review added");
+    },
+    onError: (error: any) => {
+      toast.error(error.message || "Failed to save review");
+    }
+  });
+
+  const deleteReviewMutation = useMutation({
+    mutationFn: (reviewId: number) => tourService.deleteReview(reviewId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["tour", tourId] });
+      toast.success("Review deleted");
+    },
+    onError: (error: any) => {
+      toast.error(error.message || "Failed to delete review");
+    }
+  });
+
   const cancelBookingMutation = useMutation({
     mutationFn: ({ id, reason }: { id: number; reason: string }) => bookingService.cancelBooking(id, reason),
     onSuccess: () => {
@@ -107,8 +136,24 @@ export default function TourDetailPage() {
     startTime: "10:00 AM",
     guideName: "",
     guidePhoneNumber: "",
-    alternateNumber: ""
+    alternateNumber: "",
+    session: "morning"
   });
+
+  const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
+  const [editingReviewIndex, setEditingReviewIndex] = useState<number | null>(null);
+  const [newReview, setNewReview] = useState<any>({
+    userName: "",
+    userLocation: "",
+    reviewText: "",
+    rating: 5,
+    isAdminAdded: true,
+    isActive: true,
+    date: new Date().toISOString()
+  });
+
+  const [isBookingsModalOpen, setIsBookingsModalOpen] = useState(false);
+  const [activeSlotForBookings, setActiveSlotForBookings] = useState<any>(null);
 
   const checkBookingsAndPrompt = async (index: number, slot: TourSlot) => {
     if (!slot.startTime) {
@@ -218,15 +263,24 @@ export default function TourDetailPage() {
 
     const loadingToast = toast.loading(`Copying ${newSlotsToAdd.length} slots...`);
     try {
-      for (const ns of newSlotsToAdd) {
-        await tourService.addSlot(tourId, ns);
+      const results = await Promise.allSettled(newSlotsToAdd.map(ns => tourService.addSlot(tourId, ns)));
+
+      const fulfilled = results.filter(r => r.status === 'fulfilled').length;
+      const rejected = results.filter(r => r.status === 'rejected').length;
+
+      toast.dismiss(loadingToast);
+
+      if (fulfilled > 0) {
+        toast.success(`Successfully copied ${fulfilled} slots`);
       }
-      toast.dismiss(loadingToast);
-      toast.success(`Copied ${newSlotsToAdd.length} slots from ${prevDate}`);
+      if (rejected > 0) {
+        toast.error(`Failed to copy ${rejected} slots (possibly duplicates)`);
+      }
+
       queryClient.invalidateQueries({ queryKey: ["tour", tourId] });
-    } catch (error) {
+    } catch (error: any) {
       toast.dismiss(loadingToast);
-      toast.error("Failed to copy some slots");
+      toast.error(error.message || "An unexpected error occurred during copy");
     }
   };
 
@@ -236,9 +290,25 @@ export default function TourDetailPage() {
       return;
     }
 
-    const isDuplicate = tour?.slots?.some(s => s.date === newSlot.date && s.startTime === newSlot.startTime && s.id !== newSlot.id);
+    // Date & Time Validation
+    const now = new Date();
+    const selectedDateObj = parse(newSlot.date!, "yyyy-MM-dd", new Date());
+    const slotTimeObj = parse(newSlot.startTime, "hh:mm a", selectedDateObj);
+
+    if (slotTimeObj < now) {
+      toast.error("Cannot create a slot for a past time/date");
+      return;
+    }
+
+    const isDuplicate = tour?.slots?.some(s =>
+      s.date === newSlot.date &&
+      s.startTime === newSlot.startTime &&
+      s.id !== newSlot.id &&
+      !s.isCancelled
+    );
+
     if (isDuplicate) {
-      toast.error(`A slot at ${newSlot.startTime} already exists for this date`);
+      toast.error(`An active slot at ${newSlot.startTime} already exists for this date. Please edit the existing slot instead.`);
       return;
     }
 
@@ -256,43 +326,43 @@ export default function TourDetailPage() {
 
   if (!tour) return null;
 
-  const inputClasses = "w-full rounded-xl border border-border bg-background px-4 py-2.5 text-sm transition-all focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none";
-  const labelClasses = "block text-xs font-black uppercase tracking-widest text-muted-foreground/70 mb-1.5";
+  const inputClasses = "w-full rounded-lg border border-border bg-background px-3 py-2 text-sm transition-all focus:border-primary focus:ring-1 focus:ring-primary/20 outline-none";
+  const labelClasses = "block text-[10px] font-bold uppercase tracking-wider text-muted-foreground/80 mb-1";
 
   return (
-    <div className="space-y-8 pb-12 animate-in fade-in slide-in-from-bottom-4 duration-700">
+    <div className="space-y-4 pb-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
       {/* Header & Back Button */}
-      <div className="flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between px-2">
-        <div className="flex items-center gap-4">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between px-2">
+        <div className="flex items-center gap-3">
           <Link
             href="/tours"
-            className="h-10 w-10 flex items-center justify-center rounded-xl bg-card border border-border text-muted-foreground hover:bg-muted transition-all active:scale-90"
+            className="h-8 w-8 flex items-center justify-center rounded-lg bg-card border border-border text-muted-foreground hover:bg-muted transition-all active:scale-90"
           >
-            <IconChevronLeft size={20} />
+            <IconChevronLeft size={16} />
           </Link>
           <div className="space-y-0.5">
-            <h1 className="text-2xl font-black tracking-tight text-foreground leading-tight">
+            <h1 className="text-lg font-bold tracking-tight text-foreground leading-tight">
               {tour.titleEn}
             </h1>
-            <p className="text-[11px] font-bold text-primary uppercase tracking-wider flex items-center gap-1.5">
-              <IconMapPin size={12} /> {tour.locationNameEn || "Vrindavan, India"}
+            <p className="text-[10px] font-medium text-primary uppercase tracking-wider flex items-center gap-1">
+              <IconMapPin size={10} /> {tour.locationNameEn || "Vrindavan, India"}
             </p>
           </div>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2">
           <button
             onClick={() => {
               setEditingSlotIndex(null);
               setNewSlot({ date: selectedDate, startTime: "10:00 AM", guideName: "", guidePhoneNumber: "", alternateNumber: "" });
               setIsAddModalOpen(true);
             }}
-            className="inline-flex h-11 items-center justify-center gap-2 rounded-2xl bg-primary px-6 text-[11px] font-black uppercase tracking-wider text-primary-foreground shadow-lg shadow-primary/20 hover:opacity-90 active:scale-95 transition-all"
+            className="inline-flex h-9 items-center justify-center gap-1.5 rounded-xl bg-primary px-4 text-[10px] font-bold uppercase tracking-wider text-primary-foreground shadow-md shadow-primary/10 hover:opacity-90 active:scale-95 transition-all"
           >
-            <IconPlus size={16} /> Add Slot
+            <IconPlus size={14} /> Add Slot
           </button>
           <div className={twMerge(
-            "px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest border shadow-sm",
+            "px-3 py-1.5 rounded-lg text-[9px] font-bold uppercase tracking-widest border",
             tour.isActive ? "bg-emerald-50 text-emerald-600 border-emerald-100" : "bg-red-50 text-red-600 border-red-100"
           )}>
             {tour.isActive ? "Active" : "Inactive"}
@@ -301,230 +371,263 @@ export default function TourDetailPage() {
       </div>
 
       {/* Stats Bar */}
-      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4 px-2">
-        <div className="aspect-[4/3] md:aspect-auto md:h-24 rounded-3xl overflow-hidden border border-border bg-muted/30 shadow-sm">
+      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-3 px-2">
+        <div className="h-16 rounded-xl overflow-hidden border border-border bg-muted/30">
           {tour.gallery && tour.gallery[0] ? (
             <img src={tour.gallery[0].url} className="w-full h-full object-cover" />
           ) : (
-            <div className="w-full h-full flex items-center justify-center text-muted-foreground/20">
-              <IconCalendar size={24} />
+            <div className="w-full h-full flex items-center justify-center text-muted-foreground/10">
+              <IconCalendar size={16} />
             </div>
           )}
         </div>
-        <div className="flex flex-col justify-center p-5 rounded-3xl bg-card border border-border shadow-sm hover:shadow-md transition-shadow">
-          <p className="text-[10px] font-black text-muted-foreground uppercase tracking-wider mb-1">Pricing</p>
-          <p className="text-xl font-black text-primary leading-tight">₹{tour.price}</p>
-          <p className="text-[9px] font-bold text-muted-foreground/60 uppercase">Per {tour.type === 'group' ? 'Person' : 'Tour'}</p>
+        <div className="flex flex-col justify-center p-3 rounded-xl bg-card border border-border shadow-sm">
+          <p className="text-[9px] font-bold text-muted-foreground uppercase tracking-wider">Price</p>
+          <p className="text-base font-bold text-primary leading-tight">₹{tour.price}</p>
         </div>
-        <div className="flex flex-col justify-center p-5 rounded-3xl bg-card border border-border shadow-sm hover:shadow-md transition-shadow">
-          <p className="text-[10px] font-black text-muted-foreground uppercase tracking-wider mb-1">Duration</p>
-          <p className="text-sm font-black text-foreground leading-tight">{tour.durationEn || "N/A"}</p>
-          <p className="text-[9px] font-bold text-muted-foreground/60 uppercase">Total Trip Time</p>
+        <div className="flex flex-col justify-center p-3 rounded-xl bg-card border border-border shadow-sm">
+          <p className="text-[9px] font-bold text-muted-foreground uppercase tracking-wider">Duration</p>
+          <p className="text-sm font-bold text-foreground leading-tight">{tour.durationEn || "N/A"}</p>
         </div>
-        <div className="flex flex-col justify-center p-5 rounded-3xl bg-card border border-border shadow-sm hover:shadow-md transition-shadow">
-          <p className="text-[10px] font-black text-muted-foreground uppercase tracking-wider mb-1">Capacity</p>
-          <p className="text-sm font-black text-foreground leading-tight">{tour.minPersons || 1} - {tour.maxPersons || 10}</p>
-          <p className="text-[9px] font-bold text-muted-foreground/60 uppercase">Person Range</p>
+        <div className="flex flex-col justify-center p-3 rounded-xl bg-card border border-border shadow-sm">
+          <p className="text-[9px] font-bold text-muted-foreground uppercase tracking-wider">Capacity</p>
+          <p className="text-sm font-bold text-foreground leading-tight">{tour.minPersons || 1} - {tour.maxPersons || 10}</p>
         </div>
-        <div className="hidden lg:flex flex-col justify-center p-5 rounded-3xl bg-primary/5 border border-primary/10 shadow-sm">
-          <p className="text-[10px] font-black text-primary uppercase tracking-wider mb-1">Operations</p>
-          <p className="text-sm font-black text-primary leading-tight">{tour.slots?.length || 0} Total Slots</p>
-          <p className="text-[9px] font-bold text-primary/60 uppercase">Live Schedule</p>
+        <div className="hidden lg:flex flex-col justify-center p-3 rounded-xl bg-primary/5 border border-primary/10">
+          <p className="text-[9px] font-bold text-primary uppercase tracking-wider">Total Slots</p>
+          <p className="text-sm font-bold text-primary leading-tight">{tour.slots?.length || 0}</p>
         </div>
       </div>
 
       {/* Main Content: Full Width Tabs */}
       <div className="w-full">
-        <Tabs.Root defaultValue="slots" className="space-y-6">
-          <Tabs.List className="flex p-1.5 gap-1 bg-muted/50 backdrop-blur-sm rounded-[1.5rem] border border-border/60 w-fit">
+        <Tabs.Root defaultValue="slots" className="space-y-4">
+          <Tabs.List className="flex border-b border-border w-full gap-4">
             <Tabs.Trigger
               value="slots"
-              className="flex items-center gap-2 px-6 py-2.5 rounded-[1rem] text-[11px] font-black uppercase tracking-[0.1em] transition-all data-[state=active]:bg-card data-[state=active]:text-primary data-[state=active]:shadow-lg text-muted-foreground hover:text-foreground"
+              className="px-4 py-2 text-xs font-bold transition-all border-b-2 border-transparent data-[state=active]:text-primary data-[state=active]:border-primary text-muted-foreground hover:text-foreground"
             >
-              <IconCalendar size={16} /> Slot Management
+              Slots Management
             </Tabs.Trigger>
             <Tabs.Trigger
               value="reviews"
-              className="flex items-center gap-2 px-6 py-2.5 rounded-[1rem] text-[11px] font-black uppercase tracking-[0.1em] transition-all data-[state=active]:bg-card data-[state=active]:text-primary data-[state=active]:shadow-lg text-muted-foreground hover:text-foreground"
+              className="px-4 py-2 text-xs font-bold transition-all border-b-2 border-transparent data-[state=active]:text-primary data-[state=active]:border-primary text-muted-foreground hover:text-foreground"
             >
-              <IconStar size={16} /> Review Management
+              Reviews
             </Tabs.Trigger>
           </Tabs.List>
 
-          <Tabs.Content value="slots" className="animate-in fade-in slide-in-from-bottom-4 duration-500 outline-none">
-            <div className="rounded-[2.5rem] border border-border bg-card p-6 md:p-8 shadow-xl space-y-8">
-              <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
-                <div className="space-y-1">
-                  <h3 className="text-xl font-black tracking-tight">Slot Inventory</h3>
-                  <p className="text-xs text-muted-foreground font-medium">Define operational hours for specific dates.</p>
+          <Tabs.Content value="slots" className="animate-in fade-in slide-in-from-bottom-2 duration-300 outline-none">
+            <div className="grid grid-cols-1 lg:grid-cols-[280px_1fr] gap-6 items-start">
+              {/* Left Column: Date Selector & Sidebar */}
+              <div className="space-y-4 lg:sticky lg:top-4">
+                <div className="p-4 rounded-xl border border-border bg-card shadow-sm space-y-4">
+                  <div>
+                    <label className={labelClasses}>Select Date</label>
+                    <input
+                      type="date"
+                      min={format(new Date(), "yyyy-MM-dd")}
+                      value={selectedDate}
+                      onChange={(e) => setSelectedDate(e.target.value)}
+                      className={twMerge(inputClasses, "font-bold text-base")}
+                    />
+                  </div>
+
+                  <div className="pt-2">
+                    <button
+                      onClick={copyFromPreviousDay}
+                      className="w-full px-4 py-2 rounded-lg border border-primary/20 text-primary text-[10px] font-bold uppercase tracking-wider hover:bg-primary/5 transition-all"
+                    >
+                      Copy From Prev Day
+                    </button>
+                  </div>
+
+                  <div className="pt-4 border-t border-border">
+                    <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-2">Slot Stats</p>
+                    <div className="flex items-center justify-between py-1">
+                      <span className="text-[10px] text-muted-foreground">Today's Slots</span>
+                      <span className="text-xs font-bold">{tour.slots?.filter(s => s.date === selectedDate).length || 0}</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="p-4 rounded-xl bg-primary/5 border border-primary/10">
+                  <p className="text-[10px] font-medium text-primary leading-relaxed">
+                    Choose a date on the left to manage available slots for that specific day.
+                  </p>
                 </div>
               </div>
 
-              <div className="flex flex-col gap-6">
-                {/* Date Selector Header */}
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-6 rounded-[2rem] bg-muted/20 border border-border">
-                  <div className="flex items-center gap-4">
-                    <div className="h-12 w-12 rounded-2xl bg-primary/10 flex items-center justify-center text-primary border border-primary/20">
-                      <IconCalendar size={24} />
-                    </div>
-                    <div>
-                      <label className={labelClasses}>Manage Date</label>
-                      <input
-                        type="date"
-                        value={selectedDate}
-                        onChange={(e) => setSelectedDate(e.target.value)}
-                        className={twMerge(inputClasses, "w-auto border-none bg-transparent p-0 font-black text-lg focus:ring-0")}
-                      />
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-2">
-                    <button
-                      onClick={copyFromPreviousDay}
-                      className="px-4 py-2 rounded-xl border border-primary/20 text-primary text-[10px] font-black uppercase tracking-widest hover:bg-primary/5 transition-all"
-                    >
-                      Copy From Previous Day
-                    </button>
-                  </div>
+              {/* Right Column: Slots List (Stock Inventory) */}
+              <div className="space-y-4">
+                <div className="flex items-center justify-between px-2">
+                  <h3 className="text-sm font-bold uppercase tracking-wider text-muted-foreground">Slot Inventory</h3>
+                  <p className="text-[10px] font-medium text-muted-foreground">{format(new Date(selectedDate), "EEEE, dd MMM yyyy")}</p>
                 </div>
 
-                {/* Slots List: Compact Row View */}
-                <div className="space-y-3">
+                <div className="space-y-2">
                   {(!tour.slots || tour.slots.filter(s => s.date === selectedDate).length === 0) ? (
-                    <div className="py-16 text-center border-2 border-dashed border-border rounded-[2.5rem] bg-muted/5 flex flex-col items-center gap-4">
-                      <div className="h-20 w-20 rounded-[2rem] bg-muted/30 flex items-center justify-center text-muted-foreground/30">
-                        <IconClock size={36} />
-                      </div>
-                      <div className="space-y-1">
-                        <p className="text-sm font-black text-foreground">Schedule Vacant</p>
-                        <p className="text-xs font-bold text-muted-foreground/60 max-w-[200px]">No slots defined for {format(new Date(selectedDate), "EEEE, dd MMM")}.</p>
-                      </div>
+                    <div className="py-12 text-center border-2 border-dashed border-border rounded-xl bg-muted/5 flex flex-col items-center gap-3">
+                      <IconClock size={32} className="text-muted-foreground/20" />
+                      <p className="text-xs font-bold text-muted-foreground">No slots defined for this date.</p>
                     </div>
                   ) : (
-                    <div className="grid gap-3">
-                      {tour.slots
-                        .map((slot, originalIndex) => ({ slot, originalIndex }))
-                        .filter(item => item.slot.date === selectedDate)
-                        .sort((a, b) => {
-                          const timeA = parse(a.slot.startTime, "hh:mm a", new Date());
-                          const timeB = parse(b.slot.startTime, "hh:mm a", new Date());
-                          return timeA.getTime() - timeB.getTime();
-                        })
-                        .map(({ slot, originalIndex }) => (
-                          <div key={slot.id || originalIndex} className="group p-5 rounded-3xl border border-border bg-muted/20 hover:bg-card hover:shadow-lg transition-all duration-300">
-                            <div className="flex flex-col lg:flex-row lg:items-center gap-6">
-                              {/* Time Pillar */}
-                              <div className="flex items-center gap-4 min-w-[140px]">
-                                <div className="h-12 w-12 rounded-2xl bg-primary/10 flex items-center justify-center text-primary border border-primary/20 group-hover:bg-primary group-hover:text-white transition-all">
-                                  <IconClock size={20} />
-                                </div>
-                                <div className="space-y-0.5">
-                                  <p className="text-[10px] font-black text-muted-foreground/60 uppercase tracking-widest">Start Time</p>
-                                  <p className="text-sm font-black text-foreground">{slot.startTime}</p>
-                                </div>
-                              </div>
+                    <div className="grid gap-8">
+                      {["morning", "evening"].map(session => {
+                        const sessionSlots = tour.slots!
+                          .map((slot, originalIndex) => ({ slot, originalIndex }))
+                          .filter(item => item.slot.date === selectedDate && !item.slot.isCancelled && (item.slot.session === session || (!item.slot.session && session === "morning")))
+                          .sort((a, b) => {
+                            const timeA = parse(a.slot.startTime, "hh:mm a", new Date());
+                            const timeB = parse(b.slot.startTime, "hh:mm a", new Date());
+                            return timeA.getTime() - timeB.getTime();
+                          });
 
-                              {/* Guide & Operations Pillar */}
-                              <div className="flex-1 lg:border-x lg:border-border/60 lg:px-6">
-                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                                  <div className="space-y-0.5">
-                                    <p className="text-[10px] font-black text-muted-foreground/60 uppercase tracking-widest">Guide</p>
-                                    <p className="text-[11px] font-bold flex items-center gap-1.5 text-primary">
-                                      <IconId size={12} className="text-primary/60" />
-                                      {slot.guideName || <span className="text-muted-foreground/40 italic">Not Assigned</span>}
-                                    </p>
-                                  </div>
-                                  <div className="space-y-0.5">
-                                    <p className="text-[10px] font-black text-muted-foreground/60 uppercase tracking-widest">Contact</p>
-                                    <p className="text-[11px] font-bold flex items-center gap-1.5">
-                                      <IconPhone size={12} className="text-primary/60" />
-                                      {slot.guidePhoneNumber || <span className="text-muted-foreground/40 italic">--</span>}
-                                    </p>
-                                  </div>
-                                  <div className="space-y-0.5 hidden lg:block">
-                                    <p className="text-[10px] font-black text-muted-foreground/60 uppercase tracking-widest">Emergency No.</p>
-                                    <p className="text-[11px] font-bold flex items-center gap-1.5">
-                                      <IconAlertCircle size={12} className="text-primary/60" />
-                                      {slot.alternateNumber || <span className="text-muted-foreground/40 italic">--</span>}
-                                    </p>
-                                  </div>
-                                </div>
-                              </div>
+                        if (sessionSlots.length === 0) return null;
 
-                              <div className="space-y-0.5">
-                                <p className="text-[10px] font-black text-muted-foreground/60 uppercase tracking-widest">Status</p>
-                                <div className="flex items-center gap-1.5">
-                                  <div className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
-                                  <span className="text-[11px] font-black text-emerald-600 uppercase tracking-widest">Active</span>
-                                </div>
-                              </div>
+                        return (
+                          <div key={session} className="space-y-3">
+                            <div className="flex items-center gap-2 px-2">
+                              <div className={twMerge(
+                                "h-1.5 w-1.5 rounded-full",
+                                session === "morning" ? "bg-amber-400" : "bg-indigo-400"
+                              )} />
+                              <h4 className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">
+                                {session} Slots
+                              </h4>
+                            </div>
+                            <div className="grid gap-2">
+                              {sessionSlots.map(({ slot, originalIndex }) => {
+                                const slotTime = parse(slot.startTime, "hh:mm a", parse(slot.date, "yyyy-MM-dd", new Date()));
+                                const isPast = slotTime < new Date();
 
-                              {/* Actions Pillar */}
-                              <div className="flex items-center gap-2 lg:min-w-[120px] justify-end">
-                                <button
-                                  onClick={() => {
-                                    setEditingSlotIndex(originalIndex);
-                                    setNewSlot(slot);
-                                    setIsAddModalOpen(true);
-                                  }}
-                                  className="h-9 px-4 flex items-center gap-2 rounded-xl bg-primary/5 text-primary text-[10px] font-black uppercase tracking-wider hover:bg-primary hover:text-white transition-all shadow-sm"
-                                >
-                                  <IconSettings size={14} /> Edit
-                                </button>
-                                <button
-                                  onClick={() => downloadBookings(slot)}
-                                  className="h-9 w-9 flex items-center justify-center rounded-xl bg-primary/5 text-primary hover:bg-primary hover:text-white transition-all"
-                                >
-                                  <IconUsers size={14} />
-                                </button>
-                                <button
-                                  onClick={() => checkBookingsAndPrompt(originalIndex, slot)}
-                                  className="h-9 w-9 flex items-center justify-center rounded-xl bg-destructive/10 text-destructive hover:bg-destructive hover:text-white transition-all shadow-sm"
-                                >
-                                  <IconTrash size={14} />
-                                </button>
-                              </div>
+                                return (
+                                  <div
+                                    key={slot.id || originalIndex}
+                                    className={twMerge(
+                                      "group p-3 rounded-xl border border-border transition-all",
+                                      isPast ? "bg-muted/30 opacity-60 grayscale-[0.5]" : "bg-card hover:border-primary/30"
+                                    )}
+                                  >
+                                    <div className="flex items-center gap-4">
+                                      <div className={twMerge(
+                                        "h-10 w-10 rounded-lg flex items-center justify-center border transition-all",
+                                        isPast ? "bg-muted text-muted-foreground border-border" : "bg-primary/5 text-primary border-primary/10"
+                                      )}>
+                                        <IconClock size={16} />
+                                      </div>
+
+                                      <div className="flex-1 grid grid-cols-2 md:grid-cols-4 gap-4">
+                                        <div>
+                                          <p className={labelClasses}>Time</p>
+                                          <p className={twMerge("text-xs font-bold", isPast && "line-through")}>{slot.startTime}</p>
+                                        </div>
+                                        <div>
+                                          <p className={labelClasses}>Guide</p>
+                                          <p className="text-xs font-medium truncate max-w-[120px]">{slot.guideName || "Unassigned"}</p>
+                                        </div>
+                                        <div>
+                                          <p className={labelClasses}>Contact</p>
+                                          <p className="text-xs font-medium">{slot.guidePhoneNumber || "--"}</p>
+                                        </div>
+                                        <div>
+                                          <p className={labelClasses}>Status</p>
+                                          <div className="flex items-center gap-1.5">
+                                            <div className={twMerge("h-1.5 w-1.5 rounded-full", isPast ? "bg-muted-foreground" : "bg-emerald-500")} />
+                                            <span className={twMerge("text-[10px] font-bold uppercase", isPast ? "text-muted-foreground" : "text-emerald-600")}>
+                                              {isPast ? "Expired" : "Active"}
+                                            </span>
+                                          </div>
+                                        </div>
+                                      </div>
+
+                                      <div className="flex items-center gap-1">
+                                        {!isPast && (
+                                          <button
+                                            onClick={() => {
+                                              setEditingSlotIndex(originalIndex);
+                                              setNewSlot(slot);
+                                              setIsAddModalOpen(true);
+                                            }}
+                                            className="p-1.5 rounded-lg text-muted-foreground hover:bg-primary/10 hover:text-primary transition-all"
+                                            title="Edit"
+                                          >
+                                            <IconSettings size={14} />
+                                          </button>
+                                        )}
+                                        <button
+                                          onClick={() => {
+                                            setActiveSlotForBookings(slot);
+                                            setIsBookingsModalOpen(true);
+                                          }}
+                                          className="p-1.5 rounded-lg text-muted-foreground hover:bg-primary/10 hover:text-primary transition-all"
+                                          title="View Bookings"
+                                        >
+                                          <IconUsers size={14} />
+                                        </button>
+                                        <button
+                                          onClick={() => checkBookingsAndPrompt(originalIndex, slot)}
+                                          className="p-1.5 rounded-lg text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-all"
+                                          title="Delete"
+                                        >
+                                          <IconTrash size={14} />
+                                        </button>
+                                      </div>
+                                    </div>
+                                  </div>
+                                );
+                              })}
                             </div>
                           </div>
-                        ))}
+                        );
+                      })}
                     </div>
                   )}
                 </div>
 
                 {/* Cancelled Slots Tracking Section */}
-                {(tour as any).cancelledSlots && (tour as any).cancelledSlots.length > 0 && (
-                  <div className="pt-12 border-t border-border space-y-6">
-                    <div className="flex items-center gap-3">
-                      <div className="h-10 w-10 rounded-xl bg-destructive/10 flex items-center justify-center text-destructive">
-                        <IconX size={20} />
+                {tour.slots && tour.slots.some(s => s.isCancelled) && (
+                  <div className="pt-8 space-y-4">
+                    <div className="flex items-center justify-between px-2">
+                      <div className="flex items-center gap-2">
+                        <IconAlertCircle size={14} className="text-destructive" />
+                        <h3 className="text-[10px] font-black uppercase tracking-widest text-destructive">Cancellation History & Logs</h3>
                       </div>
-                      <h3 className="text-sm font-black uppercase tracking-widest text-destructive">Cancelled Slots Log</h3>
+                      <p className="text-[9px] font-bold text-muted-foreground/60">Historical Record of Terminated Slots</p>
                     </div>
-                    <div className="grid gap-4">
-                      {(tour as any).cancelledSlots.map((cs: any) => (
-                        <div key={cs.id} className="p-6 rounded-3xl bg-destructive/5 border border-destructive/10 flex flex-col md:flex-row md:items-center justify-between gap-4">
-                          <div className="space-y-1">
-                            <div className="flex items-center gap-2">
-                              <span className="text-xs font-black text-foreground">{format(new Date(cs.date), "dd MMM yyyy")}</span>
-                              <span className="text-xs font-bold text-muted-foreground">•</span>
-                              <span className="text-xs font-black text-primary">{cs.startTime}</span>
+                    <div className="grid gap-3">
+                      {tour.slots
+                        .filter(s => s.isCancelled)
+                        .sort((a: any, b: any) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
+                        .map((cs: any) => (
+                          <div key={cs.id} className="group p-4 rounded-2xl bg-destructive/5 border border-destructive/10 hover:bg-destructive/[0.08] transition-all flex items-center justify-between gap-4">
+                            <div className="flex items-center gap-4">
+                              <div className="h-10 w-10 rounded-xl bg-destructive/10 flex items-center justify-center text-destructive">
+                                <IconCalendar size={18} />
+                              </div>
+                              <div className="space-y-0.5">
+                                <div className="flex items-center gap-2">
+                                  <span className="text-xs font-black text-foreground">{format(new Date(cs.date), "EEEE, dd MMM yyyy")}</span>
+                                  <span className="px-2 py-0.5 rounded-md bg-destructive/10 text-destructive text-[8px] font-black uppercase">{cs.startTime}</span>
+                                </div>
+                                <p className="text-[10px] text-muted-foreground font-medium leading-relaxed max-w-[400px]">
+                                  <span className="font-black text-destructive/80 uppercase text-[8px]">Reason:</span> {cs.cancellationReason}
+                                </p>
+                              </div>
                             </div>
-                            <p className="text-xs text-muted-foreground font-medium italic">"{cs.cancellationReason}"</p>
-                          </div>
-                          <div className="flex items-center gap-4">
-                            <div className="text-right">
-                              <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Impacted Bookings</p>
-                              <p className="text-sm font-black text-destructive">{cs.bookingCountAtCancellation}</p>
+                            <div className="flex items-center gap-4">
+                              <button
+                                onClick={() => {
+                                  setActiveSlotForBookings(cs);
+                                  setIsBookingsModalOpen(true);
+                                }}
+                                className="h-9 px-4 rounded-xl bg-destructive text-white text-[9px] font-black uppercase tracking-widest shadow-lg shadow-destructive/20 hover:scale-105 active:scale-95 transition-all"
+                              >
+                                View Logs
+                              </button>
                             </div>
-                            <button
-                              onClick={() => downloadBookings({ date: cs.date, startTime: cs.startTime, id: cs.slotId } as any)}
-                              className="h-9 px-4 rounded-xl bg-destructive/10 text-destructive text-[10px] font-black uppercase tracking-widest hover:bg-destructive hover:text-white transition-all"
-                            >
-                              View Bookings
-                            </button>
                           </div>
-                        </div>
-                      ))}
+                        ))}
                     </div>
                   </div>
                 )}
@@ -532,113 +635,149 @@ export default function TourDetailPage() {
             </div>
           </Tabs.Content>
 
-          <Tabs.Content value="reviews" className="animate-in fade-in slide-in-from-bottom-4 duration-500 outline-none">
-            <div className="rounded-[2.5rem] border border-border bg-card p-8 shadow-xl space-y-8">
-              <div className="flex items-center justify-between">
-                <div className="space-y-1">
-                  <h3 className="text-xl font-black tracking-tight">Tour Reviews</h3>
-                  <p className="text-xs text-muted-foreground">Monitor and manage user feedback and testimonials.</p>
+          <Tabs.Content value="reviews" className="animate-in fade-in slide-in-from-bottom-2 duration-300 outline-none">
+            <div className="grid grid-cols-1 lg:grid-cols-[320px_1fr] gap-6 items-start">
+              {/* Left Column: Stats & Add */}
+              <div className="space-y-4 lg:sticky lg:top-4">
+                <div className="p-4 rounded-xl border border-border bg-card shadow-sm space-y-4">
+                  <div className="space-y-1">
+                    <h3 className="text-sm font-bold uppercase tracking-wider text-muted-foreground">Testimonials</h3>
+                    <p className="text-[10px] text-muted-foreground font-medium">Manage user feedback and social proof.</p>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-2 pt-2">
+                    <div className="p-2 rounded-lg bg-primary/5 border border-primary/10">
+                      <p className="text-[8px] font-bold text-primary uppercase">Total</p>
+                      <p className="text-sm font-bold text-primary">{tour.reviews?.length || 0}</p>
+                    </div>
+                    <div className="p-2 rounded-lg bg-emerald-50 border border-emerald-100">
+                      <p className="text-[8px] font-bold text-emerald-600 uppercase">Active</p>
+                      <p className="text-sm font-bold text-emerald-600">{tour.reviews?.filter(r => r.isActive).length || 0}</p>
+                    </div>
+                  </div>
+
+                  <button
+                    onClick={() => {
+                      setEditingReviewIndex(null);
+                      setNewReview({
+                        userName: "",
+                        userLocation: "",
+                        reviewText: "",
+                        rating: 5,
+                        isAdminAdded: true,
+                        isActive: true,
+                        date: new Date().toISOString()
+                      });
+                      setIsReviewModalOpen(true);
+                    }}
+                    className="w-full inline-flex h-9 items-center justify-center gap-1.5 rounded-xl bg-primary px-4 text-[10px] font-bold uppercase tracking-wider text-primary-foreground shadow-md shadow-primary/10 hover:opacity-90 active:scale-95 transition-all"
+                  >
+                    <IconPlus size={14} /> Add Testimonial
+                  </button>
                 </div>
-                <button
-                  onClick={() => {
-                    const newReview = {
-                      userName: "New User",
-                      date: new Date().toISOString().split('T')[0] || "",
-                      rating: 5,
-                      reviewText: "Great experience!",
-                      isAdminAdded: true
-                    };
-                    updateMutation.mutate({ reviews: [...(tour?.reviews || []), newReview] });
-                  }}
-                  className="inline-flex h-11 items-center justify-center gap-2 rounded-2xl bg-primary px-6 text-[11px] font-black uppercase tracking-wider text-primary-foreground shadow-lg shadow-primary/20 hover:opacity-90 active:scale-95 transition-all"
-                >
-                  <IconPlus size={16} /> Add Testimonial
-                </button>
+
+                <div className="p-4 rounded-xl bg-muted/30 border border-border">
+                  <p className="text-[10px] font-medium text-muted-foreground leading-relaxed">
+                    Reviews marked as <strong>Active</strong> will be visible on the mobile app. User-submitted reviews should be reviewed here before activation.
+                  </p>
+                </div>
               </div>
 
-              <div className="grid gap-6">
-                {(!tour.reviews || tour.reviews.length === 0) ? (
-                  <div className="py-12 text-center border-2 border-dashed border-border rounded-[2rem] bg-muted/5">
-                    <p className="text-sm font-medium text-muted-foreground">No reviews found for this tour.</p>
-                  </div>
-                ) : (
-                  tour.reviews.map((review, index) => (
-                    <div key={index} className="p-8 rounded-[2rem] border border-border bg-muted/20 group hover:bg-card hover:shadow-2xl transition-all duration-500 relative">
-                      <button
-                        onClick={() => {
-                          const newReviews = tour?.reviews?.filter((_, i) => i !== index);
-                          updateMutation.mutate({ reviews: newReviews });
-                        }}
-                        className="absolute top-6 right-6 h-10 w-10 flex items-center justify-center rounded-xl bg-destructive/10 text-destructive opacity-0 group-hover:opacity-100 transition-all hover:bg-destructive hover:text-white"
-                      >
-                        <IconTrash size={18} />
-                      </button>
+              {/* Right Column: Reviews List */}
+              <div className="space-y-4">
+                <div className="flex items-center justify-between px-2">
+                  <h3 className="text-sm font-bold uppercase tracking-wider text-muted-foreground">Moderation Queue</h3>
+                </div>
 
-                      <div className="space-y-6">
-                        <div className="flex items-center gap-4">
-                          <div className="h-12 w-12 rounded-2xl bg-primary/10 flex items-center justify-center text-primary border border-primary/20 shadow-inner">
-                            <IconUser size={24} />
-                          </div>
-                          <div className="flex-1 space-y-1">
-                            <div className="flex items-center gap-3">
-                              <input
-                                defaultValue={review.userName}
-                                onBlur={(e) => {
-                                  const newReviews = [...(tour?.reviews || [])];
-                                  if (newReviews[index]) {
-                                    newReviews[index].userName = e.target.value;
-                                    updateMutation.mutate({ reviews: newReviews });
-                                  }
-                                }}
-                                className="bg-transparent border-none p-0 text-base font-black focus:ring-0 w-fit min-w-[150px]"
-                              />
-                              {review.isAdminAdded && (
-                                <span className="px-2 py-1 rounded-md bg-primary/10 text-primary text-[9px] font-black uppercase tracking-widest">
-                                  Verified Admin
-                                </span>
-                              )}
-                            </div>
-                            <div className="flex items-center gap-1">
-                              {[1, 2, 3, 4, 5].map((star) => (
-                                <IconStar
-                                  key={star}
-                                  size={14}
-                                  className={twMerge(
-                                    "cursor-pointer transition-all",
-                                    star <= review.rating ? "text-amber-400 fill-amber-400" : "text-muted-foreground/30"
-                                  )}
-                                  onClick={() => {
-                                    const newReviews = [...(tour?.reviews || [])];
-                                    if (newReviews[index]) {
-                                      newReviews[index].rating = star;
-                                      updateMutation.mutate({ reviews: newReviews });
-                                    }
-                                  }}
-                                />
-                              ))}
-                            </div>
-                          </div>
-                          <div className="text-right">
-                            <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest mb-1">Posted On</p>
-                            <p className="text-xs font-bold text-foreground">{new Date(review.date).toLocaleDateString()}</p>
-                          </div>
-                        </div>
-
-                        <textarea
-                          defaultValue={review.reviewText}
-                          onBlur={(e) => {
-                            const newReviews = [...(tour?.reviews || [])];
-                            if (newReviews[index]) {
-                              newReviews[index].reviewText = e.target.value;
-                              updateMutation.mutate({ reviews: newReviews });
-                            }
-                          }}
-                          className="w-full bg-card/50 border border-border/60 rounded-2xl p-4 text-sm font-medium leading-relaxed resize-none focus:border-primary outline-none transition-all min-h-[100px]"
-                        />
-                      </div>
+                <div className="space-y-3">
+                  {(!tour.reviews || tour.reviews.length === 0) ? (
+                    <div className="py-12 text-center border-2 border-dashed border-border rounded-xl bg-muted/5 flex flex-col items-center gap-3">
+                      <IconStar size={32} className="text-muted-foreground/20" />
+                      <p className="text-xs font-bold text-muted-foreground">No reviews found for this tour.</p>
                     </div>
-                  ))
-                )}
+                  ) : (
+                    <div className="grid gap-3">
+                      {tour.reviews
+                        .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+                        .map((review, index) => (
+                          <div key={review.id || index} className={twMerge(
+                            "group p-4 rounded-xl border transition-all",
+                            review.isActive ? "bg-card border-border hover:border-primary/30" : "bg-muted/30 border-dashed border-border opacity-80"
+                          )}>
+                            <div className="flex gap-4">
+                              <div className="h-10 w-10 rounded-xl bg-primary/5 flex items-center justify-center text-primary border border-primary/10 shrink-0">
+                                <IconUser size={18} />
+                              </div>
+
+                              <div className="flex-1 space-y-2">
+                                <div className="flex items-start justify-between">
+                                  <div>
+                                    <div className="flex items-center gap-2">
+                                      <h4 className="text-sm font-bold text-foreground">{review.userName}</h4>
+                                      {review.isAdminAdded && (
+                                        <span className="px-1.5 py-0.5 rounded-md bg-primary/5 text-primary text-[8px] font-bold uppercase tracking-widest">
+                                          Admin
+                                        </span>
+                                      )}
+                                      {!review.isActive && (
+                                        <span className="px-1.5 py-0.5 rounded-md bg-muted text-muted-foreground text-[8px] font-bold uppercase tracking-widest">
+                                          Hidden
+                                        </span>
+                                      )}
+                                    </div>
+                                    <p className="text-[10px] text-muted-foreground font-medium flex items-center gap-1">
+                                      <IconMapPin size={10} /> {review.userLocation || "Global Traveler"} • {format(new Date(review.date), "dd MMM yyyy")}
+                                    </p>
+                                  </div>
+
+                                  <div className="flex items-center gap-1">
+                                    <button
+                                      onClick={() => {
+                                        setEditingReviewIndex(index);
+                                        setNewReview(review);
+                                        setIsReviewModalOpen(true);
+                                      }}
+                                      className="p-1.5 rounded-lg text-muted-foreground hover:bg-primary/10 hover:text-primary transition-all"
+                                      title="Edit"
+                                    >
+                                      <IconSettings size={14} />
+                                    </button>
+                                    <button
+                                      onClick={() => {
+                                        if (review.id && confirm("Are you sure you want to delete this review?")) {
+                                          deleteReviewMutation.mutate(review.id);
+                                        }
+                                      }}
+                                      className="p-1.5 rounded-lg text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-all"
+                                      title="Delete"
+                                    >
+                                      <IconTrash size={14} />
+                                    </button>
+                                  </div>
+                                </div>
+
+                                <div className="flex items-center gap-0.5">
+                                  {[1, 2, 3, 4, 5].map((star) => (
+                                    <IconStar
+                                      key={star}
+                                      size={10}
+                                      className={twMerge(
+                                        star <= review.rating ? "text-amber-400 fill-amber-400" : "text-muted-foreground/20"
+                                      )}
+                                    />
+                                  ))}
+                                </div>
+
+                                <p className="text-xs text-muted-foreground leading-relaxed line-clamp-3">
+                                  {review.reviewText}
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
           </Tabs.Content>
@@ -667,33 +806,63 @@ export default function TourDetailPage() {
             </div>
 
             <div className="grid gap-6 py-2">
-              <div className="space-y-3">
-                <label className={labelClasses}>Start Time</label>
-                <div className="relative">
-                  <IconClock className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/40" />
-                  <input
-                    type="text"
-                    placeholder="10:00 AM"
-                    value={newSlot.startTime}
-                    onChange={(e) => setNewSlot(prev => ({ ...prev, startTime: e.target.value }))}
-                    className={twMerge(inputClasses, "pl-10 h-12 font-bold focus:ring-primary/20")}
-                  />
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <label className={labelClasses}>Session</label>
+                  <div className="flex bg-muted/40 p-1 rounded-xl border border-border/50">
+                    {["morning", "evening"].map((s) => (
+                      <button
+                        key={s}
+                        onClick={() => setNewSlot(prev => ({ ...prev, session: s as any }))}
+                        className={twMerge(
+                          "px-4 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all",
+                          newSlot.session === s
+                            ? "bg-card text-primary shadow-sm"
+                            : "text-muted-foreground hover:text-foreground"
+                        )}
+                      >
+                        {s}
+                      </button>
+                    ))}
+                  </div>
                 </div>
-                <div className="flex flex-wrap gap-2 pt-1">
-                  {["09:00 AM", "11:00 AM", "01:00 PM", "03:00 PM", "05:00 PM", "07:00 PM"].map(time => (
-                    <button
-                      key={time}
-                      onClick={() => setNewSlot(prev => ({ ...prev, startTime: time }))}
-                      className={twMerge(
-                        "px-2.5 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-[0.05em] border transition-all duration-300",
-                        newSlot.startTime === time
-                          ? "bg-primary text-white border-primary shadow-lg shadow-primary/30 scale-105"
-                          : "bg-muted/40 text-muted-foreground border-border/50 hover:bg-muted hover:border-primary/30"
-                      )}
-                    >
-                      {time}
-                    </button>
-                  ))}
+
+                <div className="space-y-3">
+                  <label className={labelClasses}>Start Time</label>
+                  <div className="relative">
+                    <IconClock className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/40" />
+                    <input
+                      type="text"
+                      placeholder="10:00 AM"
+                      value={newSlot.startTime}
+                      onChange={(e) => setNewSlot(prev => ({ ...prev, startTime: e.target.value }))}
+                      className={twMerge(inputClasses, "pl-10 h-12 font-bold focus:ring-primary/20")}
+                    />
+                  </div>
+                  <div className="flex flex-wrap gap-2 pt-1">
+                    {["09:00 AM", "11:00 AM", "01:00 PM", "03:00 PM", "05:00 PM", "07:00 PM"].map(time => {
+                      const slotDate = parse(selectedDate, "yyyy-MM-dd", new Date());
+                      const slotTime = parse(time, "hh:mm a", slotDate);
+                      const isExpired = isToday(slotDate) && isAfter(new Date(), slotTime);
+
+                      if (isExpired) return null;
+
+                      return (
+                        <button
+                          key={time}
+                          onClick={() => setNewSlot(prev => ({ ...prev, startTime: time }))}
+                          className={twMerge(
+                            "px-2.5 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-[0.05em] border transition-all duration-300",
+                            newSlot.startTime === time
+                              ? "bg-primary text-white border-primary shadow-lg shadow-primary/30 scale-105"
+                              : "bg-muted/40 text-muted-foreground border-border/50 hover:bg-muted hover:border-primary/30"
+                          )}
+                        >
+                          {time}
+                        </button>
+                      );
+                    })}
+                  </div>
                 </div>
               </div>
 
@@ -842,6 +1011,258 @@ export default function TourDetailPage() {
           </AlertDialog.Content>
         </AlertDialog.Portal>
       </AlertDialog.Root>
+      {/* Bookings Full Width Modal */}
+      <Dialog.Root open={isBookingsModalOpen} onOpenChange={setIsBookingsModalOpen}>
+        <Dialog.Portal>
+          <Dialog.Overlay className="fixed inset-0 z-[100] bg-black/60 backdrop-blur-md animate-in fade-in duration-300" />
+          <Dialog.Content className="fixed left-0 top-0 z-[100] h-full w-full bg-background p-8 overflow-y-auto animate-in slide-in-from-right duration-500 outline-none">
+            <div className="max-w-7xl mx-auto space-y-8">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-4">
+                  <button
+                    onClick={() => setIsBookingsModalOpen(false)}
+                    className="h-10 w-10 flex items-center justify-center rounded-xl bg-muted/50 text-muted-foreground hover:bg-muted transition-all"
+                  >
+                    <IconChevronLeft size={20} />
+                  </button>
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-3">
+                      <h2 className="text-2xl font-black tracking-tight">Slot Booking Details</h2>
+                      {activeSlotForBookings?.isCancelled && (
+                        <span className="px-3 py-1 rounded-full bg-destructive text-white text-[10px] font-black uppercase tracking-widest">Cancelled Slot</span>
+                      )}
+                    </div>
+                    <p className="text-xs font-bold text-muted-foreground flex items-center gap-2">
+                      <IconCalendar size={14} /> {activeSlotForBookings && format(new Date(activeSlotForBookings.date), "EEEE, dd MMMM yyyy")}
+                      <span className="h-1 w-1 rounded-full bg-muted-foreground/30" />
+                      <IconClock size={14} /> {activeSlotForBookings?.startTime}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-3">
+                  <button
+                    onClick={() => activeSlotForBookings && downloadBookings(activeSlotForBookings)}
+                    className="h-10 px-6 rounded-xl bg-emerald-600 text-white text-[10px] font-black uppercase tracking-widest shadow-lg shadow-emerald-200 hover:opacity-90 active:scale-95 transition-all"
+                  >
+                    Export to Excel
+                  </button>
+                  <Dialog.Close className="h-10 w-10 flex items-center justify-center rounded-xl bg-muted/50 text-muted-foreground hover:bg-muted transition-all">
+                    <IconX size={20} />
+                  </Dialog.Close>
+                </div>
+              </div>
+
+              {/* Bookings List / Table */}
+              <div className="rounded-[2.5rem] border border-border bg-card overflow-hidden shadow-2xl">
+                <TourBookingsTable slot={activeSlotForBookings} tourId={tourId} />
+              </div>
+            </div>
+          </Dialog.Content>
+        </Dialog.Portal>
+      </Dialog.Root>
+
+      {/* Review Modal */}
+      <Dialog.Root open={isReviewModalOpen} onOpenChange={setIsReviewModalOpen}>
+        <Dialog.Portal>
+          <Dialog.Overlay className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm animate-in fade-in duration-300" />
+          <Dialog.Content className="fixed left-[50%] top-[50%] z-50 w-[95vw] max-w-[500px] translate-x-[-50%] translate-y-[-50%] rounded-2xl bg-background p-6 shadow-2xl animate-in zoom-in-95 duration-300 outline-none">
+            <div className="mb-6 flex items-center justify-between">
+              <div className="space-y-1">
+                <Dialog.Title className="text-lg font-bold tracking-tight">
+                  {editingReviewIndex !== null ? "Edit Testimonial" : "Add Testimonial"}
+                </Dialog.Title>
+                <Dialog.Description className="text-xs text-muted-foreground font-medium">
+                  {editingReviewIndex !== null ? "Modify the existing review details." : "Create a new dummy or manual review."}
+                </Dialog.Description>
+              </div>
+              <Dialog.Close className="rounded-lg p-2 text-muted-foreground hover:bg-muted transition-all">
+                <IconX size={20} />
+              </Dialog.Close>
+            </div>
+
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className={labelClasses}>User Name</label>
+                  <input
+                    type="text"
+                    value={newReview.userName}
+                    onChange={(e) => setNewReview({ ...newReview, userName: e.target.value })}
+                    className={inputClasses}
+                    placeholder="e.g. John Doe"
+                  />
+                </div>
+                <div>
+                  <label className={labelClasses}>User Location</label>
+                  <input
+                    type="text"
+                    value={newReview.userLocation}
+                    onChange={(e) => setNewReview({ ...newReview, userLocation: e.target.value })}
+                    className={inputClasses}
+                    placeholder="e.g. London, UK"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className={labelClasses}>Review Content</label>
+                <textarea
+                  value={newReview.reviewText}
+                  onChange={(e) => setNewReview({ ...newReview, reviewText: e.target.value })}
+                  className={twMerge(inputClasses, "min-h-[100px] resize-none")}
+                  placeholder="Share the traveler's experience..."
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className={labelClasses}>Rating</label>
+                  <div className="flex items-center gap-1.5 h-10 px-3 rounded-lg border border-border bg-background">
+                    {[1, 2, 3, 4, 5].map((star) => (
+                      <IconStar
+                        key={star}
+                        size={20}
+                        className={twMerge(
+                          "cursor-pointer transition-all",
+                          star <= newReview.rating ? "text-amber-400 fill-amber-400" : "text-muted-foreground/20 hover:text-amber-200"
+                        )}
+                        onClick={() => setNewReview({ ...newReview, rating: star })}
+                      />
+                    ))}
+                  </div>
+                </div>
+                <div>
+                  <label className={labelClasses}>Review Date</label>
+                  <input
+                    type="date"
+                    value={newReview.date ? format(new Date(newReview.date), "yyyy-MM-dd") : ""}
+                    onChange={(e) => setNewReview({ ...newReview, date: new Date(e.target.value).toISOString() })}
+                    className={inputClasses}
+                  />
+                </div>
+              </div>
+
+              <div className="flex items-center gap-4 pt-2">
+                <label className="flex items-center gap-2 cursor-pointer group">
+                  <input
+                    type="checkbox"
+                    checked={newReview.isActive}
+                    onChange={(e) => setNewReview({ ...newReview, isActive: e.target.checked })}
+                    className="h-4 w-4 rounded border-border text-primary focus:ring-primary"
+                  />
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground group-hover:text-foreground">Visible on App</span>
+                </label>
+                <label className="flex items-center gap-2 cursor-pointer group">
+                  <input
+                    type="checkbox"
+                    checked={newReview.isAdminAdded}
+                    onChange={(e) => setNewReview({ ...newReview, isAdminAdded: e.target.checked })}
+                    className="h-4 w-4 rounded border-border text-primary focus:ring-primary"
+                  />
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground group-hover:text-foreground">Admin Added</span>
+                </label>
+              </div>
+
+              <button
+                onClick={() => reviewMutation.mutate(newReview)}
+                disabled={reviewMutation.isPending || !newReview.userName || !newReview.reviewText}
+                className="mt-2 w-full h-11 rounded-xl bg-primary text-[11px] font-black uppercase tracking-widest text-white shadow-lg shadow-primary/20 hover:opacity-90 active:scale-95 transition-all disabled:opacity-50"
+              >
+                {reviewMutation.isPending ? "Saving..." : (editingReviewIndex !== null ? "Update Testimonial" : "Post Testimonial")}
+              </button>
+            </div>
+          </Dialog.Content>
+        </Dialog.Portal>
+      </Dialog.Root>
+    </div>
+  );
+}
+
+/**
+ * Sub-component for Detailed Bookings Table
+ */
+function TourBookingsTable({ slot, tourId }: { slot: any, tourId: number }) {
+  const { data: bookings, isLoading } = useQuery({
+    queryKey: ["slotBookings", tourId, slot?.date, slot?.startTime, slot?.id],
+    queryFn: () => tourService.getSlotBookings(tourId, slot!.date, slot!.startTime, slot?.id),
+    enabled: !!slot,
+  });
+
+  if (isLoading) return <div className="p-20 flex justify-center"><IconLoader2 className="animate-spin text-primary h-12 w-12" /></div>;
+
+  if (!bookings || bookings.length === 0) {
+    return (
+      <div className="p-20 text-center space-y-4">
+        <div className="h-20 w-20 bg-muted/30 rounded-full flex items-center justify-center mx-auto">
+          <IconUsers size={40} className="text-muted-foreground/20" />
+        </div>
+        <p className="text-sm font-black text-muted-foreground uppercase tracking-widest">No active bookings found for this slot.</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="overflow-x-auto">
+      <table className="w-full text-left border-collapse">
+        <thead>
+          <tr className="bg-muted/30 border-b border-border">
+            <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-muted-foreground">Booking ID</th>
+            <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-muted-foreground">Customer Profile</th>
+            <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-muted-foreground text-center">Persons</th>
+            <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-muted-foreground">Payment Status</th>
+            <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-muted-foreground">Order Total</th>
+            <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-muted-foreground">Booking Date</th>
+            <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-muted-foreground text-right">Status</th>
+          </tr>
+        </thead>
+        <tbody className="divide-y divide-border">
+          {bookings.map((booking: any) => (
+            <tr key={booking.id} className="hover:bg-muted/10 transition-all group">
+              <td className="px-6 py-4">
+                <span className="text-xs font-black text-primary">#{booking.bookingId || booking.id}</span>
+              </td>
+              <td className="px-6 py-4">
+                <div className="flex items-center gap-3">
+                  <div className="h-9 w-9 rounded-xl bg-primary/5 flex items-center justify-center text-primary border border-primary/10 font-black text-xs">
+                    {booking.user?.name?.[0] || booking.contacts?.[0]?.name?.[0] || 'U'}
+                  </div>
+                  <div className="space-y-0.5">
+                    <p className="text-xs font-black text-foreground">{booking.user?.name || booking.contacts?.[0]?.name || "Guest User"}</p>
+                    <p className="text-[10px] font-bold text-muted-foreground">{booking.user?.phone || booking.contacts?.[0]?.mobile || "No Phone"}</p>
+                  </div>
+                </div>
+              </td>
+              <td className="px-6 py-4 text-center">
+                <span className="inline-flex items-center justify-center h-7 w-7 rounded-lg bg-muted text-[10px] font-black">{booking.personCount}</span>
+              </td>
+              <td className="px-6 py-4">
+                <div className={twMerge(
+                  "inline-flex items-center gap-1.5 px-2 py-1 rounded-md text-[9px] font-black uppercase tracking-widest",
+                  booking.paymentStatus === 'paid' ? "bg-emerald-50 text-emerald-600 border border-emerald-100" : "bg-amber-50 text-amber-600 border border-amber-100"
+                )}>
+                  {booking.paymentStatus}
+                </div>
+              </td>
+              <td className="px-6 py-4">
+                <p className="text-xs font-black text-foreground">₹{booking.totalPrice}</p>
+              </td>
+              <td className="px-6 py-4">
+                <p className="text-[10px] font-bold text-muted-foreground">{format(new Date(booking.createdAt), "dd MMM yyyy, HH:mm")}</p>
+              </td>
+              <td className="px-6 py-4 text-right">
+                <div className={twMerge(
+                  "inline-flex px-3 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest",
+                  booking.status === 'confirmed' ? "bg-primary text-white" :
+                    booking.status === 'cancelled' ? "bg-destructive text-white" : "bg-muted text-muted-foreground"
+                )}>
+                  {booking.status}
+                </div>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
     </div>
   );
 }
