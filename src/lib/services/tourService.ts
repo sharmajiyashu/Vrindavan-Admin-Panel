@@ -4,26 +4,34 @@ import { TourFormData } from "../validations/tour";
 export interface TourMedia {
   id: number;
   url: string;
-  type?: string;
+  mimetype?: string;
+  type?: 'image' | 'video' | 'audio' | 'document' | 'other' | 'gif' | 'sticker';
+  size?: number;
+  width?: number;
+  height?: number;
 }
 
 export interface TourSlot {
   id?: number;
   date: string;
   startTime: string;
-  slotDeadlineHours: number;
-  cancellationDeadlineHours: number;
+  guideName?: string | null;
   guidePhoneNumber?: string | null;
   alternateNumber?: string | null;
+  isCancelled?: boolean;
+  session?: 'morning' | 'evening';
+  cancellationReason?: string | null;
 }
 
 export interface TourReview {
   id?: number;
   userName: string;
+  userLocation?: string | null;
   date: string;
   rating: number;
   reviewText: string;
   isAdminAdded: boolean;
+  isActive: boolean;
 }
 
 export interface Tour {
@@ -55,8 +63,8 @@ export interface Tour {
   startingAddressEn?: string | null;
   startingAddressHi?: string | null;
 
-  shortHighlightListing?: { titleEn: string; titleHi: string; icon: string } | null;
-  shortHighlightDetails?: { titleEn: string; titleHi: string; icon: string } | null;
+  shortHighlightListing?: { titleEn: string; titleHi: string; iconId?: number | null; icon?: TourMedia | null } | null;
+  shortHighlightDetails?: { titleEn: string; titleHi: string; iconId?: number | null; icon?: TourMedia | null } | null;
 
   showOnReferralApp: boolean;
   referralTourSummaryEn?: string | null;
@@ -66,6 +74,7 @@ export interface Tour {
 
   features: Array<{
     iconId: number | null;
+    icon?: TourMedia | null;
     titleEn: string;
     titleHi: string;
     descriptionEn: string;
@@ -74,6 +83,7 @@ export interface Tour {
 
   itinerary: Array<{
     imageId: number | null;
+    image?: TourMedia | null;
     titleEn: string;
     titleHi: string;
     descriptionEn: string;
@@ -112,6 +122,10 @@ export interface Tour {
   gallery?: TourMedia[];
   slots?: TourSlot[];
   reviews?: TourReview[];
+  averageRating?: number;
+  reviewCount?: number;
+  adminReviewCount?: number;
+  userReviewCount?: number;
 }
 
 export interface PaginatedTourResponse {
@@ -159,5 +173,47 @@ export const tourService = {
 
   deleteTour: async (id: number) => {
     return await deleteRequest(`/tours/${id}`);
+  },
+
+  getSlotBookingCount: async (tourId: number, date: string, time: string, slotId?: number) => {
+    if (!date || !time) return { count: 0 };
+    const query = slotId ? `?slotId=${slotId}` : '';
+    return await get<{ count: number }>(`/tours/${tourId}/slots/${encodeURIComponent(date)}/${encodeURIComponent(time)}/bookings/count${query}`);
+  },
+
+  getSlotBookings: async (tourId: number, date: string, time: string, slotId?: number) => {
+    if (!date || !time) return [];
+    const query = slotId ? `?slotId=${slotId}` : '';
+    return await get<any[]>(`/tours/${tourId}/slots/${encodeURIComponent(date)}/${encodeURIComponent(time)}/bookings${query}`);
+  },
+
+  cancelSlot: async (tourId: number, date: string, time: string, reason: string, slotId?: number) => {
+    if (!date || !time) throw new Error("Date and time are required to cancel a slot");
+    return await post<any>(`/tours/${tourId}/slots/${encodeURIComponent(date)}/${encodeURIComponent(time)}/cancel`, { reason, slotId });
+  },
+
+  getSlots: async (tourId: number, date?: string) => {
+    const query = date ? `?date=${date}` : '';
+    return await get<TourSlot[]>(`/tours/${tourId}/slots${query}`);
+  },
+
+  addSlot: async (tourId: number, slotData: Partial<TourSlot>) => {
+    return await post<TourSlot>(`/tours/${tourId}/slots`, slotData);
+  },
+
+  updateSlot: async (slotId: number, slotData: Partial<TourSlot>) => {
+    return await put<TourSlot>(`/tours/slots/${slotId}`, slotData);
+  },
+
+  addReview: async (tourId: number, reviewData: any) => {
+    return await post<any>(`/tours/${tourId}/reviews`, reviewData);
+  },
+
+  updateReview: async (reviewId: number, reviewData: any) => {
+    return await put<any>(`/tours/reviews/${reviewId}`, reviewData);
+  },
+
+  deleteReview: async (reviewId: number) => {
+    return await deleteRequest(`/tours/reviews/${reviewId}`);
   },
 };

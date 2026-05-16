@@ -33,10 +33,9 @@ interface TourFormProps {
 
 const PREDEFINED_BADGES = [
   { en: "Bestseller", hi: "बेस्टसेलर" },
-  { en: "Value For Money", hi: "पैसे की कीमत" },
   { en: "Popular", hi: "लोकप्रिय" },
-  { en: "Private", hi: "निजी" },
-  { en: "Group", hi: "समूह" },
+  { en: "VIP Darshan", hi: "वीआईपी दर्शन" },
+  { en: "Private Tour", hi: "निजी टूर" },
 ];
 
 export function TourForm({ initialData, onSubmitBasic, onSubmitFiles, onRemoveMedia, onComplete, isLoading }: TourFormProps) {
@@ -48,6 +47,7 @@ export function TourForm({ initialData, onSubmitBasic, onSubmitFiles, onRemoveMe
   const [existingGallery, setExistingGallery] = useState<any[]>(initialData?.gallery || []);
   const [deletingMediaIds, setDeletingMediaIds] = useState<number[]>([]);
   const [isUploading, setIsUploading] = useState(false);
+  const [uploadingKeys, setUploadingKeys] = useState<string[]>([]);
   const [singlePreviews, setSinglePreviews] = useState<{ [key: string]: string }>({});
 
   useEffect(() => {
@@ -83,14 +83,30 @@ export function TourForm({ initialData, onSubmitBasic, onSubmitFiles, onRemoveMe
       discountConfig: initialData.discountConfig || null,
       startingAddressEn: initialData.startingAddressEn || "",
       startingAddressHi: initialData.startingAddressHi || "",
-      shortHighlightListing: initialData.shortHighlightListing || { titleEn: "", titleHi: "", iconId: null },
-      shortHighlightDetails: initialData.shortHighlightDetails || { titleEn: "", titleHi: "", iconId: null },
+      shortHighlightListing: {
+        titleEn: initialData.shortHighlightListing?.titleEn || "",
+        titleHi: initialData.shortHighlightListing?.titleHi || "",
+        iconId: initialData.shortHighlightListing?.iconId || null,
+        icon: typeof initialData.shortHighlightListing?.icon === 'object' ? initialData.shortHighlightListing?.icon : null,
+      },
+      shortHighlightDetails: {
+        titleEn: initialData.shortHighlightDetails?.titleEn || "",
+        titleHi: initialData.shortHighlightDetails?.titleHi || "",
+        iconId: initialData.shortHighlightDetails?.iconId || null,
+        icon: typeof initialData.shortHighlightDetails?.icon === 'object' ? initialData.shortHighlightDetails?.icon : null,
+      },
       showOnReferralApp: initialData.showOnReferralApp ?? false,
       referralTourSummaryEn: initialData.referralTourSummaryEn || "",
       referralTourSummaryHi: initialData.referralTourSummaryHi || "",
       customerPickupLines: initialData.customerPickupLines || [],
-      features: initialData.features || [],
-      itinerary: initialData.itinerary || [],
+      features: (initialData.features || []).map(f => ({
+        ...f,
+        icon: typeof f.icon === 'object' ? f.icon : null,
+      })),
+      itinerary: (initialData.itinerary || []).map(i => ({
+        ...i,
+        image: typeof i.image === 'object' ? i.image : null,
+      })),
       faqs: initialData.faqs || [],
       slots: initialData.slots || [],
       reviews: initialData.reviews || [],
@@ -175,23 +191,31 @@ export function TourForm({ initialData, onSubmitBasic, onSubmitFiles, onRemoveMe
 
   const onFormSubmit: SubmitHandler<TourFormData> = async (data) => {
     try {
-      const id = await onSubmitBasic({
-        ...data,
+      let currentId = tourId;
+
+      // Exclude slots and reviews as they are managed via separate dedicated APIs
+      const { slots, reviews, ...basicData } = data;
+
+      // Always save basic details first to ensure all changes (including icons/itinerary images) are persisted
+      currentId = await onSubmitBasic({
+        ...basicData,
         imageIds: existingGallery.map(m => m.id),
-      });
-      setTourId(id);
+      } as any);
+      setTourId(currentId);
 
       if (activeTab === "media") {
-        if (id) {
+        if (currentId) {
           setIsUploading(true);
           try {
             if (galleryFiles.length > 0) {
-              await onSubmitFiles(id, galleryFiles);
+              await onSubmitFiles(currentId, galleryFiles);
             }
             onComplete();
           } finally {
             setIsUploading(false);
           }
+        } else {
+          toast.error("Tour ID missing. Please save basic details first.");
         }
       } else {
         // Auto-advance
@@ -208,14 +232,14 @@ export function TourForm({ initialData, onSubmitBasic, onSubmitFiles, onRemoveMe
     }
   };
 
-  const inputClasses = "w-full rounded-xl border border-border bg-background px-4 py-2.5 text-sm transition-all focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none";
-  const labelClasses = "block text-xs font-black uppercase tracking-widest text-muted-foreground/70 mb-1.5";
-  const errorClasses = "text-[10px] font-bold text-destructive mt-1";
+  const inputClasses = "w-full rounded-lg border border-border bg-background px-3 py-2 text-sm transition-all focus:border-primary focus:ring-1 focus:ring-primary/20 outline-none";
+  const labelClasses = "block text-[10px] font-bold uppercase tracking-wider text-muted-foreground/80 mb-1";
+  const errorClasses = "text-[10px] font-medium text-destructive mt-0.5";
 
   return (
-    <form onSubmit={handleSubmit(onFormSubmit, onFormError)} className="space-y-6">
+    <form onSubmit={handleSubmit(onFormSubmit, onFormError)} className="space-y-4">
       <Tabs.Root value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <Tabs.List className="flex border-b border-border mb-6 overflow-x-auto scrollbar-none gap-2">
+        <Tabs.List className="flex border-b border-border mb-4 overflow-x-auto scrollbar-none gap-1">
           {[
             { id: "basic", label: t("tours.basicDetails"), hasError: !!(errors.titleEn || errors.titleHi || errors.subtitleEn || errors.subtitleHi || errors.subtextEn || errors.subtextHi) },
             { id: "pricing", label: "Pricing & Discounts", hasError: !!(errors.price || errors.slashedPrice || errors.minPersons || errors.maxPersons || errors.type) },
@@ -229,21 +253,21 @@ export function TourForm({ initialData, onSubmitBasic, onSubmitFiles, onRemoveMe
               value={tab.id}
               disabled={tab.disabled}
               className={twMerge(
-                "relative px-4 py-3 text-sm font-bold transition-all border-b-2 border-transparent whitespace-nowrap",
+                "relative px-3 py-2 text-xs font-bold transition-all border-b-2 border-transparent whitespace-nowrap",
                 activeTab === tab.id ? "text-primary border-primary" : "text-muted-foreground hover:text-foreground",
                 tab.disabled && "opacity-50 cursor-not-allowed"
               )}
             >
               {tab.label}
               {tab.hasError && (
-                <span className="absolute top-2 right-1 h-1.5 w-1.5 rounded-full bg-destructive animate-pulse" />
+                <span className="absolute top-1 right-0 h-1 w-1 rounded-full bg-destructive animate-pulse" />
               )}
             </Tabs.Trigger>
           ))}
         </Tabs.List>
 
-        <Tabs.Content value="basic" className="space-y-8 animate-in fade-in slide-in-from-bottom-2 duration-300">
-          <div className="grid gap-6 md:grid-cols-2">
+        <Tabs.Content value="basic" className="space-y-4 animate-in fade-in slide-in-from-bottom-2 duration-300">
+          <div className="grid gap-4 md:grid-cols-2">
             <div>
               <label className={labelClasses}>{t("tours.titleEn")}</label>
               <input {...register("titleEn")} className={inputClasses} placeholder="Darshan of Vrindavan’s All Major Historic Temples" />
@@ -285,9 +309,9 @@ export function TourForm({ initialData, onSubmitBasic, onSubmitFiles, onRemoveMe
                       setValue("badgeHi", badge.hi);
                     }}
                     className={twMerge(
-                      "px-4 py-1.5 rounded-full text-xs font-bold border transition-all",
+                      "px-3 py-1 rounded-full text-[10px] font-bold border transition-all",
                       watch("badgeEn") === badge.en
-                        ? "bg-primary border-primary text-primary-foreground shadow-md shadow-primary/20"
+                        ? "bg-primary border-primary text-primary-foreground"
                         : "bg-muted/50 border-border text-muted-foreground hover:border-primary/50"
                     )}
                   >
@@ -307,9 +331,9 @@ export function TourForm({ initialData, onSubmitBasic, onSubmitFiles, onRemoveMe
               </div>
             </div>
 
-            <div className="md:col-span-2 grid gap-6 md:grid-cols-2 p-6 rounded-3xl border border-border bg-muted/20">
-              <div className="space-y-4">
-                <h4 className="text-[10px] font-black uppercase tracking-widest text-primary">Short Highlight For Tour Listing</h4>
+            <div className="md:col-span-2 grid gap-4 md:grid-cols-2 p-4 rounded-xl border border-border bg-muted/20">
+              <div className="space-y-2">
+                <h4 className="text-[9px] font-bold uppercase tracking-wider text-primary">Listing Highlight</h4>
                 <div className="grid grid-cols-2 gap-3">
                   <div>
                     <label className={labelClasses}>Title (EN)</label>
@@ -324,10 +348,12 @@ export function TourForm({ initialData, onSubmitBasic, onSubmitFiles, onRemoveMe
                   <div className="col-span-2">
                     <label className={labelClasses}>Icon Image</label>
                     <div className="flex items-center gap-3">
-                      <div className="h-10 w-10 rounded-lg border border-border bg-muted/30 flex items-center justify-center overflow-hidden">
-                        {singlePreviews["listing-icon"] || watch("shortHighlightListing.iconId") ? (
+                      <div className="h-10 w-10 rounded-lg border border-border bg-muted/30 flex items-center justify-center overflow-hidden relative">
+                        {uploadingKeys.includes("listing-icon") ? (
+                          <IconLoader2 className="h-5 w-5 animate-spin text-primary" />
+                        ) : singlePreviews["listing-icon"] || watch("shortHighlightListing.icon")?.url ? (
                           <img
-                            src={singlePreviews["listing-icon"] || `https://res.cloudinary.com/dsaly9sls/image/upload/v1/tours/${watch("shortHighlightListing.iconId")}`}
+                            src={singlePreviews["listing-icon"] || watch("shortHighlightListing.icon")?.url || ""}
                             className="w-full h-full object-cover"
                           />
                         ) : (
@@ -342,13 +368,17 @@ export function TourForm({ initialData, onSubmitBasic, onSubmitFiles, onRemoveMe
                         onChange={async (e) => {
                           const file = e.target.files?.[0];
                           if (file) {
+                            setUploadingKeys(prev => [...prev, "listing-icon"]);
                             try {
                               const result = await tourService.uploadMedia(file);
                               setValue("shortHighlightListing.iconId", result.id);
+                              setValue("shortHighlightListing.icon", result);
                               setSinglePreviews(prev => ({ ...prev, "listing-icon": result.url }));
                               toast.success("Listing icon uploaded");
                             } catch (error) {
                               toast.error("Upload failed");
+                            } finally {
+                              setUploadingKeys(prev => prev.filter(k => k !== "listing-icon"));
                             }
                           }
                         }}
@@ -363,8 +393,8 @@ export function TourForm({ initialData, onSubmitBasic, onSubmitFiles, onRemoveMe
                   </div>
                 </div>
               </div>
-              <div className="space-y-4">
-                <h4 className="text-[10px] font-black uppercase tracking-widest text-primary">Short Highlight For Tour Details</h4>
+              <div className="space-y-2">
+                <h4 className="text-[9px] font-bold uppercase tracking-wider text-primary">Details Highlight</h4>
                 <div className="grid grid-cols-2 gap-3">
                   <div>
                     <label className={labelClasses}>Title (EN)</label>
@@ -379,10 +409,12 @@ export function TourForm({ initialData, onSubmitBasic, onSubmitFiles, onRemoveMe
                   <div className="col-span-2">
                     <label className={labelClasses}>Icon Image</label>
                     <div className="flex items-center gap-3">
-                      <div className="h-10 w-10 rounded-lg border border-border bg-muted/30 flex items-center justify-center overflow-hidden">
-                        {singlePreviews["details-icon"] || watch("shortHighlightDetails.iconId") ? (
+                      <div className="h-10 w-10 rounded-lg border border-border bg-muted/30 flex items-center justify-center overflow-hidden relative">
+                        {uploadingKeys.includes("details-icon") ? (
+                          <IconLoader2 className="h-5 w-5 animate-spin text-primary" />
+                        ) : singlePreviews["details-icon"] || watch("shortHighlightDetails.icon")?.url ? (
                           <img
-                            src={singlePreviews["details-icon"] || `https://res.cloudinary.com/dsaly9sls/image/upload/v1/tours/${watch("shortHighlightDetails.iconId")}`}
+                            src={singlePreviews["details-icon"] || watch("shortHighlightDetails.icon")?.url || ""}
                             className="w-full h-full object-cover"
                           />
                         ) : (
@@ -397,13 +429,17 @@ export function TourForm({ initialData, onSubmitBasic, onSubmitFiles, onRemoveMe
                         onChange={async (e) => {
                           const file = e.target.files?.[0];
                           if (file) {
+                            setUploadingKeys(prev => [...prev, "details-icon"]);
                             try {
                               const result = await tourService.uploadMedia(file);
                               setValue("shortHighlightDetails.iconId", result.id);
+                              setValue("shortHighlightDetails.icon", result);
                               setSinglePreviews(prev => ({ ...prev, "details-icon": result.url }));
                               toast.success("Details icon uploaded");
                             } catch (error) {
                               toast.error("Upload failed");
+                            } finally {
+                              setUploadingKeys(prev => prev.filter(k => k !== "details-icon"));
                             }
                           }
                         }}
@@ -420,7 +456,7 @@ export function TourForm({ initialData, onSubmitBasic, onSubmitFiles, onRemoveMe
               </div>
             </div>
 
-            <div className="flex items-center gap-3 p-4 rounded-2xl border border-border bg-muted/20">
+            <div className="flex items-center gap-2 p-3 rounded-xl border border-border bg-muted/20">
               <input
                 type="checkbox"
                 id="isActive"
@@ -434,8 +470,8 @@ export function TourForm({ initialData, onSubmitBasic, onSubmitFiles, onRemoveMe
           </div>
         </Tabs.Content>
 
-        <Tabs.Content value="pricing" className="space-y-8 animate-in fade-in slide-in-from-bottom-2 duration-300">
-          <div className="grid gap-6 md:grid-cols-2">
+        <Tabs.Content value="pricing" className="space-y-4 animate-in fade-in slide-in-from-bottom-2 duration-300">
+          <div className="grid gap-4 md:grid-cols-2">
             <div>
               <label className={labelClasses}>Tour Type</label>
               <select {...register("type")} className={twMerge(inputClasses, "appearance-none")}>
@@ -620,81 +656,79 @@ export function TourForm({ initialData, onSubmitBasic, onSubmitFiles, onRemoveMe
           </div>
         </Tabs.Content>
 
-        <Tabs.Content value="content" className="space-y-12 animate-in fade-in slide-in-from-bottom-2 duration-300">
+        <Tabs.Content value="content" className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
           {/* Features Section */}
-          <div className="space-y-6">
+          <div className="space-y-3">
             <div className="flex items-center justify-between">
-              <h3 className="text-sm font-black uppercase tracking-widest text-primary">Features (What People Say / Key Highlights)</h3>
+              <h3 className="text-xs font-bold uppercase tracking-wider text-primary">Features</h3>
               <button
                 type="button"
                 onClick={() => setValue("features", [...(watch("features") || []), { iconId: null, titleEn: "", titleHi: "", descriptionEn: "", descriptionHi: "" }])}
-                className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-primary/10 text-primary text-xs font-bold hover:bg-primary/20 transition-all"
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary/10 text-primary text-[10px] font-bold hover:bg-primary/20 transition-all"
               >
-                <IconPlus className="h-4 w-4" /> Add Feature
+                <IconPlus className="h-3.5 w-3.5" /> Add
               </button>
             </div>
-            <div className="grid gap-4">
+            <div className="grid gap-3">
               {(watch("features") || []).map((_, index) => (
-                <div key={index} className="p-6 rounded-2xl border border-border bg-card space-y-4 relative">
+                <div key={index} className="p-4 rounded-xl border border-border bg-card space-y-3 relative">
                   <button
                     type="button"
                     onClick={() => setValue("features", watch("features").filter((_, i) => i !== index))}
-                    className="absolute top-4 right-4 p-2 text-destructive hover:bg-destructive/10 rounded-lg transition-all"
+                    className="absolute top-3 right-3 p-1.5 text-destructive hover:bg-destructive/10 rounded-lg transition-all"
                   >
-                    <IconTrash className="h-4 w-4" />
+                    <IconTrash className="h-3.5 w-3.5" />
                   </button>
-                  <div className="grid gap-4 md:grid-cols-2">
+                  <div className="grid gap-3 md:grid-cols-2">
                     <div>
                       <label className={labelClasses}>Title (EN)</label>
                       <input {...register(`features.${index}.titleEn`)} className={inputClasses} />
-                      {errors.features?.[index]?.titleEn && <p className={errorClasses}>{errors.features[index].titleEn.message}</p>}
                     </div>
                     <div>
                       <label className={labelClasses}>Title (HI)</label>
                       <input {...register(`features.${index}.titleHi`)} className={inputClasses} />
-                      {errors.features?.[index]?.titleHi && <p className={errorClasses}>{errors.features[index].titleHi.message}</p>}
                     </div>
                     <div>
                       <label className={labelClasses}>Description (EN)</label>
-                      <textarea {...register(`features.${index}.descriptionEn`)} className={twMerge(inputClasses, "min-h-[80px]")} />
-                      {errors.features?.[index]?.descriptionEn && <p className={errorClasses}>{errors.features[index].descriptionEn.message}</p>}
+                      <textarea {...register(`features.${index}.descriptionEn`)} className={twMerge(inputClasses, "min-h-[60px]")} />
                     </div>
                     <div>
                       <label className={labelClasses}>Description (HI)</label>
-                      <textarea {...register(`features.${index}.descriptionHi`)} className={twMerge(inputClasses, "min-h-[80px]")} />
-                      {errors.features?.[index]?.descriptionHi && <p className={errorClasses}>{errors.features[index].descriptionHi.message}</p>}
+                      <textarea {...register(`features.${index}.descriptionHi`)} className={twMerge(inputClasses, "min-h-[60px]")} />
                     </div>
                     <div className="md:col-span-2">
-                      <label className={labelClasses}>Feature Icon/Image</label>
-                      <div className="flex items-center gap-4">
-                        <div className="h-16 w-16 rounded-xl border border-border bg-muted/30 overflow-hidden flex items-center justify-center">
-                          {singlePreviews[`feature-${index}`] || watch(`features.${index}.iconId`) ? (
+                      <label className={labelClasses}>Icon</label>
+                      <div className="flex items-center gap-3">
+                        <div className="h-12 w-12 rounded-lg border border-border bg-muted/30 overflow-hidden flex items-center justify-center relative">
+                          {uploadingKeys.includes(`feature-${index}`) ? (
+                            <IconLoader2 className="h-5 w-5 animate-spin text-primary" />
+                          ) : singlePreviews[`feature-${index}`] || watch(`features.${index}.icon`)?.url ? (
                             <img
-                              src={singlePreviews[`feature-${index}`] || `https://res.cloudinary.com/dsaly9sls/image/upload/v1/tours/${watch(`features.${index}.iconId`)}`}
+                              src={singlePreviews[`feature-${index}`] || watch(`features.${index}.icon`)?.url || ""}
                               className="w-full h-full object-cover"
-                              onError={(e) => {
-                                (e.target as any).src = "";
-                                (e.target as any).parentElement.innerHTML = '<svg class="w-6 h-6 text-muted-foreground/20" ... />';
-                              }}
                             />
                           ) : (
-                            <IconPhoto className="h-6 w-6 text-muted-foreground/20" />
+                            <IconPhoto className="h-5 w-5 text-muted-foreground/20" />
                           )}
                         </div>
-                        <div className="flex-1 space-y-2">
+                        <div className="flex-1 flex items-center gap-2">
                           <input
                             type="file"
                             accept="image/*"
                             onChange={async (e) => {
                               const file = e.target.files?.[0];
                               if (file) {
+                                setUploadingKeys(prev => [...prev, `feature-${index}`]);
                                 try {
                                   const result = await tourService.uploadMedia(file);
                                   setValue(`features.${index}.iconId`, result.id);
+                                  setValue(`features.${index}.icon`, result);
                                   setSinglePreviews(prev => ({ ...prev, [`feature-${index}`]: result.url }));
                                   toast.success("Icon uploaded");
                                 } catch (error) {
                                   toast.error("Upload failed");
+                                } finally {
+                                  setUploadingKeys(prev => prev.filter(k => k !== `feature-${index}`));
                                 }
                               }
                             }}
@@ -703,11 +737,10 @@ export function TourForm({ initialData, onSubmitBasic, onSubmitFiles, onRemoveMe
                           />
                           <label
                             htmlFor={`feature-icon-${index}`}
-                            className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-primary/10 text-primary text-[10px] font-black uppercase tracking-wider cursor-pointer hover:bg-primary hover:text-white transition-all"
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary/10 text-primary text-[10px] font-bold cursor-pointer hover:bg-primary hover:text-white transition-all"
                           >
-                            <IconUpload size={14} /> Upload Icon
+                            <IconUpload size={12} /> Upload
                           </label>
-                          <p className="text-[10px] text-muted-foreground">Recommended: Square PNG/SVG</p>
                         </div>
                       </div>
                     </div>
@@ -718,75 +751,77 @@ export function TourForm({ initialData, onSubmitBasic, onSubmitFiles, onRemoveMe
           </div>
 
           {/* Itinerary Section */}
-          <div className="space-y-6 pt-10 border-t border-border">
+          <div className="space-y-3 pt-6 border-t border-border">
             <div className="flex items-center justify-between">
-              <h3 className="text-sm font-black uppercase tracking-widest text-primary">Tour Itinerary / Temples Covered</h3>
+              <h3 className="text-xs font-bold uppercase tracking-wider text-primary">Itinerary</h3>
               <button
                 type="button"
                 onClick={() => setValue("itinerary", [...(watch("itinerary") || []), { imageId: null, titleEn: "", titleHi: "", descriptionEn: "", descriptionHi: "" }])}
-                className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-primary/10 text-primary text-xs font-bold hover:bg-primary/20 transition-all"
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary/10 text-primary text-[10px] font-bold hover:bg-primary/20 transition-all"
               >
-                <IconPlus className="h-4 w-4" /> Add Itinerary Item
+                <IconPlus className="h-3.5 w-3.5" /> Add
               </button>
             </div>
-            <div className="grid gap-4">
+            <div className="grid gap-3">
               {(watch("itinerary") || []).map((_, index) => (
-                <div key={index} className="p-6 rounded-2xl border border-border bg-card space-y-4 relative">
+                <div key={index} className="p-4 rounded-xl border border-border bg-card space-y-3 relative">
                   <button
                     type="button"
                     onClick={() => setValue("itinerary", watch("itinerary").filter((_, i) => i !== index))}
-                    className="absolute top-4 right-4 p-2 text-destructive hover:bg-destructive/10 rounded-lg transition-all"
+                    className="absolute top-3 right-3 p-1.5 text-destructive hover:bg-destructive/10 rounded-lg transition-all"
                   >
-                    <IconTrash className="h-4 w-4" />
+                    <IconTrash className="h-3.5 w-3.5" />
                   </button>
-                  <div className="grid gap-4 md:grid-cols-2">
+                  <div className="grid gap-3 md:grid-cols-2">
                     <div>
-                      <label className={labelClasses}>Place/Step Name (EN)</label>
+                      <label className={labelClasses}>Step Name (EN)</label>
                       <input {...register(`itinerary.${index}.titleEn`)} className={inputClasses} />
-                      {errors.itinerary?.[index]?.titleEn && <p className={errorClasses}>{errors.itinerary[index].titleEn.message}</p>}
                     </div>
                     <div>
-                      <label className={labelClasses}>Place/Step Name (HI)</label>
+                      <label className={labelClasses}>Step Name (HI)</label>
                       <input {...register(`itinerary.${index}.titleHi`)} className={inputClasses} />
-                      {errors.itinerary?.[index]?.titleHi && <p className={errorClasses}>{errors.itinerary[index].titleHi.message}</p>}
                     </div>
                     <div>
                       <label className={labelClasses}>Description (EN)</label>
-                      <textarea {...register(`itinerary.${index}.descriptionEn`)} className={twMerge(inputClasses, "min-h-[80px]")} />
-                      {errors.itinerary?.[index]?.descriptionEn && <p className={errorClasses}>{errors.itinerary[index].descriptionEn.message}</p>}
+                      <textarea {...register(`itinerary.${index}.descriptionEn`)} className={twMerge(inputClasses, "min-h-[60px]")} />
                     </div>
                     <div>
                       <label className={labelClasses}>Description (HI)</label>
-                      <textarea {...register(`itinerary.${index}.descriptionHi`)} className={twMerge(inputClasses, "min-h-[80px]")} />
-                      {errors.itinerary?.[index]?.descriptionHi && <p className={errorClasses}>{errors.itinerary[index].descriptionHi.message}</p>}
+                      <textarea {...register(`itinerary.${index}.descriptionHi`)} className={twMerge(inputClasses, "min-h-[60px]")} />
                     </div>
                     <div className="md:col-span-2">
-                      <label className={labelClasses}>Place/Temple Image</label>
-                      <div className="flex items-center gap-4">
-                        <div className="h-20 w-32 rounded-xl border border-border bg-muted/30 overflow-hidden flex items-center justify-center">
-                          {singlePreviews[`itinerary-${index}`] || watch(`itinerary.${index}.imageId`) ? (
+                      <label className={labelClasses}>Image</label>
+                      <div className="flex items-center gap-3">
+                        <div className="h-16 w-24 rounded-lg border border-border bg-muted/30 overflow-hidden flex items-center justify-center relative">
+                          {uploadingKeys.includes(`itinerary-${index}`) ? (
+                            <IconLoader2 className="h-6 w-6 animate-spin text-primary" />
+                          ) : singlePreviews[`itinerary-${index}`] || watch(`itinerary.${index}.image`)?.url ? (
                             <img
-                              src={singlePreviews[`itinerary-${index}`] || `https://res.cloudinary.com/dsaly9sls/image/upload/v1/tours/${watch(`itinerary.${index}.imageId`)}`}
+                              src={singlePreviews[`itinerary-${index}`] || watch(`itinerary.${index}.image`)?.url || ""}
                               className="w-full h-full object-cover"
                             />
                           ) : (
-                            <IconPhoto className="h-8 w-8 text-muted-foreground/20" />
+                            <IconPhoto className="h-6 w-6 text-muted-foreground/20" />
                           )}
                         </div>
-                        <div className="flex-1 space-y-2">
+                        <div className="flex-1 flex items-center gap-2">
                           <input
                             type="file"
                             accept="image/*"
                             onChange={async (e) => {
                               const file = e.target.files?.[0];
                               if (file) {
+                                setUploadingKeys(prev => [...prev, `itinerary-${index}`]);
                                 try {
                                   const result = await tourService.uploadMedia(file);
                                   setValue(`itinerary.${index}.imageId`, result.id);
+                                  setValue(`itinerary.${index}.image`, result);
                                   setSinglePreviews(prev => ({ ...prev, [`itinerary-${index}`]: result.url }));
                                   toast.success("Image uploaded");
                                 } catch (error) {
                                   toast.error("Upload failed");
+                                } finally {
+                                  setUploadingKeys(prev => prev.filter(k => k !== `itinerary-${index}`));
                                 }
                               }
                             }}
@@ -795,9 +830,9 @@ export function TourForm({ initialData, onSubmitBasic, onSubmitFiles, onRemoveMe
                           />
                           <label
                             htmlFor={`itinerary-image-${index}`}
-                            className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-primary/10 text-primary text-[10px] font-black uppercase tracking-wider cursor-pointer hover:bg-primary hover:text-white transition-all"
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary/10 text-primary text-[10px] font-bold cursor-pointer hover:bg-primary hover:text-white transition-all"
                           >
-                            <IconUpload size={14} /> Upload Image
+                            <IconUpload size={12} /> Upload
                           </label>
                         </div>
                       </div>
@@ -809,47 +844,43 @@ export function TourForm({ initialData, onSubmitBasic, onSubmitFiles, onRemoveMe
           </div>
 
           {/* FAQs Section */}
-          <div className="space-y-6 pt-10 border-t border-border">
+          <div className="space-y-3 pt-6 border-t border-border">
             <div className="flex items-center justify-between">
-              <h3 className="text-sm font-black uppercase tracking-widest text-primary">{t("tours.faqs")}</h3>
+              <h3 className="text-xs font-bold uppercase tracking-wider text-primary">FAQs</h3>
               <button
                 type="button"
                 onClick={() => setValue("faqs", [...(watch("faqs") || []), { questionEn: "", questionHi: "", answerEn: "", answerHi: "" }])}
-                className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-primary/10 text-primary text-xs font-bold hover:bg-primary/20 transition-all"
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary/10 text-primary text-[10px] font-bold hover:bg-primary/20 transition-all"
               >
-                <IconPlus className="h-4 w-4" /> Add FAQ
+                <IconPlus className="h-3.5 w-3.5" /> Add
               </button>
             </div>
-            <div className="space-y-4">
+            <div className="grid gap-3">
               {(watch("faqs") || []).map((_, index) => (
-                <div key={index} className="p-6 rounded-2xl border border-border bg-card space-y-4 relative group">
+                <div key={index} className="p-4 rounded-xl border border-border bg-card space-y-3 relative">
                   <button
                     type="button"
                     onClick={() => setValue("faqs", watch("faqs").filter((_, i) => i !== index))}
-                    className="absolute top-4 right-4 p-2 text-destructive hover:bg-destructive/10 rounded-lg transition-all"
+                    className="absolute top-3 right-3 p-1.5 text-destructive hover:bg-destructive/10 rounded-lg transition-all"
                   >
-                    <IconTrash className="h-4 w-4" />
+                    <IconTrash className="h-3.5 w-3.5" />
                   </button>
-                  <div className="grid gap-4 md:grid-cols-2">
+                  <div className="grid gap-3 md:grid-cols-2">
                     <div>
                       <label className={labelClasses}>Question (EN)</label>
                       <input {...register(`faqs.${index}.questionEn`)} className={inputClasses} />
-                      {errors.faqs?.[index]?.questionEn && <p className={errorClasses}>{errors.faqs[index].questionEn.message}</p>}
                     </div>
                     <div>
                       <label className={labelClasses}>Question (HI)</label>
                       <input {...register(`faqs.${index}.questionHi`)} className={inputClasses} />
-                      {errors.faqs?.[index]?.questionHi && <p className={errorClasses}>{errors.faqs[index].questionHi.message}</p>}
                     </div>
                     <div>
                       <label className={labelClasses}>Answer (EN)</label>
-                      <textarea {...register(`faqs.${index}.answerEn`)} className={twMerge(inputClasses, "min-h-[80px]")} />
-                      {errors.faqs?.[index]?.answerEn && <p className={errorClasses}>{errors.faqs[index].answerEn.message}</p>}
+                      <textarea {...register(`faqs.${index}.answerEn`)} className={twMerge(inputClasses, "min-h-[60px]")} />
                     </div>
                     <div>
                       <label className={labelClasses}>Answer (HI)</label>
-                      <textarea {...register(`faqs.${index}.answerHi`)} className={twMerge(inputClasses, "min-h-[80px]")} />
-                      {errors.faqs?.[index]?.answerHi && <p className={errorClasses}>{errors.faqs[index].answerHi.message}</p>}
+                      <textarea {...register(`faqs.${index}.answerHi`)} className={twMerge(inputClasses, "min-h-[60px]")} />
                     </div>
                   </div>
                 </div>
@@ -908,19 +939,19 @@ export function TourForm({ initialData, onSubmitBasic, onSubmitFiles, onRemoveMe
         </Tabs.Content>
       </Tabs.Root>
 
-      <div className="flex flex-col items-end gap-3 pt-6 border-t border-border">
+      <div className="flex flex-col items-end gap-2 pt-4 border-t border-border">
         {Object.keys(errors).length > 0 && (
-          <p className="text-xs font-bold text-destructive animate-pulse">
-            Please fix errors ({Object.keys(errors).length} invalid)
+          <p className="text-[10px] font-bold text-destructive animate-pulse">
+            Fix errors ({Object.keys(errors).length})
           </p>
         )}
         <button
           type="submit"
           disabled={isLoading || isUploading}
-          className="inline-flex h-12 w-full sm:w-auto items-center justify-center rounded-2xl bg-primary px-10 text-sm font-black text-primary-foreground shadow-xl shadow-primary/20 transition-all hover:opacity-90 active:scale-95 disabled:opacity-50"
+          className="inline-flex h-10 w-full sm:w-auto items-center justify-center rounded-xl bg-primary px-8 text-xs font-bold text-primary-foreground shadow-lg shadow-primary/20 transition-all hover:opacity-90 active:scale-95 disabled:opacity-50"
         >
-          {(isLoading || isUploading) ? <IconLoader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-          {activeTab === "media" ? "Upload & Finish" : "Save & Continue"}
+          {(isLoading || isUploading) ? <IconLoader2 className="mr-2 h-3.5 w-3.5 animate-spin" /> : null}
+          {activeTab === "media" ? "Finish" : "Save & Continue"}
         </button>
       </div>
     </form>

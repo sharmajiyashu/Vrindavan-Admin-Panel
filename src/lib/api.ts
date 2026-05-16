@@ -71,6 +71,20 @@ export interface ResponseWrapper<T = unknown> {
 function toErrorMessage(value: unknown, fallback = "Request failed"): string {
   if (typeof value === "string" && value.trim().length > 0) return value;
   if (value == null) return fallback;
+
+  // Handle Zod error array: [{ field: '...', message: '...' }]
+  if (Array.isArray(value)) {
+    return value
+      .map((err) => {
+        if (typeof err === "object" && err !== null && "message" in err) {
+          const field = (err as any).field ? `${(err as any).field}: ` : "";
+          return `${field}${String((err as any).message)}`;
+        }
+        return String(err);
+      })
+      .join(". ");
+  }
+
   if (typeof value === "object") {
     try {
       const json = JSON.stringify(value);

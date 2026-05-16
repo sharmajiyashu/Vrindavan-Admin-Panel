@@ -55,7 +55,7 @@ export function DashboardSidebar() {
           const titleKey = item.titleKey;
 
           if (!hasItems) {
-            const isActive = pathname === href;
+            const isActive = pathname === href || (href !== "/dashboard" && pathname.startsWith(href + "/"));
             return (
               <Link
                 key={href}
@@ -119,7 +119,7 @@ export function DashboardSidebar() {
               <Collapsible.Content className="overflow-hidden animate-in slide-in-from-top-2 duration-300">
                 <div className="ml-5 mt-1 border-l-2 border-primary/10 pl-4 space-y-1">
                   {item.items.map((sub) => {
-                    const subActive = pathname === sub.href;
+                    const subActive = pathname === sub.href || pathname.startsWith(sub.href + "/");
                     const SubIcon = sub.icon;
                     return (
                       <Link

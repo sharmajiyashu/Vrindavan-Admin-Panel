@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   IconUsers,
@@ -16,11 +17,16 @@ import {
   IconMapPin,
   IconPhone,
   IconCalendarStats,
+  IconClock,
+  IconX,
 } from "@tabler/icons-react";
 import { twMerge } from "tailwind-merge";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { dashboardService, DashboardResponse } from "@/lib/services/dashboardService";
+import { tourService } from "@/lib/services/tourService";
 import Link from "next/link";
+import { format, parse, isValid, differenceInMinutes } from "date-fns";
+import { toast } from "react-toastify";
 
 export default function DashboardPage() {
   const { t } = useLanguage();
@@ -32,7 +38,6 @@ export default function DashboardPage() {
   });
 
   const stats = data?.stats;
-  const recentBookings = data?.recentUpcomingBookings || [];
 
   const statCards = [
     {
@@ -70,174 +75,148 @@ export default function DashboardPage() {
   ];
 
   return (
-    <div className="space-y-8 animate-in fade-in duration-700 pb-12">
+    <div className="space-y-6 animate-in fade-in duration-700 pb-8">
       {/* Header section */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between px-2">
-        <div className="space-y-1">
-          <h1 className="text-2xl font-black tracking-tight text-foreground flex items-center gap-3">
-            <div className="h-10 w-10 rounded-2xl bg-primary/5 flex items-center justify-center text-primary">
-              <IconCalendarStats size={24} />
-            </div>
-            {t("dashboard.title")}
-          </h1>
-          <p className="text-xs font-semibold text-muted-foreground/80 pl-13">
-            Welcome back! Here's what's happening today in Vrindavan.
-          </p>
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between px-2">
+        <div className="flex items-center gap-3">
+          <div className="h-9 w-9 rounded-xl bg-primary/5 flex items-center justify-center text-primary">
+            <IconCalendarStats size={20} />
+          </div>
+          <div>
+            <h1 className="text-lg font-black tracking-tight text-foreground leading-none">
+              {t("dashboard.title")}
+            </h1>
+            <p className="text-[10px] font-bold text-muted-foreground/60 mt-1 uppercase tracking-wider">
+              {format(new Date(), "EEEE, MMMM do")}
+            </p>
+          </div>
         </div>
-        <div className="flex gap-2">
-          <button
-            onClick={() => queryClient.invalidateQueries({ queryKey: ["dashboard-stats"] })}
-            className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-border bg-card text-muted-foreground transition-all hover:bg-muted active:scale-95 shadow-sm"
-            title="Refresh dashboard metrics"
-          >
-            <IconReload className={twMerge("h-4 w-4", isLoading && "animate-spin")} />
-          </button>
-        </div>
+        <button
+          onClick={() => queryClient.invalidateQueries({ queryKey: ["dashboard-stats"] })}
+          className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-border bg-card text-muted-foreground transition-all hover:bg-muted active:scale-95 shadow-sm"
+        >
+          <IconReload className={twMerge("h-3.5 w-3.5", isLoading && "animate-spin")} />
+        </button>
       </div>
 
-      {/* Stats Grid */}
-      <section className="grid gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 px-2">
+      {/* Stats Grid - Smaller Cards */}
+      <section className="grid gap-4 grid-cols-2 lg:grid-cols-4 px-2">
         {statCards.map((stat, i) => (
           <div
             key={i}
             className={twMerge(
-              "group relative overflow-hidden rounded-3xl border-2 bg-card p-6 transition-all duration-300",
-              "hover:shadow-lg hover:-translate-y-1",
+              "group relative overflow-hidden rounded-2xl border border-border bg-card p-4 transition-all duration-300",
+              "hover:shadow-md",
               stat.border
             )}
           >
-            <div className="flex items-center justify-between">
-              <div className={twMerge("rounded-2xl p-3 shadow-inner", stat.bg, stat.color)}>
-                <stat.icon size={26} stroke={2} />
+            <div className="flex items-center justify-between mb-3">
+              <div className={twMerge("rounded-lg p-1.5", stat.bg, stat.color)}>
+                <stat.icon size={18} stroke={2.5} />
               </div>
-              <div className={twMerge(
-                "h-2 w-2 rounded-full",
-                isLoading ? "bg-muted animate-pulse" : "bg-emerald-400"
-              )} />
             </div>
-
-            <div className="mt-6 space-y-1">
-              <h3 className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/40 leading-none">
+            <div className="space-y-0.5">
+              <h3 className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/40">
                 {stat.title}
               </h3>
-              <div className="flex items-baseline gap-2">
-                <span className="text-3xl font-black tracking-tighter text-foreground tabular-nums">
-                  {stat.value}
-                </span>
-              </div>
+              <p className="text-xl font-black tracking-tighter text-foreground tabular-nums leading-none">
+                {stat.value}
+              </p>
             </div>
-
-            {/* Subtle background glow */}
-            <div className={twMerge(
-              "absolute -right-8 -bottom-8 h-32 w-32 rounded-full opacity-[0.05] blur-2xl transition-all duration-500 group-hover:scale-150",
-              stat.bg
-            )} />
           </div>
         ))}
       </section>
 
-      {false && (
-        <div className="grid gap-6 lg:grid-cols-3 px-2">
-          {/* Recent Upcoming Bookings */}
-          <section className="lg:col-span-2 rounded-3xl border-2 border-border bg-card p-8 shadow-sm overflow-hidden">
-            <div className="flex items-center justify-between mb-8">
-              <h2 className="text-xl font-black tracking-tight text-foreground">
-                {t("dashboard.recentUpcoming")}
+      <div className="grid gap-4 lg:grid-cols-3 px-2">
+        {/* Compact Tour Operations */}
+        <section className="lg:col-span-2 rounded-[1.5rem] border border-border bg-card p-6 shadow-sm space-y-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-base font-black tracking-tight text-foreground">
+                Tour Operations
               </h2>
-              <Link href="/bookings" className="text-[10px] font-black uppercase tracking-widest text-primary hover:underline flex items-center gap-1.5 leading-none">
-                View All <IconArrowRight size={14} />
-              </Link>
+              <p className="text-[9px] font-bold uppercase tracking-widest text-primary/60">
+                Manage guide assignments and deadlines
+              </p>
             </div>
+            <IconCalendarStats size={18} className="text-primary/20" />
+          </div>
 
-            <div className="space-y-4">
-              {isLoading ? (
-                <div className="h-64 flex flex-col items-center justify-center gap-3">
-                  <IconLoader2 size={32} className="animate-spin text-primary/30" />
-                  <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/40">Fetching schedules...</p>
-                </div>
-              ) : recentBookings.length === 0 ? (
-                <div className="h-64 flex flex-col items-center justify-center gap-4 text-center">
-                  <div className="h-16 w-16 rounded-3xl bg-muted/30 flex items-center justify-center text-muted-foreground">
-                    <IconReceipt2 size={32} stroke={1.5} />
-                  </div>
-                  <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest leading-relaxed">No upcoming itineraries<br />found for this week.</p>
-                </div>
-              ) : (
-                <div className="divide-y divide-border/40">
-                  {recentBookings.map((booking) => (
-                    <div key={booking.id} className="py-4 first:pt-0 last:pb-0 flex items-center justify-between group transition-all">
-                      <div className="flex items-center gap-4">
-                        <div className="h-12 w-12 rounded-2xl bg-muted/50 border border-border/40 flex items-center justify-center text-muted-foreground group-hover:bg-primary/5 group-hover:text-primary transition-colors">
-                          <IconCalendarEvent size={24} stroke={1.5} />
+          <div className="space-y-3">
+            {isLoading ? (
+              <div className="h-40 flex flex-col items-center justify-center gap-2">
+                <IconLoader2 size={24} className="animate-spin text-primary/20" />
+              </div>
+            ) : (data?.upcomingSlots || []).length === 0 ? (
+              <div className="h-40 flex flex-col items-center justify-center gap-2 text-center border border-dashed rounded-2xl bg-muted/5">
+                <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">No tours scheduled</p>
+              </div>
+            ) : (
+              <div className="grid gap-2">
+                {data?.upcomingSlots.slice(0, 5).map((slot: any) => {
+                  const dateTimeStr = `${slot.date} ${slot.startTime}`;
+                  const slotTime = parse(dateTimeStr, "yyyy-MM-dd hh:mm a", new Date());
+                  const deadlineHours = slot.tour?.shareDetailsBeforeHours || 2;
+                  const deadlineTime = new Date(slotTime.getTime() - deadlineHours * 60 * 60 * 1000);
+                  const minutesLeft = differenceInMinutes(deadlineTime, new Date());
+                  const isDeadlinePassed = minutesLeft <= 0;
+
+                  return (
+                    <div key={slot.id} className="p-3 rounded-xl border border-border bg-muted/5 group hover:bg-card hover:shadow-md transition-all flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className="h-8 w-8 rounded-lg bg-primary/5 flex flex-col items-center justify-center text-primary font-black text-[10px]">
+                          <span className="leading-none">{format(slotTime, "dd")}</span>
                         </div>
-                        <div className="space-y-1">
-                          <p className="text-xs font-black text-foreground line-clamp-1">{booking.tour.titleEn}</p>
-                          <div className="flex items-center gap-3 text-[10px] font-bold text-muted-foreground opacity-60">
-                            <span className="flex items-center gap-1 text-primary"><IconUser size={10} /> {booking.user.name}</span>
-                            <span className="flex items-center gap-1"><IconPhone size={10} /> {booking.user.mobile}</span>
-                          </div>
+                        <div className="min-w-0">
+                          <h4 className="text-[11px] font-bold text-foreground truncate max-w-[120px] sm:max-w-none">{slot.tour?.titleEn}</h4>
+                          <p className="text-[9px] font-medium text-muted-foreground/60 uppercase tracking-widest">{slot.startTime}</p>
                         </div>
                       </div>
-                      <div className="text-right">
-                        <div className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-2 py-0.5 text-[9px] font-black uppercase tracking-wider text-emerald-600 ring-1 ring-inset ring-emerald-500/10">
-                          <IconCircleCheck size={10} />
-                          {booking.status}
+
+                      <div className="flex items-center gap-3">
+                        <div className={twMerge(
+                          "px-2 py-1 rounded-md text-[8px] font-black uppercase tracking-wider border flex items-center gap-1",
+                          isDeadlinePassed ? "bg-red-50 text-red-600 border-red-100" : "bg-emerald-50 text-emerald-600 border-emerald-100"
+                        )}>
+                          {isDeadlinePassed ? "Expired" : `${Math.floor(minutesLeft / 60)}h ${minutesLeft % 60}m`}
                         </div>
-                        <p className="text-[10px] font-bold text-muted-foreground/40 mt-1 uppercase tracking-widest tabular-nums">
-                          {new Date(booking.createdAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
-                        </p>
+                        <Link href={`/tours/${slot.tourId}`} className="h-7 w-7 rounded-lg bg-primary/5 flex items-center justify-center text-primary">
+                          <IconArrowRight size={14} />
+                        </Link>
                       </div>
                     </div>
-                  ))}
-                </div>
-              )}
+                  );
+                })}
+
+                {(data?.upcomingSlots || []).length > 5 && (
+                  <Link href="/tour-operations" className="text-center p-3 rounded-xl border border-dashed border-border text-[10px] font-black uppercase tracking-widest text-muted-foreground/60 hover:text-primary transition-all">
+                    View All Operations
+                  </Link>
+                )}
+              </div>
+            )}
+          </div>
+        </section>
+
+        {/* Sidebar Mini Section */}
+        <div className="space-y-4">
+          <section className="rounded-[1.5rem] border border-border bg-card p-5 shadow-sm space-y-4">
+            <h3 className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/40">Shortcuts</h3>
+            <div className="grid gap-2">
+              {[
+                { label: "Tours", href: "/tours", color: "bg-purple-50 text-purple-600" },
+                { label: "Bookings", href: "/bookings", color: "bg-emerald-50 text-emerald-600" },
+                { label: "Users", href: "/users", color: "bg-amber-50 text-amber-600" }
+              ].map((link, idx) => (
+                <Link key={idx} href={link.href} className={twMerge("flex items-center justify-between p-3 rounded-xl font-black text-[10px] uppercase tracking-widest transition-all hover:scale-[0.98]", link.color)}>
+                  {link.label}
+                  <IconArrowRight size={12} />
+                </Link>
+              ))}
             </div>
           </section>
-
-          {/* Quick Actions Sidebar */}
-          <div className="space-y-6">
-            <section className="rounded-3xl border-2 border-border bg-card p-8 shadow-sm h-full">
-              <div className="flex items-center justify-between mb-8">
-                <h3 className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/40 leading-none">Administrative Shortcuts</h3>
-              </div>
-              <div className="grid gap-3">
-                <Link href="/temples" className="flex items-center justify-between p-4 rounded-2xl bg-amber-50 border-2 border-amber-200 text-amber-900 group transition-all hover:bg-amber-100 active:scale-[0.98]">
-                  <div className="flex items-center gap-3">
-                    <div className="h-8 w-8 rounded-lg bg-white shadow-sm flex items-center justify-center">
-                      <IconMapPin size={18} className="text-amber-600" />
-                    </div>
-                    <span className="text-[11px] font-black uppercase tracking-widest">Manage Temples</span>
-                  </div>
-                  <IconArrowRight size={14} className="opacity-30 group-hover:translate-x-1 transition-transform" />
-                </Link>
-                <Link href="/tours" className="flex items-center justify-between p-4 rounded-2xl bg-purple-50 border-2 border-purple-200 text-purple-900 group transition-all hover:bg-purple-100 active:scale-[0.98]">
-                  <div className="flex items-center gap-3">
-                    <div className="h-8 w-8 rounded-lg bg-white shadow-sm flex items-center justify-center">
-                      <IconCalendarCheck size={18} className="text-purple-600" />
-                    </div>
-                    <span className="text-[11px] font-black uppercase tracking-widest">Manage Tours</span>
-                  </div>
-                  <IconArrowRight size={14} className="opacity-30 group-hover:translate-x-1 transition-transform" />
-                </Link>
-                <Link href="/users" className="flex items-center justify-between p-4 rounded-2xl bg-blue-50 border-2 border-blue-200 text-blue-900 group transition-all hover:bg-blue-100 active:scale-[0.98]">
-                  <div className="flex items-center gap-3">
-                    <div className="h-8 w-8 rounded-lg bg-white shadow-sm flex items-center justify-center">
-                      <IconUser size={18} className="text-blue-600" />
-                    </div>
-                    <span className="text-[11px] font-black uppercase tracking-widest">Customer Base</span>
-                  </div>
-                  <IconArrowRight size={14} className="opacity-30 group-hover:translate-x-1 transition-transform" />
-                </Link>
-              </div>
-              <div className="mt-8 pt-8 border-t border-border/40">
-                <p className="text-[10px] font-bold text-muted-foreground/40 uppercase tracking-[0.2em] text-center leading-relaxed">
-                  Vrindavan Admin Protocol<br />v2.4.0 — Secure Access
-                </p>
-              </div>
-            </section>
-          </div>
         </div>
-      )}
+      </div>
     </div>
   );
 }

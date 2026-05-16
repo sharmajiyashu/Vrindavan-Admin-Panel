@@ -18,7 +18,8 @@ import {
   IconFingerprint,
   IconTicket,
   IconLayoutBottombar,
-  IconInfoCircle
+  IconInfoCircle,
+  IconCalendarStats
 } from "@tabler/icons-react";
 
 export interface SidebarNavItem {
@@ -45,9 +46,12 @@ export function isNavSection(
 /** Sidebar navigation config for Vrindavan Admin Panel. titleKey matches i18n messages. */
 export const sidebarNav: SidebarNavEntry[] = [
   { titleKey: "nav.dashboard", href: "/dashboard", icon: IconLayoutDashboard },
+  { titleKey: "tours.title", href: "/tours", icon: IconMap2 },
+  { titleKey: "nav.tourOperations", href: "/tour-operations", icon: IconCalendarStats },
+  { titleKey: "nav.bookings", href: "/bookings", icon: IconReceipt2 },
   {
     titleKey: "nav.darshanManagement",
-    href: "/darshan-management", // Arbitrary base for selection tracking
+    href: "/darshan-management",
     icon: IconFingerprint,
     items: [
       { titleKey: "nav.darshans", href: "/darshans", icon: IconPhoto },
@@ -56,11 +60,10 @@ export const sidebarNav: SidebarNavEntry[] = [
       { titleKey: "nav.temples", href: "/temples", icon: IconBuildingSkyscraper },
     ],
   },
-  { titleKey: "nav.aboutUs", href: "/about-us", icon: IconInfoCircle },
-  { titleKey: "tours.title", href: "/tours", icon: IconMap2 },
-  { titleKey: "nav.bookings", href: "/bookings", icon: IconReceipt2 },
-  { titleKey: "nav.tourMap", href: "/route-maps", icon: IconMap2 },
+  { titleKey: "nav.referrals", href: "/referrals", icon: IconUsersGroup },
   { titleKey: "nav.userManagement", href: "/users", icon: IconUsers },
   { titleKey: "nav.coupons", href: "/coupons", icon: IconTicket },
-  { titleKey: "nav.wallets", href: "/wallets", icon: IconWallet },
+  // { titleKey: "nav.wallets", href: "/wallets", icon: IconWallet },
+  { titleKey: "nav.tourMap", href: "/route-maps", icon: IconMap2 },
+  { titleKey: "nav.aboutUs", href: "/about-us", icon: IconInfoCircle },
 ];
