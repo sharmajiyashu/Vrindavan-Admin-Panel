@@ -54,6 +54,7 @@ export default function ReferralManagement() {
   const [isConfigModalOpen, setIsConfigModalOpen] = useState(false);
   const [addRefereeForm, setAddRefereeForm] = useState({
     name: "",
+    extension: "91",
     mobile: "",
     aadhaarNumber: "",
     referralCode: "",
@@ -89,6 +90,7 @@ export default function ReferralManagement() {
       setIsAddModalOpen(false);
       setAddRefereeForm({
         name: "",
+        extension: "91",
         mobile: "",
         aadhaarNumber: "",
         referralCode: "",
@@ -316,10 +318,14 @@ export default function ReferralManagement() {
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
+                            const fullMobile = ref.mobile || "";
+                            const ext = fullMobile.length > 10 ? fullMobile.substring(0, fullMobile.length - 10) : "91";
+                            const mob = fullMobile.length > 10 ? fullMobile.substring(fullMobile.length - 10) : fullMobile;
                             setEditRefereeForm({
                               id: ref.id,
                               name: ref.name,
-                              mobile: ref.mobile,
+                              extension: ext,
+                              mobile: mob,
                               aadhaarNumber: ref.aadhaarNumber || "",
                               referralCode: ref.referralCode,
                               isActive: ref.isActive,
@@ -406,19 +412,32 @@ export default function ReferralManagement() {
                         onChange={(e) => setAddRefereeForm({ ...addRefereeForm, name: e.target.value })}
                       />
                     </div>
-                    <div className="space-y-1.5">
+                    <div className="space-y-1.5 col-span-2 sm:col-span-1">
                       <label className={labelClasses}>Phone Number</label>
-                      <input
-                        name="mobile"
-                        required
-                        placeholder="Mobile Number"
-                        className={inputClasses}
-                        value={addRefereeForm.mobile}
-                        onChange={(e) => {
-                          const val = e.target.value.replace(/\D/g, "");
-                          setAddRefereeForm({ ...addRefereeForm, mobile: val });
-                        }}
-                      />
+                      <div className="flex gap-2">
+                        <input
+                          name="extension"
+                          required
+                          placeholder="91"
+                          className={twMerge(inputClasses, "w-20 px-2 text-center")}
+                          value={addRefereeForm.extension}
+                          onChange={(e) => {
+                            const val = e.target.value.replace(/\D/g, "").slice(0, 4);
+                            setAddRefereeForm({ ...addRefereeForm, extension: val });
+                          }}
+                        />
+                        <input
+                          name="mobile"
+                          required
+                          placeholder="Mobile Number"
+                          className={inputClasses}
+                          value={addRefereeForm.mobile}
+                          onChange={(e) => {
+                            const val = e.target.value.replace(/\D/g, "").slice(0, 10);
+                            setAddRefereeForm({ ...addRefereeForm, mobile: val });
+                          }}
+                        />
+                      </div>
                     </div>
                     <div className="space-y-1.5">
                       <label className={labelClasses}>Aadhaar (Optional)</label>
@@ -561,14 +580,23 @@ export default function ReferralManagement() {
                           onChange={(e) => setEditRefereeForm({ ...editRefereeForm, name: e.target.value })}
                         />
                       </div>
-                      <div className="space-y-1.5">
+                      <div className="space-y-1.5 col-span-2 sm:col-span-1">
                         <label className={labelClasses}>Phone Number</label>
-                        <input
-                          required
-                          className={inputClasses}
-                          value={editRefereeForm.mobile}
-                          onChange={(e) => setEditRefereeForm({ ...editRefereeForm, mobile: e.target.value.replace(/\D/g, "") })}
-                        />
+                        <div className="flex gap-2">
+                          <input
+                            required
+                            placeholder="91"
+                            className={twMerge(inputClasses, "w-20 px-2 text-center")}
+                            value={editRefereeForm.extension || "91"}
+                            onChange={(e) => setEditRefereeForm({ ...editRefereeForm, extension: e.target.value.replace(/\D/g, "").slice(0, 4) })}
+                          />
+                          <input
+                            required
+                            className={inputClasses}
+                            value={editRefereeForm.mobile}
+                            onChange={(e) => setEditRefereeForm({ ...editRefereeForm, mobile: e.target.value.replace(/\D/g, "").slice(0, 10) })}
+                          />
+                        </div>
                       </div>
                       <div className="space-y-1.5">
                         <label className={labelClasses}>Aadhaar (Optional)</label>
