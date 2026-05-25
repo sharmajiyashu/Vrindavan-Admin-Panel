@@ -46,6 +46,7 @@ export default function RefereeDetailPage() {
   // Edit State
   const [editForm, setEditForm] = useState({
     name: "",
+    extension: "91",
     mobile: "",
     aadhaarNumber: "",
     referralCode: "",
@@ -61,9 +62,13 @@ export default function RefereeDetailPage() {
 
   useEffect(() => {
     if (details) {
+      const fullMobile = details.referee.mobile || "";
+      const ext = fullMobile.length > 10 ? fullMobile.substring(0, fullMobile.length - 10) : "91";
+      const mob = fullMobile.length > 10 ? fullMobile.substring(fullMobile.length - 10) : fullMobile;
       setEditForm({
         name: details.referee.name || "",
-        mobile: details.referee.mobile || "",
+        extension: ext,
+        mobile: mob,
         aadhaarNumber: details.referee.aadhaarNumber || "",
         referralCode: details.referee.referralCode || "",
         isActive: details.referee.isActive,
@@ -273,12 +278,20 @@ export default function RefereeDetailPage() {
                     </div>
                     <div className="grid grid-cols-2 gap-5">
                       <div className="space-y-1.5">
-                        <label className={labelClasses}>Mobile (Numeric Only)</label>
-                        <input 
-                          value={editForm.mobile}
-                          onChange={(e) => setEditForm({...editForm, mobile: e.target.value.replace(/\D/g, "")})}
-                          className={inputClasses}
-                        />
+                        <label className={labelClasses}>Phone Number</label>
+                        <div className="flex gap-2">
+                          <input 
+                            placeholder="91"
+                            value={editForm.extension || "91"}
+                            onChange={(e) => setEditForm({...editForm, extension: e.target.value.replace(/\D/g, "").slice(0, 4)})}
+                            className={twMerge(inputClasses, "w-20 px-2 text-center")}
+                          />
+                          <input 
+                            value={editForm.mobile}
+                            onChange={(e) => setEditForm({...editForm, mobile: e.target.value.replace(/\D/g, "").slice(0, 10)})}
+                            className={inputClasses}
+                          />
+                        </div>
                       </div>
                       <div className="space-y-1.5">
                         <label className={labelClasses}>Custom Code</label>
