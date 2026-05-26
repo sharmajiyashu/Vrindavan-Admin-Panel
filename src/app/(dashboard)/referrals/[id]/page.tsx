@@ -408,8 +408,29 @@ export default function RefereeDetailPage() {
                     {details.earningHistory.map((earn) => (
                       <tr key={earn.id} className="hover:bg-muted/10 transition-colors">
                         <td className="px-8 py-6">
-                          <p className="text-xs font-black text-foreground">{earn.tourName}</p>
-                          <p className="text-[10px] font-bold text-muted-foreground/50 mt-0.5">Booking ID: #{earn.bookingId}</p>
+                          <div className="space-y-1">
+                            <p className="text-xs font-black text-foreground">{earn.tourName}</p>
+                            <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[10px] font-bold text-muted-foreground/50">
+                              <span>Booking ID: #{earn.bookingId}</span>
+                              <span>•</span>
+                              <span>Customer: {earn.personName}</span>
+                              <span>•</span>
+                              <span className={twMerge(
+                                "px-1.5 py-0.5 rounded text-[8px] font-black uppercase tracking-wider border",
+                                earn.tourType === "private" ? "bg-purple-50 text-purple-600 border-purple-100" : "bg-blue-50 text-blue-600 border-blue-100"
+                              )}>
+                                {earn.tourType === "private" ? "Private" : "Group"}
+                              </span>
+                            </div>
+                            {earn.baseReferralAmount !== undefined && (
+                              <p className="text-[9px] font-bold text-primary/60 uppercase tracking-widest mt-0.5">
+                                Rate: {earn.tourType === "private" 
+                                  ? `₹${earn.baseReferralAmount} Flat`
+                                  : `₹${earn.baseReferralAmount} × ${earn.personCount || 1} guest(s)`
+                                }
+                              </p>
+                            )}
+                          </div>
                         </td>
                         <td className="px-8 py-6">
                           <p className="text-[10px] font-bold text-muted-foreground">{format(new Date(earn.dateTime), "dd MMM yyyy")}</p>

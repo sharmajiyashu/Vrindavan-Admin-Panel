@@ -75,6 +75,7 @@ export const tourBaseSchema = z.object({
   showOnReferralApp: coerceBoolean.default(false),
   referralTourSummaryEn: z.string().optional().nullable(),
   referralTourSummaryHi: z.string().optional().nullable(),
+  referralAmount: coerceNumber.min(0).default(0),
 
   customerPickupLines: z.preprocess(jsonArrayPreprocess, z.array(z.string())).default([]),
 

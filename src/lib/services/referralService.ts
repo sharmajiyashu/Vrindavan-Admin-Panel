@@ -39,6 +39,9 @@ export interface EarningHistory {
   dateTime: string;
   personName: string;
   referralAmount: number;
+  tourType?: 'group' | 'private';
+  baseReferralAmount?: number;
+  personCount?: number;
 }
 
 export interface CreditedHistory {
