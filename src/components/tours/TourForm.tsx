@@ -98,6 +98,7 @@ export function TourForm({ initialData, onSubmitBasic, onSubmitFiles, onRemoveMe
       showOnReferralApp: initialData.showOnReferralApp ?? false,
       referralTourSummaryEn: initialData.referralTourSummaryEn || "",
       referralTourSummaryHi: initialData.referralTourSummaryHi || "",
+      referralAmount: initialData.referralAmount || 0,
       customerPickupLines: initialData.customerPickupLines || [],
       features: (initialData.features || []).map(f => ({
         ...f,
@@ -145,6 +146,7 @@ export function TourForm({ initialData, onSubmitBasic, onSubmitFiles, onRemoveMe
       showOnReferralApp: false,
       referralTourSummaryEn: "",
       referralTourSummaryHi: "",
+      referralAmount: 0,
       customerPickupLines: [],
       features: [],
       itinerary: [],
@@ -594,6 +596,26 @@ export function TourForm({ initialData, onSubmitBasic, onSubmitFiles, onRemoveMe
 
             {watch("showOnReferralApp") && (
               <div className="grid gap-6 md:grid-cols-2">
+                <div className="md:col-span-2 p-4 rounded-xl border border-primary/10 bg-primary/5 space-y-4">
+                  <h4 className="text-xs font-black uppercase tracking-widest text-primary">Referral Earning Configuration</h4>
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <div>
+                      <label className={labelClasses}>Referrer Earning Amount (₹)</label>
+                      <input
+                        type="number"
+                        {...register("referralAmount")}
+                        className={inputClasses}
+                        placeholder="e.g. 100"
+                      />
+                      <p className="text-[10px] text-muted-foreground mt-1">
+                        {tourType === "private"
+                          ? "This amount will be awarded flat per private tour booking."
+                          : "This amount will be multiplied by the number of travelers for group tour bookings."}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
                 <div className="md:col-span-2 space-y-4">
                   <h4 className="text-xs font-black uppercase tracking-widest text-primary">Tour Summary for Referral App</h4>
                   <div className="grid gap-4 md:grid-cols-2">

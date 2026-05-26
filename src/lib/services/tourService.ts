@@ -108,6 +108,7 @@ export interface Tour {
   recommendationHi?: string | null;
   badgeEn?: string | null;
   badgeHi?: string | null;
+  referralAmount: number;
 
   guidePhoneNumber?: string | null;
   alternateNumber?: string | null;
