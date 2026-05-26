@@ -6,6 +6,16 @@ export interface ReferralConfig {
   supportEmail: string;
   supportWhatsApp: string;
   minPayoutAmount: number;
+  infoEn?: string;
+  infoHi?: string;
+  howToEarnEn?: string;
+  howToEarnHi?: string;
+  itinerary?: Array<{
+    titleEn: string;
+    titleHi: string;
+    descriptionEn: string;
+    descriptionHi: string;
+  }>;
   updatedAt: string;
 }
 
