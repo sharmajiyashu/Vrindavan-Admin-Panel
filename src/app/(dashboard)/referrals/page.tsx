@@ -69,7 +69,18 @@ export default function ReferralManagement() {
   const [editRefereeForm, setEditRefereeForm] = useState<any>(null);
   const [selectedRefereeId, setSelectedRefereeId] = useState<number | null>(null);
 
-  // Queries
+  const [configForm, setConfigForm] = useState<any>({
+    supportPhone: "",
+    supportEmail: "",
+    supportWhatsApp: "",
+    minPayoutAmount: 100,
+    infoEn: "",
+    infoHi: "",
+    howToEarnEn: "",
+    howToEarnHi: "",
+    itinerary: []
+  });
+
   const { data: referees, isLoading } = useQuery({
     queryKey: ["referees", search, eligibleOnly, sortBy, order],
     queryFn: () => referralService.listReferees({ search, eligibleOnly, sortBy, order }),
@@ -80,6 +91,22 @@ export default function ReferralManagement() {
     queryKey: ["referralConfig"],
     queryFn: () => referralService.getConfig(),
   });
+
+  React.useEffect(() => {
+    if (config) {
+      setConfigForm({
+        supportPhone: config.supportPhone || "",
+        supportEmail: config.supportEmail || "",
+        supportWhatsApp: config.supportWhatsApp || "",
+        minPayoutAmount: config.minPayoutAmount || 100,
+        infoEn: config.infoEn || "",
+        infoHi: config.infoHi || "",
+        howToEarnEn: config.howToEarnEn || "",
+        howToEarnHi: config.howToEarnHi || "",
+        itinerary: config.itinerary || []
+      });
+    }
+  }, [config]);
 
   // Mutations
   const createMutation = useMutation({
@@ -697,56 +724,247 @@ export default function ReferralManagement() {
       <Dialog.Root open={isConfigModalOpen} onOpenChange={setIsConfigModalOpen}>
         <Dialog.Portal>
           <Dialog.Overlay className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm animate-in fade-in duration-300" />
-          <Dialog.Content className="fixed left-[50%] top-[50%] z-50 w-full max-w-sm translate-x-[-50%] translate-y-[-50%] overflow-hidden rounded-[2.5rem] bg-card p-10 shadow-2xl animate-in zoom-in-95 fade-in duration-300 outline-none border border-border">
-            <div className="flex items-center justify-between mb-8">
-              <Dialog.Title className="text-lg font-black tracking-tight uppercase tracking-[0.2em]">Referral Config</Dialog.Title>
+          <Dialog.Content className="fixed left-[50%] top-[50%] z-50 w-full max-w-3xl translate-x-[-50%] translate-y-[-50%] overflow-hidden rounded-[2.5rem] bg-card p-10 shadow-2xl animate-in zoom-in-95 fade-in duration-300 outline-none border border-border h-[85vh] flex flex-col">
+            <div className="flex items-center justify-between mb-6 shrink-0">
+              <Dialog.Title className="text-2xl font-black tracking-tight flex items-center gap-3">
+                <div className="h-9 w-9 rounded-xl bg-primary/10 flex items-center justify-center text-primary">
+                  <IconSettings size={20} />
+                </div>
+                Referral Configuration
+              </Dialog.Title>
               <Dialog.Close className="h-10 w-10 flex items-center justify-center rounded-xl bg-muted/50 text-muted-foreground hover:bg-muted hover:text-foreground transition-all active:scale-90">
                 <IconX size={20} />
               </Dialog.Close>
             </div>
 
-            <form className="space-y-5" onSubmit={async (e) => {
-              e.preventDefault();
-              const formData = new FormData(e.currentTarget);
-              try {
-                await referralService.updateConfig(Object.fromEntries(formData));
-                queryClient.invalidateQueries({ queryKey: ["referralConfig"] });
-                toast.success("Config updated");
-                setIsConfigModalOpen(false);
-              } catch (error: any) {
-                toast.error(error.message || "Failed to update");
-              }
-            }}>
-              <div className="space-y-4">
-                <div className="space-y-1.5">
-                  <label className={labelClasses}>Support Phone</label>
-                  <input name="supportPhone" defaultValue={config?.supportPhone} placeholder="+91 12345 67890" className={inputClasses} />
+            <div className="flex-1 overflow-y-auto pr-2 scrollbar-none">
+              <form className="space-y-8" id="referral-config-form" onSubmit={async (e) => {
+                e.preventDefault();
+                try {
+                  await referralService.updateConfig(configForm);
+                  queryClient.invalidateQueries({ queryKey: ["referralConfig"] });
+                  toast.success("Configuration updated successfully");
+                  setIsConfigModalOpen(false);
+                } catch (error: any) {
+                  toast.error(error.message || "Failed to update configuration");
+                }
+              }}>
+                {/* Contact & Payout Settings */}
+                <div className="space-y-4">
+                  <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-primary/45">Basic Contact & Payout Settings</h4>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-1.5">
+                      <label className={labelClasses}>Support Phone</label>
+                      <input
+                        value={configForm.supportPhone}
+                        onChange={(e) => setConfigForm({ ...configForm, supportPhone: e.target.value })}
+                        placeholder="+91 12345 67890"
+                        className={inputClasses}
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className={labelClasses}>Support Email</label>
+                      <input
+                        value={configForm.supportEmail}
+                        onChange={(e) => setConfigForm({ ...configForm, supportEmail: e.target.value })}
+                        placeholder="support@vrindavan.com"
+                        className={inputClasses}
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className={labelClasses}>Support WhatsApp</label>
+                      <input
+                        value={configForm.supportWhatsApp}
+                        onChange={(e) => setConfigForm({ ...configForm, supportWhatsApp: e.target.value })}
+                        placeholder="+91 12345 67890"
+                        className={inputClasses}
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className={labelClasses}>Min Payout (₹)</label>
+                      <input
+                        type="number"
+                        value={configForm.minPayoutAmount}
+                        onChange={(e) => setConfigForm({ ...configForm, minPayoutAmount: Number(e.target.value) })}
+                        className={inputClasses}
+                      />
+                    </div>
+                  </div>
                 </div>
-                <div className="space-y-1.5">
-                  <label className={labelClasses}>Support Email</label>
-                  <input name="supportEmail" defaultValue={config?.supportEmail} placeholder="support@vrindavan.com" className={inputClasses} />
-                </div>
-                <div className="space-y-1.5">
-                  <label className={labelClasses}>WhatsApp</label>
-                  <input name="supportWhatsApp" defaultValue={config?.supportWhatsApp} placeholder="+91 12345 67890" className={inputClasses} />
-                </div>
-                <div className="space-y-1.5">
-                  <label className={labelClasses}>Min Payout (₹)</label>
-                  <input type="number" name="minPayoutAmount" defaultValue={config?.minPayoutAmount} className={inputClasses} />
-                </div>
-              </div>
 
-              <div className="flex gap-3 pt-4">
-                <Dialog.Close asChild>
-                  <button type="button" className="flex-1 h-12 rounded-2xl border border-border text-[10px] font-black uppercase tracking-wider text-muted-foreground hover:bg-muted transition-all active:scale-95">
-                    Cancel
-                  </button>
-                </Dialog.Close>
-                <button type="submit" className="flex-1 h-12 rounded-2xl bg-primary text-[10px] font-black uppercase tracking-wider text-white shadow-lg shadow-primary/20 hover:opacity-90 active:scale-95 transition-all">
-                  Save
+                {/* Dashboard Information Text */}
+                <div className="space-y-5">
+                  <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-primary/45">Dashboard Info Text</h4>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-1.5">
+                      <label className={labelClasses}>Info Description (English)</label>
+                      <textarea
+                        value={configForm.infoEn}
+                        onChange={(e) => setConfigForm({ ...configForm, infoEn: e.target.value })}
+                        placeholder="Welcome info shown to referee in English"
+                        rows={3}
+                        className={twMerge(inputClasses, "h-auto py-3 resize-none")}
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className={labelClasses}>Info Description (Hindi)</label>
+                      <textarea
+                        value={configForm.infoHi}
+                        onChange={(e) => setConfigForm({ ...configForm, infoHi: e.target.value })}
+                        placeholder="Welcome info shown to referee in Hindi"
+                        rows={3}
+                        className={twMerge(inputClasses, "h-auto py-3 resize-none")}
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* How to Earn Section */}
+                <div className="space-y-5">
+                  <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-primary/45">How to Earn Details</h4>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-1.5">
+                      <label className={labelClasses}>How to Earn (English)</label>
+                      <textarea
+                        value={configForm.howToEarnEn}
+                        onChange={(e) => setConfigForm({ ...configForm, howToEarnEn: e.target.value })}
+                        placeholder="Steps on how to earn in English"
+                        rows={3}
+                        className={twMerge(inputClasses, "h-auto py-3 resize-none")}
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className={labelClasses}>How to Earn (Hindi)</label>
+                      <textarea
+                        value={configForm.howToEarnHi}
+                        onChange={(e) => setConfigForm({ ...configForm, howToEarnHi: e.target.value })}
+                        placeholder="Steps on how to earn in Hindi"
+                        rows={3}
+                        className={twMerge(inputClasses, "h-auto py-3 resize-none")}
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Itinerary Steps */}
+                <div className="space-y-5">
+                  <div className="flex items-center justify-between border-b border-border/60 pb-2">
+                    <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-primary/45">Referral Process / Itinerary Steps</h4>
+                    <button
+                      type="button"
+                      onClick={() => setConfigForm((prev: any) => ({
+                        ...prev,
+                        itinerary: [...(prev.itinerary || []), { titleEn: "", titleHi: "", descriptionEn: "", descriptionHi: "" }]
+                      }))}
+                      className="px-3 py-1.5 rounded-xl border border-primary/20 bg-primary/5 hover:bg-primary/10 text-primary text-[10px] font-black uppercase tracking-wider transition-all flex items-center gap-1.5"
+                    >
+                      <IconPlus size={12} />
+                      Add Step
+                    </button>
+                  </div>
+
+                  {(!configForm.itinerary || configForm.itinerary.length === 0) ? (
+                    <p className="text-center py-6 text-[11px] font-bold text-muted-foreground/40 uppercase tracking-wider bg-muted/10 rounded-2xl border border-dashed border-border/60">
+                      No steps configured. Click Add Step to build your list.
+                    </p>
+                  ) : (
+                    <div className="space-y-4">
+                      {configForm.itinerary.map((step: any, index: number) => (
+                        <div key={index} className="p-5 rounded-2xl bg-muted/20 border border-border flex flex-col gap-4 relative animate-in slide-in-from-top-2 duration-300">
+                          <div className="flex items-center justify-between">
+                            <span className="text-[10px] font-black text-primary uppercase tracking-widest bg-primary/15 px-2.5 py-1 rounded-lg">
+                              Step {index + 1}
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => setConfigForm((prev: any) => ({
+                                ...prev,
+                                itinerary: prev.itinerary.filter((_: any, i: number) => i !== index)
+                              }))}
+                              className="h-8 w-8 rounded-lg bg-red-50 text-red-500 hover:bg-red-100 flex items-center justify-center transition-all"
+                            >
+                              <IconTrash size={14} />
+                            </button>
+                          </div>
+
+                          <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-1.5">
+                              <label className={labelClasses}>Title (English)</label>
+                              <input
+                                value={step.titleEn}
+                                onChange={(e) => {
+                                  const list = [...configForm.itinerary];
+                                  list[index].titleEn = e.target.value;
+                                  setConfigForm({ ...configForm, itinerary: list });
+                                }}
+                                placeholder="e.g. Share Referral Code"
+                                className={inputClasses}
+                              />
+                            </div>
+                            <div className="space-y-1.5">
+                              <label className={labelClasses}>Title (Hindi)</label>
+                              <input
+                                value={step.titleHi}
+                                onChange={(e) => {
+                                  const list = [...configForm.itinerary];
+                                  list[index].titleHi = e.target.value;
+                                  setConfigForm({ ...configForm, itinerary: list });
+                                }}
+                                placeholder="e.g. अपना कोड साझा करें"
+                                className={inputClasses}
+                              />
+                            </div>
+                            <div className="space-y-1.5">
+                              <label className={labelClasses}>Description (English)</label>
+                              <textarea
+                                value={step.descriptionEn}
+                                onChange={(e) => {
+                                  const list = [...configForm.itinerary];
+                                  list[index].descriptionEn = e.target.value;
+                                  setConfigForm({ ...configForm, itinerary: list });
+                                }}
+                                placeholder="Details about this step in English"
+                                rows={2}
+                                className={twMerge(inputClasses, "h-auto py-2.5 resize-none")}
+                              />
+                            </div>
+                            <div className="space-y-1.5">
+                              <label className={labelClasses}>Description (Hindi)</label>
+                              <textarea
+                                value={step.descriptionHi}
+                                onChange={(e) => {
+                                  const list = [...configForm.itinerary];
+                                  list[index].descriptionHi = e.target.value;
+                                  setConfigForm({ ...configForm, itinerary: list });
+                                }}
+                                placeholder="Details about this step in Hindi"
+                                rows={2}
+                                className={twMerge(inputClasses, "h-auto py-2.5 resize-none")}
+                              />
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </form>
+            </div>
+
+            <div className="pt-6 flex gap-3 shrink-0">
+              <Dialog.Close asChild>
+                <button type="button" className="flex-1 h-12 rounded-2xl border border-border text-xs font-black uppercase tracking-wider text-muted-foreground hover:bg-muted transition-all active:scale-95">
+                  Cancel
                 </button>
-              </div>
-            </form>
+              </Dialog.Close>
+              <button
+                type="submit"
+                form="referral-config-form"
+                className="flex-[2] h-12 rounded-2xl bg-primary text-xs font-black uppercase tracking-wider text-white shadow-lg shadow-primary/20 hover:opacity-90 active:scale-95 transition-all flex items-center justify-center gap-2"
+              >
+                Save Configuration
+              </button>
+            </div>
           </Dialog.Content>
         </Dialog.Portal>
       </Dialog.Root>
