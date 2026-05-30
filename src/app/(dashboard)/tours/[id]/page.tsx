@@ -367,6 +367,11 @@ export default function TourDetailPage() {
           )}>
             {tour.isActive ? "Active" : "Inactive"}
           </div>
+          {tour.isVerified && (
+            <div className="px-3 py-1.5 rounded-lg text-[9px] font-bold uppercase tracking-widest border bg-emerald-50 text-emerald-600 border-emerald-100">
+              Verified Tour
+            </div>
+          )}
         </div>
       </div>
 

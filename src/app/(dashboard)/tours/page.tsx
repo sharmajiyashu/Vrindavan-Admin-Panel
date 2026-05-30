@@ -227,6 +227,11 @@ export default function ToursPage() {
                               {tour.badgeEn}
                             </span>
                           )}
+                          {tour.isVerified && (
+                            <span className="shrink-0 px-1.5 py-0.5 rounded-md bg-emerald-50 text-emerald-600 text-[8px] font-black uppercase tracking-widest border border-emerald-100 shadow-sm">
+                              Verified
+                            </span>
+                          )}
                         </div>
                         <p className="truncate text-[10px] font-medium text-muted-foreground mt-1 opacity-70 tracking-wide">{tour.titleHi}</p>
                       </div>

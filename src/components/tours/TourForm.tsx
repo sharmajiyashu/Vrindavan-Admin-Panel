@@ -119,6 +119,7 @@ export function TourForm({ initialData, onSubmitBasic, onSubmitFiles, onRemoveMe
       cancellationBeforeHours: initialData.cancellationBeforeHours ?? 24,
       shareDetailsBeforeHours: initialData.shareDetailsBeforeHours ?? 2,
       guideDetailsBeforeHours: initialData.guideDetailsBeforeHours ?? 24,
+      isVerified: initialData.isVerified ?? false,
     } : {
       titleEn: "",
       titleHi: "",
@@ -136,6 +137,7 @@ export function TourForm({ initialData, onSubmitBasic, onSubmitFiles, onRemoveMe
       discountConfig: null,
       extraDiscountPerUser: 0,
       isActive: true,
+      isVerified: false,
       templesCoveredCount: 0,
       durationEn: "",
       durationHi: "",
@@ -299,6 +301,17 @@ export function TourForm({ initialData, onSubmitBasic, onSubmitFiles, onRemoveMe
               <input {...register("subtextHi")} className={inputClasses} placeholder="उदाहरण: आध्यात्मिक यात्रा" />
             </div>
 
+            <div>
+              <label className={labelClasses}>{t("tours.locationNameEn")}</label>
+              <input {...register("locationNameEn")} className={inputClasses} placeholder="e.g. Vrindavan, Uttar Pradesh" />
+              {errors.locationNameEn && <p className={errorClasses}>{errors.locationNameEn.message}</p>}
+            </div>
+            <div>
+              <label className={labelClasses}>{t("tours.locationNameHi")}</label>
+              <input {...register("locationNameHi")} className={inputClasses} placeholder="उदा. वृंदावन, उत्तर प्रदेश" />
+              {errors.locationNameHi && <p className={errorClasses}>{errors.locationNameHi.message}</p>}
+            </div>
+
             <div className="md:col-span-2 space-y-4">
               <label className={labelClasses}>Tags / Badges Support</label>
               <div className="flex flex-wrap gap-2">
@@ -458,16 +471,30 @@ export function TourForm({ initialData, onSubmitBasic, onSubmitFiles, onRemoveMe
               </div>
             </div>
 
-            <div className="flex items-center gap-2 p-3 rounded-xl border border-border bg-muted/20">
-              <input
-                type="checkbox"
-                id="isActive"
-                {...register("isActive")}
-                className="h-5 w-5 rounded-lg border-border text-primary focus:ring-primary/20"
-              />
-              <label htmlFor="isActive" className="text-sm font-bold text-foreground cursor-pointer select-none">
-                {t("tours.active")}
-              </label>
+            <div className="grid grid-cols-2 gap-4 md:col-span-2">
+              <div className="flex items-center gap-2 p-3 rounded-xl border border-border bg-muted/20">
+                <input
+                  type="checkbox"
+                  id="isActive"
+                  {...register("isActive")}
+                  className="h-5 w-5 rounded-lg border-border text-primary focus:ring-primary/20"
+                />
+                <label htmlFor="isActive" className="text-sm font-bold text-foreground cursor-pointer select-none">
+                  {t("tours.active")}
+                </label>
+              </div>
+
+              <div className="flex items-center gap-2 p-3 rounded-xl border border-border bg-muted/20">
+                <input
+                  type="checkbox"
+                  id="isVerified"
+                  {...register("isVerified")}
+                  className="h-5 w-5 rounded-lg border-border text-primary focus:ring-primary/20"
+                />
+                <label htmlFor="isVerified" className="text-sm font-bold text-foreground cursor-pointer select-none">
+                  Verified Tour
+                </label>
+              </div>
             </div>
           </div>
         </Tabs.Content>

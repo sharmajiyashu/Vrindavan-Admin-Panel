@@ -123,6 +123,7 @@ export const tourBaseSchema = z.object({
   maxPersons: coerceNumber.optional().nullable(),
 
   isActive: coerceBoolean.default(true),
+  isVerified: coerceBoolean.default(false),
 
   imageIds: z.preprocess(jsonArrayPreprocess, z.array(z.number())).optional().default([]),
 

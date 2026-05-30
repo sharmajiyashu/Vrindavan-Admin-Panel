@@ -118,6 +118,7 @@ export interface Tour {
   guideDetailsBeforeHours?: number;
 
   isActive: boolean;
+  isVerified?: boolean;
   createdAt: string;
   updatedAt: string;
   gallery?: TourMedia[];
