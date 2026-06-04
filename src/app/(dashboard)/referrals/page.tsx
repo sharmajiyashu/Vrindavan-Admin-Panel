@@ -48,6 +48,10 @@ export default function ReferralManagement() {
   const [sortBy, setSortBy] = useState<"lifetime_earned" | "name">("lifetime_earned");
   const [order, setOrder] = useState<"asc" | "desc">("desc");
 
+  // State for Payment Method Differentiation
+  const [addPaymentMethod, setAddPaymentMethod] = useState<"upi" | "bank">("upi");
+  const [editPaymentMethod, setEditPaymentMethod] = useState<"upi" | "bank">("upi");
+
   // State for Modals
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -230,6 +234,25 @@ export default function ReferralManagement() {
             Eligible (₹100+)
           </button>
 
+          {/* Sort By Dropdown */}
+          <div className="relative flex items-center gap-2 bg-card border border-border rounded-xl h-10 px-3 shadow-sm">
+            <span className="text-[9px] font-black uppercase tracking-wider text-muted-foreground/50">Sort:</span>
+            <select
+              value={`${sortBy}-${order}`}
+              onChange={(e) => {
+                const [newSort, newOrder] = e.target.value.split("-") as [any, any];
+                setSortBy(newSort);
+                setOrder(newOrder);
+              }}
+              className="bg-transparent text-[11px] font-bold text-foreground outline-none cursor-pointer pr-1"
+            >
+              <option value="lifetime_earned-desc">Earnings (High to Low)</option>
+              <option value="lifetime_earned-asc">Earnings (Low to High)</option>
+              <option value="name-asc">Name (A to Z)</option>
+              <option value="name-desc">Name (Z to A)</option>
+            </select>
+          </div>
+
           <div className="flex items-center gap-1.5">
             <button
               onClick={() => setIsConfigModalOpen(true)}
@@ -363,6 +386,7 @@ export default function ReferralManagement() {
                                 ifscCode: ref.paymentDetails?.ifscCode || ""
                               }
                             });
+                            setEditPaymentMethod(ref.paymentDetails?.upiId ? "upi" : "bank");
                             setIsEditModalOpen(true);
                           }}
                           title="Edit Profile"
@@ -414,15 +438,75 @@ export default function ReferralManagement() {
               <form className="space-y-8" id="add-referee-form" onSubmit={(e) => {
                 e.preventDefault();
 
-                if (!addRefereeForm.name.trim()) return toast.error("Name is required");
-                if (!addRefereeForm.mobile.trim()) return toast.error("Mobile number is required");
+                const trimmedName = addRefereeForm.name.trim();
+                const trimmedMobile = addRefereeForm.mobile.trim();
+                const trimmedExtension = addRefereeForm.extension.trim();
+                const trimmedAadhaar = addRefereeForm.aadhaarNumber.trim();
+                const trimmedCode = addRefereeForm.referralCode.trim();
 
-                const code = addRefereeForm.referralCode.trim();
-                if (code && (code !== code.toUpperCase() || code.includes(" "))) {
-                  return toast.error("Referral code must be uppercase and have no spaces");
+                if (!trimmedName) return toast.error("Name is required");
+                if (trimmedName.length < 2) return toast.error("Name must be at least 2 characters");
+                if (!trimmedMobile) return toast.error("Mobile number is required");
+                if (!/^\d{10}$/.test(trimmedMobile)) {
+                  return toast.error("Mobile number must be exactly 10 digits");
+                }
+                if (trimmedExtension && !/^\d{1,4}$/.test(trimmedExtension)) {
+                  return toast.error("Invalid extension (e.g. 91)");
+                }
+                if (trimmedAadhaar && !/^\d{12}$/.test(trimmedAadhaar)) {
+                  return toast.error("Aadhaar number must be exactly 12 digits");
+                }
+                if (trimmedCode) {
+                  if (trimmedCode.length < 3 || trimmedCode.length > 15) {
+                    return toast.error("Referral code must be between 3 and 15 characters");
+                  }
+                  if (!/^[A-Z0-9]+$/.test(trimmedCode)) {
+                    return toast.error("Referral code must contain only uppercase letters and numbers");
+                  }
                 }
 
-                createMutation.mutate(addRefereeForm);
+                const paymentData = { ...addRefereeForm.paymentDetails };
+
+                // Payment Details Validation
+                if (addPaymentMethod === "upi") {
+                  const upi = paymentData.upiId.trim();
+                  if (!upi) {
+                    return toast.error("UPI ID is required for UPI payment method");
+                  }
+                  if (!/^[a-zA-Z0-9.\-_]{2,256}@[a-zA-Z]{2,64}$/.test(upi)) {
+                    return toast.error("Please enter a valid UPI ID (e.g. name@upi)");
+                  }
+                  // Clear bank details since UPI is chosen
+                  paymentData.upiId = upi;
+                  paymentData.bankName = "";
+                  paymentData.accountNumber = "";
+                  paymentData.ifscCode = "";
+                } else {
+                  const bankName = paymentData.bankName.trim();
+                  const accNum = paymentData.accountNumber.trim();
+                  const ifsc = paymentData.ifscCode.trim();
+
+                  if (!bankName || !accNum || !ifsc) {
+                    return toast.error("Bank Name, Account Number, and IFSC Code are all required for Bank Transfer");
+                  }
+                  if (!/^[A-Z]{4}0[A-Z0-9]{6}$/.test(ifsc)) {
+                    return toast.error("Please enter a valid 11-digit IFSC code (e.g. HDFC0001234)");
+                  }
+                  // Clear UPI since Bank is chosen
+                  paymentData.upiId = "";
+                  paymentData.bankName = bankName;
+                  paymentData.accountNumber = accNum;
+                  paymentData.ifscCode = ifsc;
+                }
+
+                createMutation.mutate({
+                  name: trimmedName,
+                  extension: trimmedExtension || "91",
+                  mobile: trimmedMobile,
+                  aadhaarNumber: trimmedAadhaar || undefined,
+                  referralCode: trimmedCode || undefined,
+                  paymentDetails: paymentData
+                });
               }}>
                 {/* Basic Info */}
                 <div className="space-y-6">
@@ -494,57 +578,98 @@ export default function ReferralManagement() {
 
                 {/* Payment Info */}
                 <div className="space-y-6">
-                  <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-primary/40">Payment Details</h4>
-                  <div className="grid grid-cols-2 gap-5">
-                    <div className="space-y-1.5">
-                      <label className={labelClasses}>UPI ID</label>
-                      <input
-                        placeholder="name@upi"
-                        className={inputClasses}
-                        value={addRefereeForm.paymentDetails.upiId}
-                        onChange={(e) => setAddRefereeForm({
-                          ...addRefereeForm,
-                          paymentDetails: { ...addRefereeForm.paymentDetails, upiId: e.target.value }
-                        })}
-                      />
-                    </div>
-                    <div className="space-y-1.5">
-                      <label className={labelClasses}>Bank Name</label>
-                      <input
-                        placeholder="HDFC Bank"
-                        className={inputClasses}
-                        value={addRefereeForm.paymentDetails.bankName}
-                        onChange={(e) => setAddRefereeForm({
-                          ...addRefereeForm,
-                          paymentDetails: { ...addRefereeForm.paymentDetails, bankName: e.target.value }
-                        })}
-                      />
-                    </div>
-                    <div className="space-y-1.5">
-                      <label className={labelClasses}>Account Number</label>
-                      <input
-                        placeholder="0000 0000 0000"
-                        className={inputClasses}
-                        value={addRefereeForm.paymentDetails.accountNumber}
-                        onChange={(e) => setAddRefereeForm({
-                          ...addRefereeForm,
-                          paymentDetails: { ...addRefereeForm.paymentDetails, accountNumber: e.target.value }
-                        })}
-                      />
-                    </div>
-                    <div className="space-y-1.5">
-                      <label className={labelClasses}>IFSC Code</label>
-                      <input
-                        placeholder="HDFC000123"
-                        className={inputClasses}
-                        value={addRefereeForm.paymentDetails.ifscCode}
-                        onChange={(e) => setAddRefereeForm({
-                          ...addRefereeForm,
-                          paymentDetails: { ...addRefereeForm.paymentDetails, ifscCode: e.target.value.toUpperCase() }
-                        })}
-                      />
+                  <div className="flex items-center justify-between border-b border-border/40 pb-3">
+                    <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-primary/60">Payment Details</h4>
+
+                    {/* Payment Method Selector */}
+                    <div className="flex gap-1.5 bg-muted/40 p-1 rounded-xl border border-border">
+                      <button
+                        type="button"
+                        onClick={() => setAddPaymentMethod("upi")}
+                        className={twMerge(
+                          "h-7 px-3 rounded-lg text-[9px] font-black uppercase tracking-wider transition-all",
+                          addPaymentMethod === "upi"
+                            ? "bg-card text-foreground shadow-sm"
+                            : "text-muted-foreground hover:text-foreground"
+                        )}
+                      >
+                        UPI
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setAddPaymentMethod("bank")}
+                        className={twMerge(
+                          "h-7 px-3 rounded-lg text-[9px] font-black uppercase tracking-wider transition-all",
+                          addPaymentMethod === "bank"
+                            ? "bg-card text-foreground shadow-sm"
+                            : "text-muted-foreground hover:text-foreground"
+                        )}
+                      >
+                        Bank Transfer
+                      </button>
                     </div>
                   </div>
+
+                  {addPaymentMethod === "upi" ? (
+                    <div className="space-y-4 animate-in fade-in-50 duration-200">
+                      <div className="space-y-1.5">
+                        <label className={labelClasses}>UPI ID *</label>
+                        <input
+                          placeholder="username@upi"
+                          required
+                          className={inputClasses}
+                          value={addRefereeForm.paymentDetails.upiId}
+                          onChange={(e) => setAddRefereeForm({
+                            ...addRefereeForm,
+                            paymentDetails: { ...addRefereeForm.paymentDetails, upiId: e.target.value }
+                          })}
+                        />
+                        <p className="text-[9px] text-muted-foreground/60 pl-1">For instant payouts via UPI.</p>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 animate-in fade-in-50 duration-200">
+                      <div className="space-y-1.5">
+                        <label className={labelClasses}>Bank Name *</label>
+                        <input
+                          placeholder="e.g. HDFC Bank"
+                          required
+                          className={inputClasses}
+                          value={addRefereeForm.paymentDetails.bankName}
+                          onChange={(e) => setAddRefereeForm({
+                            ...addRefereeForm,
+                            paymentDetails: { ...addRefereeForm.paymentDetails, bankName: e.target.value }
+                          })}
+                        />
+                      </div>
+                      <div className="space-y-1.5">
+                        <label className={labelClasses}>Account Number *</label>
+                        <input
+                          placeholder="Account Number"
+                          required
+                          className={inputClasses}
+                          value={addRefereeForm.paymentDetails.accountNumber}
+                          onChange={(e) => setAddRefereeForm({
+                            ...addRefereeForm,
+                            paymentDetails: { ...addRefereeForm.paymentDetails, accountNumber: e.target.value }
+                          })}
+                        />
+                      </div>
+                      <div className="space-y-1.5 sm:col-span-2">
+                        <label className={labelClasses}>IFSC Code *</label>
+                        <input
+                          placeholder="e.g. HDFC0000123"
+                          required
+                          className={twMerge(inputClasses, "uppercase")}
+                          value={addRefereeForm.paymentDetails.ifscCode}
+                          onChange={(e) => setAddRefereeForm({
+                            ...addRefereeForm,
+                            paymentDetails: { ...addRefereeForm.paymentDetails, ifscCode: e.target.value.toUpperCase() }
+                          })}
+                        />
+                      </div>
+                    </div>
+                  )}
                 </div>
               </form>
             </div>
@@ -590,9 +715,76 @@ export default function ReferralManagement() {
               <div className="flex-1 overflow-y-auto pr-2 scrollbar-none">
                 <form className="space-y-8" id="edit-referee-form" onSubmit={(e) => {
                   e.preventDefault();
-                  if (!editRefereeForm.name.trim()) return toast.error("Name is required");
-                  if (!editRefereeForm.mobile.trim()) return toast.error("Mobile number is required");
-                  updateMutation.mutate(editRefereeForm);
+
+                  const trimmedName = editRefereeForm.name.trim();
+                  const trimmedMobile = editRefereeForm.mobile.trim();
+                  const trimmedExtension = editRefereeForm.extension?.trim() || "91";
+                  const trimmedAadhaar = editRefereeForm.aadhaarNumber?.trim() || "";
+                  const trimmedCode = editRefereeForm.referralCode?.trim() || "";
+
+                  if (!trimmedName) return toast.error("Name is required");
+                  if (trimmedName.length < 2) return toast.error("Name must be at least 2 characters");
+                  if (!trimmedMobile) return toast.error("Mobile number is required");
+                  if (!/^\d{10}$/.test(trimmedMobile)) {
+                    return toast.error("Mobile number must be exactly 10 digits");
+                  }
+                  if (trimmedExtension && !/^\d{1,4}$/.test(trimmedExtension)) {
+                    return toast.error("Invalid extension (e.g. 91)");
+                  }
+                  if (trimmedAadhaar && !/^\d{12}$/.test(trimmedAadhaar)) {
+                    return toast.error("Aadhaar number must be exactly 12 digits");
+                  }
+                  if (trimmedCode) {
+                    if (trimmedCode.length < 3 || trimmedCode.length > 15) {
+                      return toast.error("Referral code must be between 3 and 15 characters");
+                    }
+                    if (!/^[A-Z0-9]+$/.test(trimmedCode)) {
+                      return toast.error("Referral code must contain only uppercase letters and numbers");
+                    }
+                  }
+
+                  const paymentData = { ...editRefereeForm.paymentDetails };
+
+                  // Payment Details Validation
+                  if (editPaymentMethod === "upi") {
+                    const upi = paymentData.upiId.trim();
+                    if (!upi) {
+                      return toast.error("UPI ID is required for UPI payment method");
+                    }
+                    if (!/^[a-zA-Z0-9.\-_]{2,256}@[a-zA-Z]{2,64}$/.test(upi)) {
+                      return toast.error("Please enter a valid UPI ID (e.g. name@upi)");
+                    }
+                    // Clear bank details since UPI is chosen
+                    paymentData.upiId = upi;
+                    paymentData.bankName = "";
+                    paymentData.accountNumber = "";
+                    paymentData.ifscCode = "";
+                  } else {
+                    const bankName = paymentData.bankName.trim();
+                    const accNum = paymentData.accountNumber.trim();
+                    const ifsc = paymentData.ifscCode.trim();
+
+                    if (!bankName || !accNum || !ifsc) {
+                      return toast.error("Bank Name, Account Number, and IFSC Code are all required for Bank Transfer");
+                    }
+                    if (!/^[A-Z]{4}0[A-Z0-9]{6}$/.test(ifsc)) {
+                      return toast.error("Please enter a valid 11-digit IFSC code (e.g. HDFC0001234)");
+                    }
+                    // Clear UPI since Bank is chosen
+                    paymentData.upiId = "";
+                    paymentData.bankName = bankName;
+                    paymentData.accountNumber = accNum;
+                    paymentData.ifscCode = ifsc;
+                  }
+
+                  updateMutation.mutate({
+                    name: trimmedName,
+                    extension: trimmedExtension,
+                    mobile: trimmedMobile,
+                    aadhaarNumber: trimmedAadhaar || undefined,
+                    referralCode: trimmedCode || undefined,
+                    paymentDetails: paymentData
+                  });
                 }}>
                   {/* Basic Info */}
                   <div className="space-y-6">
@@ -646,53 +838,98 @@ export default function ReferralManagement() {
 
                   {/* Payment Info */}
                   <div className="space-y-6">
-                    <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-primary/40">Payment Details</h4>
-                    <div className="grid grid-cols-2 gap-5">
-                      <div className="space-y-1.5">
-                        <label className={labelClasses}>UPI ID</label>
-                        <input
-                          className={inputClasses}
-                          value={editRefereeForm.paymentDetails.upiId}
-                          onChange={(e) => setEditRefereeForm({
-                            ...editRefereeForm,
-                            paymentDetails: { ...editRefereeForm.paymentDetails, upiId: e.target.value }
-                          })}
-                        />
-                      </div>
-                      <div className="space-y-1.5">
-                        <label className={labelClasses}>Bank Name</label>
-                        <input
-                          className={inputClasses}
-                          value={editRefereeForm.paymentDetails.bankName}
-                          onChange={(e) => setEditRefereeForm({
-                            ...editRefereeForm,
-                            paymentDetails: { ...editRefereeForm.paymentDetails, bankName: e.target.value }
-                          })}
-                        />
-                      </div>
-                      <div className="space-y-1.5">
-                        <label className={labelClasses}>Account Number</label>
-                        <input
-                          className={inputClasses}
-                          value={editRefereeForm.paymentDetails.accountNumber}
-                          onChange={(e) => setEditRefereeForm({
-                            ...editRefereeForm,
-                            paymentDetails: { ...editRefereeForm.paymentDetails, accountNumber: e.target.value }
-                          })}
-                        />
-                      </div>
-                      <div className="space-y-1.5">
-                        <label className={labelClasses}>IFSC Code</label>
-                        <input
-                          className={inputClasses}
-                          value={editRefereeForm.paymentDetails.ifscCode}
-                          onChange={(e) => setEditRefereeForm({
-                            ...editRefereeForm,
-                            paymentDetails: { ...editRefereeForm.paymentDetails, ifscCode: e.target.value.toUpperCase() }
-                          })}
-                        />
+                    <div className="flex items-center justify-between border-b border-border/40 pb-3">
+                      <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-primary/60">Payment Details</h4>
+
+                      {/* Payment Method Selector */}
+                      <div className="flex gap-1.5 bg-muted/40 p-1 rounded-xl border border-border">
+                        <button
+                          type="button"
+                          onClick={() => setEditPaymentMethod("upi")}
+                          className={twMerge(
+                            "h-7 px-3 rounded-lg text-[9px] font-black uppercase tracking-wider transition-all",
+                            editPaymentMethod === "upi"
+                              ? "bg-card text-foreground shadow-sm"
+                              : "text-muted-foreground hover:text-foreground"
+                          )}
+                        >
+                          UPI
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setEditPaymentMethod("bank")}
+                          className={twMerge(
+                            "h-7 px-3 rounded-lg text-[9px] font-black uppercase tracking-wider transition-all",
+                            editPaymentMethod === "bank"
+                              ? "bg-card text-foreground shadow-sm"
+                              : "text-muted-foreground hover:text-foreground"
+                          )}
+                        >
+                          Bank Transfer
+                        </button>
                       </div>
                     </div>
+
+                    {editPaymentMethod === "upi" ? (
+                      <div className="space-y-4 animate-in fade-in-50 duration-200">
+                        <div className="space-y-1.5">
+                          <label className={labelClasses}>UPI ID *</label>
+                          <input
+                            placeholder="username@upi"
+                            required
+                            className={inputClasses}
+                            value={editRefereeForm.paymentDetails.upiId}
+                            onChange={(e) => setEditRefereeForm({
+                              ...editRefereeForm,
+                              paymentDetails: { ...editRefereeForm.paymentDetails, upiId: e.target.value }
+                            })}
+                          />
+                          <p className="text-[9px] text-muted-foreground/60 pl-1">For instant payouts via UPI.</p>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 animate-in fade-in-50 duration-200">
+                        <div className="space-y-1.5">
+                          <label className={labelClasses}>Bank Name *</label>
+                          <input
+                            placeholder="e.g. HDFC Bank"
+                            required
+                            className={inputClasses}
+                            value={editRefereeForm.paymentDetails.bankName}
+                            onChange={(e) => setEditRefereeForm({
+                              ...editRefereeForm,
+                              paymentDetails: { ...editRefereeForm.paymentDetails, bankName: e.target.value }
+                            })}
+                          />
+                        </div>
+                        <div className="space-y-1.5">
+                          <label className={labelClasses}>Account Number *</label>
+                          <input
+                            placeholder="Account Number"
+                            required
+                            className={inputClasses}
+                            value={editRefereeForm.paymentDetails.accountNumber}
+                            onChange={(e) => setEditRefereeForm({
+                              ...editRefereeForm,
+                              paymentDetails: { ...editRefereeForm.paymentDetails, accountNumber: e.target.value }
+                            })}
+                          />
+                        </div>
+                        <div className="space-y-1.5 sm:col-span-2">
+                          <label className={labelClasses}>IFSC Code *</label>
+                          <input
+                            placeholder="e.g. HDFC0000123"
+                            required
+                            className={twMerge(inputClasses, "uppercase")}
+                            value={editRefereeForm.paymentDetails.ifscCode}
+                            onChange={(e) => setEditRefereeForm({
+                              ...editRefereeForm,
+                              paymentDetails: { ...editRefereeForm.paymentDetails, ifscCode: e.target.value.toUpperCase() }
+                            })}
+                          />
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </form>
               </div>

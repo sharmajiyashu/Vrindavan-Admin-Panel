@@ -14,6 +14,7 @@ export interface Booking {
   totalPrice: number;
   status: "upcoming" | "completed" | "cancelled";
   cancellationReason: string | null;
+  createdByAdmin?: boolean;
   createdAt: string;
   updatedAt: string;
   tour?: {
@@ -61,12 +62,25 @@ export interface PaginatedBookingResponse {
 }
 
 export const bookingService = {
-  listBookings: async (page = 1, limit = 10, status?: string, search?: string) => {
+  listBookings: async (
+    page = 1,
+    limit = 10,
+    status?: string,
+    search?: string,
+    tourId?: number,
+    startDate?: string,
+    endDate?: string,
+    createdByAdmin?: boolean
+  ) => {
     const params = new URLSearchParams();
     params.append("page", page.toString());
     params.append("limit", limit.toString());
     if (status) params.append("status", status);
     if (search) params.append("search", search);
+    if (tourId) params.append("tourId", tourId.toString());
+    if (startDate) params.append("startDate", startDate);
+    if (endDate) params.append("endDate", endDate);
+    if (createdByAdmin !== undefined) params.append("createdByAdmin", createdByAdmin.toString());
 
     return await get<PaginatedBookingResponse>(`/bookings?${params.toString()}`);
   },
@@ -85,5 +99,9 @@ export const bookingService = {
 
   completeBooking: async (id: number) => {
     return await post<Booking>(`/bookings/${id}/complete`);
+  },
+
+  createBookingAdmin: async (data: any) => {
+    return await post<Booking>("/bookings", data);
   },
 };

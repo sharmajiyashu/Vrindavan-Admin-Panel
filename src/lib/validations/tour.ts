@@ -117,12 +117,14 @@ export const tourBaseSchema = z.object({
   cancellationBeforeHours: coerceNumber.default(24),
   shareDetailsBeforeHours: coerceNumber.default(2),
   guideDetailsBeforeHours: coerceNumber.default(24),
+  slotDeadlineHours: coerceNumber.default(2),
 
   type: z.enum(['group', 'private']).default('group'),
   minPersons: coerceNumber.optional().nullable(),
   maxPersons: coerceNumber.optional().nullable(),
 
   isActive: coerceBoolean.default(true),
+  isVerified: coerceBoolean.default(false),
 
   imageIds: z.preprocess(jsonArrayPreprocess, z.array(z.number())).optional().default([]),
 
@@ -147,16 +149,8 @@ export const tourBaseSchema = z.object({
   })).optional().default([]),
 });
 
-// Refine the full schema for creation/full validation
-export const tourValidationSchema = tourBaseSchema.refine(data => {
-  if (data.type === 'private') {
-    return data.minPersons != null && data.maxPersons != null;
-  }
-  return true;
-}, {
-  message: "Private tours must have min and max persons allowed",
-  path: ["type"]
-});
+// Refine the full schema for creation/full validation (currently no refinements needed)
+export const tourValidationSchema = tourBaseSchema;
 
 export type TourFormData = z.infer<typeof tourValidationSchema>;
 

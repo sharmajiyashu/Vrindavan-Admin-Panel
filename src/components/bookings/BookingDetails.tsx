@@ -50,8 +50,13 @@ export function BookingDetails({ booking }: BookingDetailsProps) {
                 <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/50">
                   {t("bookings.bookingId")}
                 </span>
-                <h3 className="text-xl font-black tracking-tight text-foreground">
+                <h3 className="text-xl font-black tracking-tight text-foreground flex items-center gap-2.5">
                   {booking.bookingId || `#${booking.id}`}
+                  {booking.createdByAdmin && (
+                    <span className="inline-flex items-center rounded-full bg-purple-50 px-2.5 py-0.5 text-[8px] font-black uppercase tracking-wider text-purple-600 ring-1 ring-inset ring-purple-500/10">
+                      Created by Admin
+                    </span>
+                  )}
                 </h3>
               </div>
               <div
@@ -112,9 +117,10 @@ export function BookingDetails({ booking }: BookingDetailsProps) {
             </div>
           </div>
 
+          {/* User Information (Account Holder) */}
           <div className="rounded-3xl border border-border bg-card p-6 shadow-sm">
             <h4 className="text-xs font-black uppercase tracking-widest text-muted-foreground/50 mb-4">
-              {t("bookings.customerInfo")}
+              User Information (Account Holder)
             </h4>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
               <div className="flex items-center gap-3">
@@ -123,10 +129,10 @@ export function BookingDetails({ booking }: BookingDetailsProps) {
                 </div>
                 <div className="min-w-0">
                   <p className="text-[10px] font-bold text-muted-foreground uppercase">
-                    {t("bookings.user")}
+                    Account Name
                   </p>
                   <p className="text-sm font-bold truncate">
-                    {booking.user?.name}
+                    {booking.user?.name || "N/A"}
                   </p>
                 </div>
               </div>
@@ -139,7 +145,7 @@ export function BookingDetails({ booking }: BookingDetailsProps) {
                     Mobile
                   </p>
                   <p className="text-sm font-bold truncate">
-                    {booking.user?.mobile}
+                    {booking.user?.mobile || "N/A"}
                   </p>
                 </div>
               </div>
@@ -153,6 +159,54 @@ export function BookingDetails({ booking }: BookingDetailsProps) {
                   </p>
                   <p className="text-sm font-bold truncate">
                     {booking.user?.email || "N/A"}
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Customer Information (Tour booked for) */}
+          <div className="rounded-3xl border border-border bg-card p-6 shadow-sm">
+            <h4 className="text-xs font-black uppercase tracking-widest text-muted-foreground/50 mb-4">
+              Customer Information (Tour booked for)
+            </h4>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+              <div className="flex items-center gap-3">
+                <div className="h-10 w-10 rounded-xl bg-muted flex items-center justify-center text-muted-foreground">
+                  <IconUser size={20} />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-[10px] font-bold text-muted-foreground uppercase">
+                    Customer Name
+                  </p>
+                  <p className="text-sm font-bold truncate">
+                    {booking.contacts?.[0]?.name || booking.user?.name || "N/A"}
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-3">
+                <div className="h-10 w-10 rounded-xl bg-muted flex items-center justify-center text-muted-foreground">
+                  <IconPhone size={20} />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-[10px] font-bold text-muted-foreground uppercase">
+                    Mobile
+                  </p>
+                  <p className="text-sm font-bold truncate">
+                    {booking.contacts?.[0]?.mobile || booking.user?.mobile || "N/A"}
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-3">
+                <div className="h-10 w-10 rounded-xl bg-muted flex items-center justify-center text-muted-foreground">
+                  <IconMail size={20} />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-[10px] font-bold text-muted-foreground uppercase">
+                    Email
+                  </p>
+                  <p className="text-sm font-bold truncate">
+                    {booking.contacts?.[0]?.email || booking.user?.email || "N/A"}
                   </p>
                 </div>
               </div>

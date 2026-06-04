@@ -154,12 +154,35 @@ export default function TourOperationsPage() {
                   </div>
 
                   <div className="flex items-center gap-4">
-                    <div className={twMerge(
-                      "px-2 py-1 rounded-lg text-[8px] font-black uppercase tracking-wider border flex items-center gap-1.5",
-                      isDeadlinePassed ? "bg-red-50 text-red-600 border-red-100" : "bg-emerald-50 text-emerald-600 border-emerald-100"
-                    )}>
-                      {isDeadlinePassed ? "Expired" : `${Math.floor(minutesLeft / 60)}h ${minutesLeft % 60}m`}
-                    </div>
+                    {(() => {
+                      const hasGuide = !!slot.guideName;
+                      const isTourStarted = new Date() > slotTime;
+                      let badgeText = "";
+                      let badgeClasses = "";
+
+                      if (hasGuide) {
+                        badgeText = "Assigned";
+                        badgeClasses = "bg-emerald-50 text-emerald-600 border-emerald-100";
+                      } else if (isTourStarted) {
+                        badgeText = "Expired";
+                        badgeClasses = "bg-red-50 text-red-600 border-red-100";
+                      } else if (isDeadlinePassed) {
+                        badgeText = "Overdue";
+                        badgeClasses = "bg-amber-50 text-amber-600 border-amber-100";
+                      } else {
+                        badgeText = `${Math.floor(minutesLeft / 60)}h ${minutesLeft % 60}m`;
+                        badgeClasses = "bg-blue-50 text-blue-600 border-blue-100";
+                      }
+
+                      return (
+                        <div className={twMerge(
+                          "px-2 py-1 rounded-lg text-[8px] font-black uppercase tracking-wider border flex items-center gap-1.5",
+                          badgeClasses
+                        )}>
+                          {badgeText}
+                        </div>
+                      );
+                    })()}
 
                     <div className="flex items-center gap-2">
                       <button

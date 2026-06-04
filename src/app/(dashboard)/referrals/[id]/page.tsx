@@ -20,7 +20,8 @@ import {
   IconClock,
   IconDeviceFloppy,
   IconChecks,
-  IconCurrencyRupee
+  IconCurrencyRupee,
+  IconRoute
 } from "@tabler/icons-react";
 import { referralService } from "@/lib/services/referralService";
 import { useTranslations } from "@/contexts/LanguageContext";
@@ -95,7 +96,7 @@ export default function RefereeDetailPage() {
   });
 
   const settleMutation = useMutation({
-    mutationFn: (data: { amount: number; paymentMethod: string }) => 
+    mutationFn: (data: { amount: number; paymentMethod: string }) =>
       referralService.creditMoney(refereeId, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["refereeDetails", refereeId] });
@@ -179,12 +180,13 @@ export default function RefereeDetailPage() {
         <div className="min-h-[500px]">
           <Tabs.Content value="overview" className="space-y-10 outline-none animate-in fade-in slide-in-from-bottom-4 duration-500">
             {/* Stats Grid */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-6">
               {[
                 { label: "Current Balance", value: `₹${details.summary.currentEarned.toLocaleString()}`, color: "bg-emerald-50 text-emerald-600 border-emerald-100", icon: IconWallet },
                 { label: "Lifetime Earned", value: `₹${details.summary.lifetimeEarned.toLocaleString()}`, color: "bg-primary/5 text-primary border-primary/10", icon: IconCurrencyRupee },
                 { label: "Pending Commissions", value: `₹${details.summary.pendingEarned.toLocaleString()}`, color: "bg-amber-50 text-amber-600 border-amber-100", icon: IconClock },
-                { label: "Total Paid Out", value: `₹${details.summary.totalPaidOut.toLocaleString()}`, color: "bg-muted/30 text-muted-foreground border-border/60", icon: IconHistory }
+                { label: "Total Paid Out", value: `₹${details.summary.totalPaidOut.toLocaleString()}`, color: "bg-muted/30 text-muted-foreground border-border/60", icon: IconHistory },
+                { label: "Lifetime Tours Referred", value: `${details.summary.lifetimeToursReferred || 0}`, color: "bg-blue-50 text-blue-600 border-blue-100", icon: IconRoute }
               ].map((stat, i) => (
                 <div key={i} className={twMerge("p-8 rounded-[2.5rem] border space-y-4", stat.color)}>
                   <div className="h-10 w-10 rounded-xl bg-white/50 backdrop-blur-sm flex items-center justify-center shadow-sm">
@@ -227,7 +229,7 @@ export default function RefereeDetailPage() {
                     {settleMutation.isPending ? <IconLoader2 size={18} className="animate-spin" /> : "Settle Now"}
                   </button>
                 </div>
-                
+
                 {details.summary.currentEarned < 100 && (
                   <p className="text-[10px] font-black uppercase tracking-widest text-amber-600 text-center bg-amber-50 py-3 rounded-xl border border-amber-100">
                     Minimum payout threshold is ₹100
@@ -241,14 +243,14 @@ export default function RefereeDetailPage() {
                   <IconShieldCheck className="text-emerald-600" />
                   Verification Details
                 </h3>
-                
+
                 <div className="space-y-5">
                   <div className="flex items-center justify-between p-5 rounded-2xl bg-muted/20 border border-border/60">
-                    <span className="text-xs font-bold text-muted-foreground flex items-center gap-2"><IconId size={16}/> Aadhaar ID</span>
+                    <span className="text-xs font-bold text-muted-foreground flex items-center gap-2"><IconId size={16} /> Aadhaar ID</span>
                     <span className="text-xs font-black">{details.referee.aadhaarNumber || "NOT PROVIDED"}</span>
                   </div>
                   <div className="flex items-center justify-between p-5 rounded-2xl bg-muted/20 border border-border/60">
-                    <span className="text-xs font-bold text-muted-foreground flex items-center gap-2"><IconBuildingBank size={16}/> Bank Status</span>
+                    <span className="text-xs font-bold text-muted-foreground flex items-center gap-2"><IconBuildingBank size={16} /> Bank Status</span>
                     <div className={twMerge(
                       "px-3 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest border",
                       details.referee.paymentDetails?.isVerified ? "bg-emerald-50 text-emerald-600 border-emerald-100" : "bg-amber-50 text-amber-600 border-amber-100"
@@ -270,9 +272,9 @@ export default function RefereeDetailPage() {
                   <div className="grid grid-cols-1 gap-6">
                     <div className="space-y-1.5">
                       <label className={labelClasses}>Full Name</label>
-                      <input 
+                      <input
                         value={editForm.name}
-                        onChange={(e) => setEditForm({...editForm, name: e.target.value})}
+                        onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
                         className={inputClasses}
                       />
                     </div>
@@ -280,33 +282,33 @@ export default function RefereeDetailPage() {
                       <div className="space-y-1.5">
                         <label className={labelClasses}>Phone Number</label>
                         <div className="flex gap-2">
-                          <input 
+                          <input
                             placeholder="91"
                             value={editForm.extension || "91"}
-                            onChange={(e) => setEditForm({...editForm, extension: e.target.value.replace(/\D/g, "").slice(0, 4)})}
+                            onChange={(e) => setEditForm({ ...editForm, extension: e.target.value.replace(/\D/g, "").slice(0, 4) })}
                             className={twMerge(inputClasses, "w-20 px-2 text-center")}
                           />
-                          <input 
+                          <input
                             value={editForm.mobile}
-                            onChange={(e) => setEditForm({...editForm, mobile: e.target.value.replace(/\D/g, "").slice(0, 10)})}
+                            onChange={(e) => setEditForm({ ...editForm, mobile: e.target.value.replace(/\D/g, "").slice(0, 10) })}
                             className={inputClasses}
                           />
                         </div>
                       </div>
                       <div className="space-y-1.5">
                         <label className={labelClasses}>Custom Code</label>
-                        <input 
+                        <input
                           value={editForm.referralCode}
-                          onChange={(e) => setEditForm({...editForm, referralCode: e.target.value.toUpperCase().replace(/\s/g, "")})}
+                          onChange={(e) => setEditForm({ ...editForm, referralCode: e.target.value.toUpperCase().replace(/\s/g, "") })}
                           className={twMerge(inputClasses, "uppercase")}
                         />
                       </div>
                     </div>
                     <div className="space-y-1.5">
                       <label className={labelClasses}>Aadhaar Number</label>
-                      <input 
+                      <input
                         value={editForm.aadhaarNumber}
-                        onChange={(e) => setEditForm({...editForm, aadhaarNumber: e.target.value})}
+                        onChange={(e) => setEditForm({ ...editForm, aadhaarNumber: e.target.value })}
                         className={inputClasses}
                       />
                     </div>
@@ -316,7 +318,7 @@ export default function RefereeDetailPage() {
                         <p className="text-[10px] font-bold text-muted-foreground/60 mt-1">If inactive, partner cannot login to app</p>
                       </div>
                       <button
-                        onClick={() => setEditForm({...editForm, isActive: !editForm.isActive})}
+                        onClick={() => setEditForm({ ...editForm, isActive: !editForm.isActive })}
                         className={twMerge(
                           "h-10 px-6 rounded-xl text-[10px] font-black uppercase tracking-widest border transition-all",
                           editForm.isActive ? "bg-emerald-50 text-emerald-600 border-emerald-100" : "bg-red-50 text-red-600 border-red-100"
@@ -334,35 +336,35 @@ export default function RefereeDetailPage() {
                   <div className="grid grid-cols-1 gap-6">
                     <div className="space-y-1.5">
                       <label className={labelClasses}>UPI ID</label>
-                      <input 
+                      <input
                         value={editForm.paymentDetails.upiId}
-                        onChange={(e) => setEditForm({...editForm, paymentDetails: {...editForm.paymentDetails, upiId: e.target.value}})}
+                        onChange={(e) => setEditForm({ ...editForm, paymentDetails: { ...editForm.paymentDetails, upiId: e.target.value } })}
                         className={inputClasses}
                         placeholder="username@bank"
                       />
                     </div>
                     <div className="space-y-1.5">
                       <label className={labelClasses}>Bank Name</label>
-                      <input 
+                      <input
                         value={editForm.paymentDetails.bankName}
-                        onChange={(e) => setEditForm({...editForm, paymentDetails: {...editForm.paymentDetails, bankName: e.target.value}})}
+                        onChange={(e) => setEditForm({ ...editForm, paymentDetails: { ...editForm.paymentDetails, bankName: e.target.value } })}
                         className={inputClasses}
                         placeholder="e.g. State Bank of India"
                       />
                     </div>
                     <div className="space-y-1.5">
                       <label className={labelClasses}>Account Number</label>
-                      <input 
+                      <input
                         value={editForm.paymentDetails.accountNumber}
-                        onChange={(e) => setEditForm({...editForm, paymentDetails: {...editForm.paymentDetails, accountNumber: e.target.value}})}
+                        onChange={(e) => setEditForm({ ...editForm, paymentDetails: { ...editForm.paymentDetails, accountNumber: e.target.value } })}
                         className={inputClasses}
                       />
                     </div>
                     <div className="space-y-1.5">
                       <label className={labelClasses}>IFSC Code</label>
-                      <input 
+                      <input
                         value={editForm.paymentDetails.ifscCode}
-                        onChange={(e) => setEditForm({...editForm, paymentDetails: {...editForm.paymentDetails, ifscCode: e.target.value.toUpperCase()}})}
+                        onChange={(e) => setEditForm({ ...editForm, paymentDetails: { ...editForm.paymentDetails, ifscCode: e.target.value.toUpperCase() } })}
                         className={inputClasses}
                       />
                     </div>
@@ -372,7 +374,7 @@ export default function RefereeDetailPage() {
                         <p className="text-[10px] font-bold text-muted-foreground/60 mt-1">Mark bank details as manually verified</p>
                       </div>
                       <button
-                        onClick={() => setEditForm({...editForm, paymentDetails: {...editForm.paymentDetails, isVerified: !editForm.paymentDetails.isVerified}})}
+                        onClick={() => setEditForm({ ...editForm, paymentDetails: { ...editForm.paymentDetails, isVerified: !editForm.paymentDetails.isVerified } })}
                         className={twMerge(
                           "h-10 px-6 rounded-xl text-[10px] font-black uppercase tracking-widest border transition-all",
                           editForm.paymentDetails.isVerified ? "bg-emerald-600 text-white border-emerald-600" : "bg-card text-muted-foreground border-border"
@@ -424,7 +426,7 @@ export default function RefereeDetailPage() {
                             </div>
                             {earn.baseReferralAmount !== undefined && (
                               <p className="text-[9px] font-bold text-primary/60 uppercase tracking-widest mt-0.5">
-                                Rate: {earn.tourType === "private" 
+                                Rate: {earn.tourType === "private"
                                   ? `₹${earn.baseReferralAmount} Flat`
                                   : `₹${earn.baseReferralAmount} × ${earn.personCount || 1} guest(s)`
                                 }
@@ -433,7 +435,7 @@ export default function RefereeDetailPage() {
                           </div>
                         </td>
                         <td className="px-8 py-6">
-                          <p className="text-[10px] font-bold text-muted-foreground">{format(new Date(earn.dateTime), "dd MMM yyyy")}</p>
+                          <p className="text-[10px] font-bold text-muted-foreground">{format(new Date(earn.dateTime), "dd MMM yyyy, h:mm a")}</p>
                         </td>
                         <td className="px-8 py-6">
                           <div className={twMerge(
@@ -479,7 +481,7 @@ export default function RefereeDetailPage() {
                           <p className="text-xs font-black text-foreground">{pay.paymentMethod}</p>
                         </td>
                         <td className="px-8 py-6">
-                          <p className="text-[10px] font-bold text-muted-foreground">{format(new Date(pay.createdAt), "dd MMM yyyy")}</p>
+                          <p className="text-[10px] font-bold text-muted-foreground">{format(new Date(pay.createdAt), "dd MMM yyyy, h:mm a")}</p>
                         </td>
                         <td className="px-8 py-6">
                           <p className="text-[10px] font-black tracking-widest text-muted-foreground/40">{pay.transactionId || "MANUAL_SETTLE"}</p>

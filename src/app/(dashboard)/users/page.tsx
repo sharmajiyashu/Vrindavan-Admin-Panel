@@ -22,6 +22,7 @@ import { userService, User, PaginatedUserResponse } from "@/lib/services/userSer
 import { useLanguage } from "@/contexts/LanguageContext";
 import { twMerge } from "tailwind-merge";
 import { toast } from "react-toastify";
+import { format } from "date-fns";
 
 export default function UsersPage() {
   const { t } = useLanguage();
@@ -32,7 +33,13 @@ export default function UsersPage() {
   const [editingUser, setEditingUser] = useState<User | null>(null);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
 
-  const [formData, setFormData] = useState({ name: "", email: "" });
+  const [formData, setFormData] = useState({
+    name: "",
+    email: "",
+    userRole: "user",
+    isActive: true,
+    walletBalance: 0
+  });
 
   const { data, isLoading } = useQuery<PaginatedUserResponse>({
     queryKey: ["users", page, limit, searchTerm],
@@ -40,7 +47,7 @@ export default function UsersPage() {
   });
 
   const updateMutation = useMutation({
-    mutationFn: ({ id, data }: { id: number; data: { name: string; email: string } }) =>
+    mutationFn: ({ id, data }: { id: number; data: { name: string; email: string; userRole: string; isActive: boolean; walletBalance: number } }) =>
       userService.updateUser(id, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["users"] });
@@ -58,7 +65,13 @@ export default function UsersPage() {
 
   const handleEditClick = (user: User) => {
     setEditingUser(user);
-    setFormData({ name: user.name, email: user.email || "" });
+    setFormData({
+      name: user.name,
+      email: user.email || "",
+      userRole: user.userRole,
+      isActive: user.isActive,
+      walletBalance: Number(user.walletBalance || 0)
+    });
     setIsEditDialogOpen(true);
   };
 
@@ -131,8 +144,11 @@ export default function UsersPage() {
               <thead>
                 <tr className="border-b border-border/60 text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/50">
                   <th className="px-6 py-4">User</th>
-                  <th className="px-4 py-4">{t("users.totalBookings")}</th>
                   <th className="px-4 py-4">{t("users.role")}</th>
+                  <th className="px-4 py-4">Wallet Balance</th>
+                  <th className="px-4 py-4">Referral Code</th>
+                  <th className="px-4 py-4">{t("users.totalBookings")}</th>
+                  <th className="px-4 py-4">Status</th>
                   <th className="px-6 py-4 text-right">Actions</th>
                 </tr>
               </thead>
@@ -146,24 +162,51 @@ export default function UsersPage() {
                         </div>
                         <div className="min-w-0">
                           <p className="truncate text-xs font-bold text-foreground leading-tight">{user.name}</p>
-                          <div className="flex items-center gap-3 mt-1 opacity-70">
-                            <p className="truncate text-[10px] font-medium text-muted-foreground tracking-wide flex items-center gap-1">
-                              <IconMail size={10} />
-                              {user.email || "No email"}
-                            </p>
-                            <p className="truncate text-[10px] font-medium text-muted-foreground tracking-wide flex items-center gap-1">
-                              <IconPhone size={10} />
-                              {user.mobile}
-                            </p>
+                          <div className="flex flex-col gap-1 mt-1 opacity-70">
+                            <div className="flex items-center gap-3">
+                              <p className="truncate text-[10px] font-medium text-muted-foreground tracking-wide flex items-center gap-1">
+                                <IconMail size={10} />
+                                {user.email || "No email"}
+                              </p>
+                              <p className="truncate text-[10px] font-medium text-muted-foreground tracking-wide flex items-center gap-1">
+                                <IconPhone size={10} />
+                                {user.mobile}
+                              </p>
+                            </div>
+                            {user.createdAt && (
+                              <p className="text-[9px] font-medium text-muted-foreground/65">
+                                Registered: {format(new Date(user.createdAt), "dd MMM yyyy")}
+                              </p>
+                            )}
                           </div>
                         </div>
                       </div>
                     </td>
                     <td className="px-4 py-4">
+                      <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/60">{user.userRole}</p>
+                    </td>
+                    <td className="px-4 py-4">
+                      <p className="text-xs font-black text-foreground">₹{Number(user.walletBalance || 0).toLocaleString()}</p>
+                    </td>
+                    <td className="px-4 py-4">
+                      {user.referralCode ? (
+                        <span className="inline-flex items-center rounded bg-primary/5 px-2 py-0.5 text-[9px] font-black tracking-widest text-primary border border-primary/10">
+                          {user.referralCode}
+                        </span>
+                      ) : (
+                        <span className="text-xs text-muted-foreground/30">-</span>
+                      )}
+                    </td>
+                    <td className="px-4 py-4">
                       <p className="text-xs font-bold text-foreground">{user.totalBookings}</p>
                     </td>
                     <td className="px-4 py-4">
-                      <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/60">{user.userRole}</p>
+                      <span className={twMerge(
+                        "inline-flex items-center rounded-lg px-2 py-0.5 text-[9px] font-black uppercase tracking-widest border",
+                        user.isActive ? "bg-emerald-50 text-emerald-600 border-emerald-100" : "bg-red-50 text-red-600 border-red-100"
+                      )}>
+                        {user.isActive ? "Active" : "Inactive"}
+                      </span>
                     </td>
                     <td className="px-6 py-4 text-right">
                       <button
@@ -247,6 +290,48 @@ export default function UsersPage() {
                     onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                     className="h-12 w-full rounded-2xl border border-border bg-muted/20 px-4 text-sm font-bold transition-all focus:border-primary focus:ring-4 focus:ring-primary/5 outline-none placeholder:text-muted-foreground/30"
                   />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/60 ml-1">
+                    User Role
+                  </label>
+                  <select
+                    value={formData.userRole}
+                    onChange={(e) => setFormData({ ...formData, userRole: e.target.value })}
+                    className="h-12 w-full rounded-2xl border border-border bg-muted/20 px-4 text-sm font-bold transition-all focus:border-primary focus:ring-4 focus:ring-primary/5 outline-none cursor-pointer"
+                  >
+                    <option value="user">User (Customer)</option>
+                    <option value="admin">Admin</option>
+                    <option value="referee">Referee (Partner)</option>
+                  </select>
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/60 ml-1">
+                    Wallet Balance (₹)
+                  </label>
+                  <input
+                    type="number"
+                    min={0}
+                    value={formData.walletBalance}
+                    onChange={(e) => setFormData({ ...formData, walletBalance: Number(e.target.value) })}
+                    className="h-12 w-full rounded-2xl border border-border bg-muted/20 px-4 text-sm font-bold transition-all focus:border-primary focus:ring-4 focus:ring-primary/5 outline-none"
+                  />
+                </div>
+                <div className="flex items-center justify-between p-4 rounded-2xl bg-muted/25 border border-border">
+                  <div>
+                    <p className="text-xs font-black uppercase tracking-widest">Active Status</p>
+                    <p className="text-[9px] font-bold text-muted-foreground/60 mt-1">If inactive, user cannot access the app</p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setFormData({ ...formData, isActive: !formData.isActive })}
+                    className={twMerge(
+                      "h-10 px-6 rounded-xl text-[10px] font-black uppercase tracking-widest border transition-all",
+                      formData.isActive ? "bg-emerald-50 text-emerald-600 border-emerald-100" : "bg-red-50 text-red-600 border-red-100"
+                    )}
+                  >
+                    {formData.isActive ? "Active" : "Inactive"}
+                  </button>
                 </div>
               </div>
 

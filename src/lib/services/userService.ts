@@ -8,6 +8,7 @@ export interface User {
   walletBalance: string | number;
   referralCode: string | null;
   userRole: string;
+  isActive: boolean;
   createdAt: string;
   totalBookings: number;
 }
@@ -36,7 +37,7 @@ export const userService = {
     return await get<User>(`/users/${id}`);
   },
 
-  updateUser: async (id: number, data: { name?: string; email?: string }) => {
+  updateUser: async (id: number, data: { name?: string; email?: string; userRole?: string; isActive?: boolean; walletBalance?: number }) => {
     return await put<User>(`/users/${id}`, data);
   },
 };

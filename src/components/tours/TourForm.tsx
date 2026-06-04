@@ -119,6 +119,8 @@ export function TourForm({ initialData, onSubmitBasic, onSubmitFiles, onRemoveMe
       cancellationBeforeHours: initialData.cancellationBeforeHours ?? 24,
       shareDetailsBeforeHours: initialData.shareDetailsBeforeHours ?? 2,
       guideDetailsBeforeHours: initialData.guideDetailsBeforeHours ?? 24,
+      slotDeadlineHours: initialData.slotDeadlineHours ?? 2,
+      isVerified: initialData.isVerified ?? false,
     } : {
       titleEn: "",
       titleHi: "",
@@ -136,6 +138,7 @@ export function TourForm({ initialData, onSubmitBasic, onSubmitFiles, onRemoveMe
       discountConfig: null,
       extraDiscountPerUser: 0,
       isActive: true,
+      isVerified: false,
       templesCoveredCount: 0,
       durationEn: "",
       durationHi: "",
@@ -161,6 +164,7 @@ export function TourForm({ initialData, onSubmitBasic, onSubmitFiles, onRemoveMe
       cancellationBeforeHours: 24,
       shareDetailsBeforeHours: 2,
       guideDetailsBeforeHours: 24,
+      slotDeadlineHours: 2,
     },
   });
 
@@ -197,6 +201,11 @@ export function TourForm({ initialData, onSubmitBasic, onSubmitFiles, onRemoveMe
 
       // Exclude slots and reviews as they are managed via separate dedicated APIs
       const { slots, reviews, ...basicData } = data;
+
+      if (basicData.type === "private") {
+        basicData.minPersons = null;
+        basicData.maxPersons = null;
+      }
 
       // Always save basic details first to ensure all changes (including icons/itinerary images) are persisted
       currentId = await onSubmitBasic({
@@ -245,7 +254,7 @@ export function TourForm({ initialData, onSubmitBasic, onSubmitFiles, onRemoveMe
           {[
             { id: "basic", label: t("tours.basicDetails"), hasError: !!(errors.titleEn || errors.titleHi || errors.subtitleEn || errors.subtitleHi || errors.subtextEn || errors.subtextHi) },
             { id: "pricing", label: "Pricing & Discounts", hasError: !!(errors.price || errors.slashedPrice || errors.minPersons || errors.maxPersons || errors.type) },
-            { id: "logistics", label: t("tours.logistics"), hasError: !!(errors.lat || errors.long || errors.durationEn || errors.durationHi || errors.startingAddressEn || errors.startingAddressHi) },
+            { id: "logistics", label: t("tours.logistics"), hasError: !!(errors.lat || errors.long || errors.durationEn || errors.durationHi || errors.startingAddressEn || errors.startingAddressHi || errors.cancellationBeforeHours || errors.shareDetailsBeforeHours || errors.guideDetailsBeforeHours || errors.slotDeadlineHours) },
             { id: "referral", label: "Referral App", hasError: !!(errors.referralTourSummaryEn || errors.referralTourSummaryHi || errors.customerPickupLines) },
             { id: "content", label: t("tours.content"), hasError: !!(errors.features || errors.itinerary || errors.faqs) },
             { id: "media", label: t("tours.media"), disabled: !tourId },
@@ -297,6 +306,17 @@ export function TourForm({ initialData, onSubmitBasic, onSubmitFiles, onRemoveMe
             <div className="md:col-span-2">
               <label className={labelClasses}>{t("tours.subtextHi")}</label>
               <input {...register("subtextHi")} className={inputClasses} placeholder="उदाहरण: आध्यात्मिक यात्रा" />
+            </div>
+
+            <div>
+              <label className={labelClasses}>{t("tours.locationNameEn")}</label>
+              <input {...register("locationNameEn")} className={inputClasses} placeholder="e.g. Vrindavan, Uttar Pradesh" />
+              {errors.locationNameEn && <p className={errorClasses}>{errors.locationNameEn.message}</p>}
+            </div>
+            <div>
+              <label className={labelClasses}>{t("tours.locationNameHi")}</label>
+              <input {...register("locationNameHi")} className={inputClasses} placeholder="उदा. वृंदावन, उत्तर प्रदेश" />
+              {errors.locationNameHi && <p className={errorClasses}>{errors.locationNameHi.message}</p>}
             </div>
 
             <div className="md:col-span-2 space-y-4">
@@ -458,16 +478,30 @@ export function TourForm({ initialData, onSubmitBasic, onSubmitFiles, onRemoveMe
               </div>
             </div>
 
-            <div className="flex items-center gap-2 p-3 rounded-xl border border-border bg-muted/20">
-              <input
-                type="checkbox"
-                id="isActive"
-                {...register("isActive")}
-                className="h-5 w-5 rounded-lg border-border text-primary focus:ring-primary/20"
-              />
-              <label htmlFor="isActive" className="text-sm font-bold text-foreground cursor-pointer select-none">
-                {t("tours.active")}
-              </label>
+            <div className="grid grid-cols-2 gap-4 md:col-span-2">
+              <div className="flex items-center gap-2 p-3 rounded-xl border border-border bg-muted/20">
+                <input
+                  type="checkbox"
+                  id="isActive"
+                  {...register("isActive")}
+                  className="h-5 w-5 rounded-lg border-border text-primary focus:ring-primary/20"
+                />
+                <label htmlFor="isActive" className="text-sm font-bold text-foreground cursor-pointer select-none">
+                  {t("tours.active")}
+                </label>
+              </div>
+
+              <div className="flex items-center gap-2 p-3 rounded-xl border border-border bg-muted/20">
+                <input
+                  type="checkbox"
+                  id="isVerified"
+                  {...register("isVerified")}
+                  className="h-5 w-5 rounded-lg border-border text-primary focus:ring-primary/20"
+                />
+                <label htmlFor="isVerified" className="text-sm font-bold text-foreground cursor-pointer select-none">
+                  Verified Tour
+                </label>
+              </div>
             </div>
           </div>
         </Tabs.Content>
@@ -486,18 +520,20 @@ export function TourForm({ initialData, onSubmitBasic, onSubmitFiles, onRemoveMe
               </p>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className={labelClasses}>Min Persons</label>
-                <input type="number" {...register("minPersons")} className={inputClasses} placeholder="1" />
-                {errors.minPersons && <p className={errorClasses}>{errors.minPersons.message}</p>}
+            {tourType !== "private" && (
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className={labelClasses}>Min Persons</label>
+                  <input type="number" {...register("minPersons")} className={inputClasses} placeholder="1" />
+                  {errors.minPersons && <p className={errorClasses}>{errors.minPersons.message}</p>}
+                </div>
+                <div>
+                  <label className={labelClasses}>Max Persons</label>
+                  <input type="number" {...register("maxPersons")} className={inputClasses} placeholder="10" />
+                  {errors.maxPersons && <p className={errorClasses}>{errors.maxPersons.message}</p>}
+                </div>
               </div>
-              <div>
-                <label className={labelClasses}>Max Persons</label>
-                <input type="number" {...register("maxPersons")} className={inputClasses} placeholder="10" />
-                {errors.maxPersons && <p className={errorClasses}>{errors.maxPersons.message}</p>}
-              </div>
-            </div>
+            )}
 
             <div>
               <label className={labelClasses}>Price ({tourType === "private" ? "Complete Price" : "Per Person Price"})</label>
@@ -560,7 +596,7 @@ export function TourForm({ initialData, onSubmitBasic, onSubmitFiles, onRemoveMe
               </div>
             </div>
 
-            <div className="md:col-span-2 grid grid-cols-3 gap-4 pt-4 border-t border-border/40">
+            <div className="md:col-span-2 grid grid-cols-2 md:grid-cols-4 gap-4 pt-4 border-t border-border/40">
               <div>
                 <label className={labelClasses}>Tour Cancellation Deadline (Hours)</label>
                 <input type="number" {...register("cancellationBeforeHours")} className={inputClasses} />
@@ -575,6 +611,11 @@ export function TourForm({ initialData, onSubmitBasic, onSubmitFiles, onRemoveMe
                 <label className={labelClasses}>Guide Details Deadline (Hours)</label>
                 <input type="number" {...register("guideDetailsBeforeHours")} className={inputClasses} />
                 <p className="text-[10px] text-muted-foreground mt-1">Reveal guide details to user.</p>
+              </div>
+              <div>
+                <label className={labelClasses}>Slot Booking Deadline (Hours)</label>
+                <input type="number" {...register("slotDeadlineHours")} className={inputClasses} />
+                <p className="text-[10px] text-muted-foreground mt-1">Close slot booking x hours before start.</p>
               </div>
             </div>
           </div>
@@ -796,11 +837,11 @@ export function TourForm({ initialData, onSubmitBasic, onSubmitFiles, onRemoveMe
                   </button>
                   <div className="grid gap-3 md:grid-cols-2">
                     <div>
-                      <label className={labelClasses}>Step Name (EN)</label>
+                      <label className={labelClasses}>Title (EN)</label>
                       <input {...register(`itinerary.${index}.titleEn`)} className={inputClasses} />
                     </div>
                     <div>
-                      <label className={labelClasses}>Step Name (HI)</label>
+                      <label className={labelClasses}>Title (HI)</label>
                       <input {...register(`itinerary.${index}.titleHi`)} className={inputClasses} />
                     </div>
                     <div>
