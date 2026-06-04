@@ -290,6 +290,11 @@ export default function TourDetailPage() {
       return;
     }
 
+    if (!newSlot.alternateNumber || !newSlot.alternateNumber.trim()) {
+      toast.error("Alternate contact number is required");
+      return;
+    }
+
     // Date & Time Validation
     const now = new Date();
     const selectedDateObj = parse(newSlot.date!, "yyyy-MM-dd", new Date());
@@ -396,7 +401,9 @@ export default function TourDetailPage() {
         </div>
         <div className="flex flex-col justify-center p-3 rounded-xl bg-card border border-border shadow-sm">
           <p className="text-[9px] font-bold text-muted-foreground uppercase tracking-wider">Capacity</p>
-          <p className="text-sm font-bold text-foreground leading-tight">{tour.minPersons || 1} - {tour.maxPersons || 10}</p>
+          <p className="text-sm font-bold text-foreground leading-tight">
+            {tour.type === "private" ? "Private" : `${tour.minPersons || 1} - ${tour.maxPersons || 10}`}
+          </p>
         </div>
         <div className="hidden lg:flex flex-col justify-center p-3 rounded-xl bg-primary/5 border border-primary/10">
           <p className="text-[9px] font-bold text-primary uppercase tracking-wider">Total Slots</p>
@@ -840,7 +847,12 @@ export default function TourDetailPage() {
                     {["morning", "evening"].map((s) => (
                       <button
                         key={s}
-                        onClick={() => setNewSlot(prev => ({ ...prev, session: s as any }))}
+                        type="button"
+                        onClick={() => setNewSlot(prev => ({
+                          ...prev,
+                          session: s as any,
+                          startTime: s === "morning" ? "09:00 AM" : "04:00 PM"
+                        }))}
                         className={twMerge(
                           "px-4 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all",
                           newSlot.session === s
@@ -867,7 +879,10 @@ export default function TourDetailPage() {
                     />
                   </div>
                   <div className="flex flex-wrap gap-2 pt-1">
-                    {["09:00 AM", "11:00 AM", "01:00 PM", "03:00 PM", "05:00 PM", "07:00 PM"].map(time => {
+                    {(newSlot.session === "evening"
+                      ? ["12:00 PM", "02:00 PM", "04:00 PM", "06:00 PM", "08:00 PM"]
+                      : ["06:00 AM", "08:00 AM", "09:00 AM", "10:00 AM", "11:00 AM"]
+                    ).map(time => {
                       const slotDate = parse(selectedDate, "yyyy-MM-dd", new Date());
                       const slotTime = parse(time, "hh:mm a", slotDate);
                       const isExpired = isToday(slotDate) && isAfter(new Date(), slotTime);
@@ -877,6 +892,7 @@ export default function TourDetailPage() {
                       return (
                         <button
                           key={time}
+                          type="button"
                           onClick={() => setNewSlot(prev => ({ ...prev, startTime: time }))}
                           className={twMerge(
                             "px-2.5 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-[0.05em] border transition-all duration-300",
@@ -922,7 +938,7 @@ export default function TourDetailPage() {
                   </div>
                 </div>
                 <div className="space-y-2">
-                  <label className={labelClasses}>Alternate Contact Number</label>
+                  <label className={labelClasses}>Alternate Contact Number <span className="text-destructive">*</span></label>
                   <div className="relative">
                     <IconAlertCircle className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/40" />
                     <input

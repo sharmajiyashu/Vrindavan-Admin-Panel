@@ -116,6 +116,7 @@ export interface Tour {
   cancellationBeforeHours?: number;
   shareDetailsBeforeHours?: number;
   guideDetailsBeforeHours?: number;
+  slotDeadlineHours?: number;
 
   isActive: boolean;
   isVerified?: boolean;
