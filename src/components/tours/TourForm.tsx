@@ -819,7 +819,7 @@ export function TourForm({ initialData, onSubmitBasic, onSubmitFiles, onRemoveMe
               <h3 className="text-xs font-bold uppercase tracking-wider text-primary">Itinerary</h3>
               <button
                 type="button"
-                onClick={() => setValue("itinerary", [...(watch("itinerary") || []), { imageId: null, titleEn: "", titleHi: "", descriptionEn: "", descriptionHi: "" }])}
+                onClick={() => setValue("itinerary", [...(watch("itinerary") || []), { imageId: null, titleEn: "", titleHi: "", descriptionEn: "", descriptionHi: "", sectionHeaderEn: "", sectionHeaderHi: "" }])}
                 className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary/10 text-primary text-[10px] font-bold hover:bg-primary/20 transition-all"
               >
                 <IconPlus className="h-3.5 w-3.5" /> Add
@@ -836,6 +836,14 @@ export function TourForm({ initialData, onSubmitBasic, onSubmitFiles, onRemoveMe
                     <IconTrash className="h-3.5 w-3.5" />
                   </button>
                   <div className="grid gap-3 md:grid-cols-2">
+                    <div>
+                      <label className={labelClasses}>Section Header (EN) [Optional]</label>
+                      <input {...register(`itinerary.${index}.sectionHeaderEn`)} className={inputClasses} placeholder="e.g. Day 1" />
+                    </div>
+                    <div>
+                      <label className={labelClasses}>Section Header (HI) [Optional]</label>
+                      <input {...register(`itinerary.${index}.sectionHeaderHi`)} className={inputClasses} placeholder="उदा. पहला दिन" />
+                    </div>
                     <div>
                       <label className={labelClasses}>Title (EN)</label>
                       <input {...register(`itinerary.${index}.titleEn`)} className={inputClasses} />

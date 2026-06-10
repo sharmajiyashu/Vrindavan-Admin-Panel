@@ -95,6 +95,8 @@ export const tourBaseSchema = z.object({
     titleHi: z.string(),
     descriptionEn: z.string(),
     descriptionHi: z.string(),
+    sectionHeaderEn: z.string().optional().nullable(),
+    sectionHeaderHi: z.string().optional().nullable(),
   }))).default([]),
 
   faqs: z.preprocess(jsonArrayPreprocess, z.array(z.object({
