@@ -52,6 +52,7 @@ export function CouponForm({ initialData, onSubmit, onCancel, isLoading }: Coupo
       maxUsage: initialData.maxUsage ?? null,
       tourId: initialData.tourId ?? null,
       isActive: initialData.isActive ?? true,
+      minOrderValue: initialData.minOrderValue ?? null,
     } : {
       code: "",
       discountType: "percentage",
@@ -60,6 +61,7 @@ export function CouponForm({ initialData, onSubmit, onCancel, isLoading }: Coupo
       expiryDate: "",
       maxUsage: null,
       tourId: null,
+      minOrderValue: null,
     },
   });
 
@@ -121,6 +123,18 @@ export function CouponForm({ initialData, onSubmit, onCancel, isLoading }: Coupo
                 {t("coupons.flat")}
               </div>
             </label>
+            <label className="flex-1 cursor-pointer">
+              <input
+                type="radio"
+                value="flat_above"
+                {...register("discountType")}
+                className="sr-only peer"
+              />
+              <div className="flex items-center justify-center gap-1 py-2 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all peer-checked:bg-primary peer-checked:text-primary-foreground text-muted-foreground hover:bg-muted text-center px-1">
+                <IconCurrencyDollar size={14} />
+                Flat Above X
+              </div>
+            </label>
           </div>
         </div>
 
@@ -143,6 +157,28 @@ export function CouponForm({ initialData, onSubmit, onCancel, isLoading }: Coupo
           </div>
           {errors.discountValue && <p className={errorClasses}>{errors.discountValue.message}</p>}
         </div>
+
+        {/* Min Order Value for Flat Above */}
+        {discountType === "flat_above" && (
+          <div>
+            <label className={labelClasses}>
+              Min Order Amount (₹)
+            </label>
+            <div className="relative group">
+              <div className="absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-foreground/40 group-focus-within:text-primary transition-colors">
+                <span>₹</span>
+              </div>
+              <input
+                type="number"
+                step="any"
+                {...register("minOrderValue")}
+                className={twMerge(inputClasses, "pl-11")}
+                placeholder="e.g. 400"
+              />
+            </div>
+            {errors.minOrderValue && <p className={errorClasses}>{errors.minOrderValue.message}</p>}
+          </div>
+        )}
 
         {/* Expiry Date */}
         <div>

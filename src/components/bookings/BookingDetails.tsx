@@ -145,7 +145,13 @@ export function BookingDetails({ booking }: BookingDetailsProps) {
                     Mobile
                   </p>
                   <p className="text-sm font-bold truncate">
-                    {booking.user?.mobile || "N/A"}
+                    {(() => {
+                      const mobile = booking.user?.mobile;
+                      if (!mobile) return "N/A";
+                      if (mobile.startsWith("9191") && mobile.length >= 14) return `+91 ${mobile.slice(4)}`;
+                      if (mobile.startsWith("91") && mobile.length === 12) return `+91 ${mobile.slice(2)}`;
+                      return mobile;
+                    })()}
                   </p>
                 </div>
               </div>
@@ -193,7 +199,13 @@ export function BookingDetails({ booking }: BookingDetailsProps) {
                     Mobile
                   </p>
                   <p className="text-sm font-bold truncate">
-                    {booking.contacts?.[0]?.mobile || booking.user?.mobile || "N/A"}
+                    {(() => {
+                      const mobile = booking.contacts?.[0]?.mobile || booking.user?.mobile;
+                      if (!mobile) return "N/A";
+                      if (mobile.startsWith("9191") && mobile.length >= 14) return `+91 ${mobile.slice(4)}`;
+                      if (mobile.startsWith("91") && mobile.length === 12) return `+91 ${mobile.slice(2)}`;
+                      return mobile;
+                    })()}
                   </p>
                 </div>
               </div>
@@ -317,7 +329,13 @@ export function BookingDetails({ booking }: BookingDetailsProps) {
                         {contact.name}
                       </p>
                       <p className="text-[10px] font-medium text-muted-foreground opacity-70">
-                        {contact.mobile}
+                        {(() => {
+                          const mobile = contact.mobile;
+                          if (!mobile) return "N/A";
+                          if (mobile.startsWith("9191") && mobile.length >= 14) return `+91 ${mobile.slice(4)}`;
+                          if (mobile.startsWith("91") && mobile.length === 12) return `+91 ${mobile.slice(2)}`;
+                          return mobile;
+                        })()}
                       </p>
                     </div>
                   </div>

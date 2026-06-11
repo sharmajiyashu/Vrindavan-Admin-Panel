@@ -109,6 +109,8 @@ export interface Tour {
   badgeEn?: string | null;
   badgeHi?: string | null;
   referralAmount: number;
+  referralDiscountType?: 'flat' | 'percentage' | null;
+  referralDiscountValue?: number | null;
 
   guidePhoneNumber?: string | null;
   alternateNumber?: string | null;

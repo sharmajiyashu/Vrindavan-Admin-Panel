@@ -8,8 +8,9 @@ const coerceNumber = z.preprocess((val) => {
 
 export const couponValidationSchema = z.object({
   code: z.string().min(1, "Coupon code is required").max(50),
-  discountType: z.enum(['flat', 'percentage']),
+  discountType: z.enum(['flat', 'percentage', 'flat_above']),
   discountValue: z.coerce.number().min(0, "Discount value is required"),
+  minOrderValue: z.coerce.number().optional().nullable(),
   expiryDate: z.string().optional().nullable().refine((val) => {
     if (!val) return true;
     return /^\d{4}-\d{2}-\d{2}/.test(val);

@@ -99,6 +99,8 @@ export function TourForm({ initialData, onSubmitBasic, onSubmitFiles, onRemoveMe
       referralTourSummaryEn: initialData.referralTourSummaryEn || "",
       referralTourSummaryHi: initialData.referralTourSummaryHi || "",
       referralAmount: initialData.referralAmount || 0,
+      referralDiscountType: initialData.referralDiscountType || "flat",
+      referralDiscountValue: initialData.referralDiscountValue || 0,
       customerPickupLines: initialData.customerPickupLines || [],
       features: (initialData.features || []).map(f => ({
         ...f,
@@ -150,6 +152,8 @@ export function TourForm({ initialData, onSubmitBasic, onSubmitFiles, onRemoveMe
       referralTourSummaryEn: "",
       referralTourSummaryHi: "",
       referralAmount: 0,
+      referralDiscountType: "flat",
+      referralDiscountValue: 0,
       customerPickupLines: [],
       features: [],
       itinerary: [],
@@ -657,7 +661,32 @@ export function TourForm({ initialData, onSubmitBasic, onSubmitFiles, onRemoveMe
                   </div>
                 </div>
 
-                <div className="md:col-span-2 space-y-4">
+                <div className="md:col-span-2 p-4 rounded-xl border border-primary/10 bg-primary/5 space-y-4">
+                  <h4 className="text-xs font-black uppercase tracking-widest text-primary">Referral Discount Configuration</h4>
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <div>
+                      <label className={labelClasses}>Discount Type</label>
+                      <select {...register("referralDiscountType")} className={twMerge(inputClasses, "appearance-none")}>
+                        <option value="flat">Flat Amount (₹)</option>
+                        <option value="percentage">Percentage (%)</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className={labelClasses}>Discount Value {watch("referralDiscountType") === "percentage" ? "(%)" : "(₹)"}</label>
+                      <input
+                        type="number"
+                        {...register("referralDiscountValue")}
+                        className={inputClasses}
+                        placeholder="e.g. 25"
+                      />
+                      <p className="text-[10px] text-muted-foreground mt-1">
+                        Leave 0 to disable referral discount. Example text: "Extra {watch("referralDiscountType") === "percentage" ? "" : "₹"}{watch("referralDiscountValue") || 0}{watch("referralDiscountType") === "percentage" ? "%" : ""} OFF at Checkout Use Code RADHE123"
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* <div className="md:col-span-2 space-y-4">
                   <h4 className="text-xs font-black uppercase tracking-widest text-primary">Tour Summary for Referral App</h4>
                   <div className="grid gap-4 md:grid-cols-2">
                     <div>
@@ -713,7 +742,7 @@ export function TourForm({ initialData, onSubmitBasic, onSubmitFiles, onRemoveMe
                       <IconPlus className="h-4 w-4" /> Add Pickup Line
                     </button>
                   </div>
-                </div>
+                </div> */}
               </div>
             )}
           </div>

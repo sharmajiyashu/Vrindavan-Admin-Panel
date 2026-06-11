@@ -38,7 +38,8 @@ export default function UsersPage() {
     email: "",
     userRole: "user",
     isActive: true,
-    walletBalance: 0
+    walletBalance: 0,
+    location: ""
   });
 
   const { data, isLoading } = useQuery<PaginatedUserResponse>({
@@ -47,7 +48,7 @@ export default function UsersPage() {
   });
 
   const updateMutation = useMutation({
-    mutationFn: ({ id, data }: { id: number; data: { name: string; email: string; userRole: string; isActive: boolean; walletBalance: number } }) =>
+    mutationFn: ({ id, data }: { id: number; data: { name: string; email: string; userRole: string; isActive: boolean; walletBalance: number; location: string } }) =>
       userService.updateUser(id, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["users"] });
@@ -70,7 +71,8 @@ export default function UsersPage() {
       email: user.email || "",
       userRole: user.userRole,
       isActive: user.isActive,
-      walletBalance: Number(user.walletBalance || 0)
+      walletBalance: Number(user.walletBalance || 0),
+      location: user.location || ""
     });
     setIsEditDialogOpen(true);
   };
@@ -144,10 +146,13 @@ export default function UsersPage() {
               <thead>
                 <tr className="border-b border-border/60 text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/50">
                   <th className="px-6 py-4">User</th>
+                  <th className="px-4 py-4">User Type</th>
+                  <th className="px-4 py-4">Location</th>
                   <th className="px-4 py-4">{t("users.role")}</th>
                   <th className="px-4 py-4">Wallet Balance</th>
                   <th className="px-4 py-4">Referral Code</th>
                   <th className="px-4 py-4">{t("users.totalBookings")}</th>
+                  <th className="px-4 py-4">Joined At</th>
                   <th className="px-4 py-4">Status</th>
                   <th className="px-6 py-4 text-right">Actions</th>
                 </tr>
@@ -173,14 +178,20 @@ export default function UsersPage() {
                                 {user.mobile}
                               </p>
                             </div>
-                            {user.createdAt && (
-                              <p className="text-[9px] font-medium text-muted-foreground/65">
-                                Registered: {format(new Date(user.createdAt), "dd MMM yyyy")}
-                              </p>
-                            )}
                           </div>
                         </div>
                       </div>
+                    </td>
+                    <td className="px-4 py-4">
+                      <span className={twMerge(
+                        "inline-flex items-center rounded-lg px-2 py-0.5 text-[9px] font-black uppercase tracking-widest border",
+                        user.totalBookings === 0 ? "bg-amber-50 text-amber-600 border-amber-100" : "bg-blue-50 text-blue-600 border-blue-100"
+                      )}>
+                        {user.totalBookings === 0 ? "New User" : "Returning"}
+                      </span>
+                    </td>
+                    <td className="px-4 py-4">
+                      <p className="text-xs font-bold text-foreground">{user.location || "-"}</p>
                     </td>
                     <td className="px-4 py-4">
                       <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/60">{user.userRole}</p>
@@ -199,6 +210,13 @@ export default function UsersPage() {
                     </td>
                     <td className="px-4 py-4">
                       <p className="text-xs font-bold text-foreground">{user.totalBookings}</p>
+                    </td>
+                    <td className="px-4 py-4">
+                      {user.createdAt ? (
+                        <p className="text-xs font-bold text-foreground">{format(new Date(user.createdAt), "dd MMM yyyy")}</p>
+                      ) : (
+                        <span className="text-xs text-muted-foreground/30">-</span>
+                      )}
                     </td>
                     <td className="px-4 py-4">
                       <span className={twMerge(
@@ -304,6 +322,17 @@ export default function UsersPage() {
                     <option value="admin">Admin</option>
                     <option value="referee">Referee (Partner)</option>
                   </select>
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/60 ml-1">
+                    Location
+                  </label>
+                  <input
+                    value={formData.location}
+                    onChange={(e) => setFormData({ ...formData, location: e.target.value })}
+                    placeholder="e.g. New Delhi, India"
+                    className="h-12 w-full rounded-2xl border border-border bg-muted/20 px-4 text-sm font-bold transition-all focus:border-primary focus:ring-4 focus:ring-primary/5 outline-none placeholder:text-muted-foreground/30"
+                  />
                 </div>
                 <div className="space-y-1.5">
                   <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/60 ml-1">

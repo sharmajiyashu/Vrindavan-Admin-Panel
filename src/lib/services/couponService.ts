@@ -4,12 +4,13 @@ import { CouponFormData } from "../validations/coupon";
 export interface Coupon {
   id: number;
   code: string;
-  discountType: 'flat' | 'percentage';
+  discountType: "flat" | "percentage" | "flat_above";
   discountValue: number;
-  expiryDate?: string;
-  maxUsage?: number;
+  minOrderValue?: number | null;
+  expiryDate: string | null;
+  maxUsage: number | null;
   currentUsage: number;
-  tourId?: number;
+  tourId: number | null;
   isActive: boolean;
   createdAt: string;
   updatedAt: string;
