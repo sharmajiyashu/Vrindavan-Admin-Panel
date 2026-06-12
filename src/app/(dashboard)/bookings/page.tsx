@@ -424,7 +424,13 @@ export default function BookingsPage() {
                           {booking.contacts?.[0]?.name || booking.user?.name || "N/A"}
                         </p>
                         <p className="truncate text-[9px] font-bold text-muted-foreground/40 mt-1 tracking-wider uppercase">
-                          {booking.contacts?.[0]?.mobile || booking.user?.mobile || "N/A"}
+                          {(() => {
+                            const mobile = booking.contacts?.[0]?.mobile || booking.user?.mobile;
+                            if (!mobile) return "N/A";
+                            if (mobile.startsWith("9191") && mobile.length >= 14) return `+91 ${mobile.slice(4)}`;
+                            if (mobile.startsWith("91") && mobile.length === 12) return `+91 ${mobile.slice(2)}`;
+                            return mobile;
+                          })()}
                         </p>
                       </div>
                     </td>

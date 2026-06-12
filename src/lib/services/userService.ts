@@ -11,6 +11,7 @@ export interface User {
   isActive: boolean;
   createdAt: string;
   totalBookings: number;
+  location?: string | null;
 }
 
 export interface PaginatedUserResponse {
@@ -37,7 +38,7 @@ export const userService = {
     return await get<User>(`/users/${id}`);
   },
 
-  updateUser: async (id: number, data: { name?: string; email?: string; userRole?: string; isActive?: boolean; walletBalance?: number }) => {
+  updateUser: async (id: number, data: { name?: string; email?: string; userRole?: string; isActive?: boolean; walletBalance?: number; location?: string }) => {
     return await put<User>(`/users/${id}`, data);
   },
 };

@@ -99,6 +99,8 @@ export function TourForm({ initialData, onSubmitBasic, onSubmitFiles, onRemoveMe
       referralTourSummaryEn: initialData.referralTourSummaryEn || "",
       referralTourSummaryHi: initialData.referralTourSummaryHi || "",
       referralAmount: initialData.referralAmount || 0,
+      referralDiscountType: initialData.referralDiscountType || "flat",
+      referralDiscountValue: initialData.referralDiscountValue || 0,
       customerPickupLines: initialData.customerPickupLines || [],
       features: (initialData.features || []).map(f => ({
         ...f,
@@ -150,6 +152,8 @@ export function TourForm({ initialData, onSubmitBasic, onSubmitFiles, onRemoveMe
       referralTourSummaryEn: "",
       referralTourSummaryHi: "",
       referralAmount: 0,
+      referralDiscountType: "flat",
+      referralDiscountValue: 0,
       customerPickupLines: [],
       features: [],
       itinerary: [],
@@ -657,7 +661,32 @@ export function TourForm({ initialData, onSubmitBasic, onSubmitFiles, onRemoveMe
                   </div>
                 </div>
 
-                <div className="md:col-span-2 space-y-4">
+                <div className="md:col-span-2 p-4 rounded-xl border border-primary/10 bg-primary/5 space-y-4">
+                  <h4 className="text-xs font-black uppercase tracking-widest text-primary">Referral Discount Configuration</h4>
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <div>
+                      <label className={labelClasses}>Discount Type</label>
+                      <select {...register("referralDiscountType")} className={twMerge(inputClasses, "appearance-none")}>
+                        <option value="flat">Flat Amount (₹)</option>
+                        <option value="percentage">Percentage (%)</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className={labelClasses}>Discount Value {watch("referralDiscountType") === "percentage" ? "(%)" : "(₹)"}</label>
+                      <input
+                        type="number"
+                        {...register("referralDiscountValue")}
+                        className={inputClasses}
+                        placeholder="e.g. 25"
+                      />
+                      <p className="text-[10px] text-muted-foreground mt-1">
+                        Leave 0 to disable referral discount. Example text: "Extra {watch("referralDiscountType") === "percentage" ? "" : "₹"}{watch("referralDiscountValue") || 0}{watch("referralDiscountType") === "percentage" ? "%" : ""} OFF at Checkout Use Code RADHE123"
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* <div className="md:col-span-2 space-y-4">
                   <h4 className="text-xs font-black uppercase tracking-widest text-primary">Tour Summary for Referral App</h4>
                   <div className="grid gap-4 md:grid-cols-2">
                     <div>
@@ -713,7 +742,7 @@ export function TourForm({ initialData, onSubmitBasic, onSubmitFiles, onRemoveMe
                       <IconPlus className="h-4 w-4" /> Add Pickup Line
                     </button>
                   </div>
-                </div>
+                </div> */}
               </div>
             )}
           </div>
@@ -819,7 +848,7 @@ export function TourForm({ initialData, onSubmitBasic, onSubmitFiles, onRemoveMe
               <h3 className="text-xs font-bold uppercase tracking-wider text-primary">Itinerary</h3>
               <button
                 type="button"
-                onClick={() => setValue("itinerary", [...(watch("itinerary") || []), { imageId: null, titleEn: "", titleHi: "", descriptionEn: "", descriptionHi: "" }])}
+                onClick={() => setValue("itinerary", [...(watch("itinerary") || []), { imageId: null, titleEn: "", titleHi: "", descriptionEn: "", descriptionHi: "", sectionHeaderEn: "", sectionHeaderHi: "" }])}
                 className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary/10 text-primary text-[10px] font-bold hover:bg-primary/20 transition-all"
               >
                 <IconPlus className="h-3.5 w-3.5" /> Add
@@ -836,6 +865,14 @@ export function TourForm({ initialData, onSubmitBasic, onSubmitFiles, onRemoveMe
                     <IconTrash className="h-3.5 w-3.5" />
                   </button>
                   <div className="grid gap-3 md:grid-cols-2">
+                    <div>
+                      <label className={labelClasses}>Section Header (EN) [Optional]</label>
+                      <input {...register(`itinerary.${index}.sectionHeaderEn`)} className={inputClasses} placeholder="e.g. Day 1" />
+                    </div>
+                    <div>
+                      <label className={labelClasses}>Section Header (HI) [Optional]</label>
+                      <input {...register(`itinerary.${index}.sectionHeaderHi`)} className={inputClasses} placeholder="उदा. पहला दिन" />
+                    </div>
                     <div>
                       <label className={labelClasses}>Title (EN)</label>
                       <input {...register(`itinerary.${index}.titleEn`)} className={inputClasses} />

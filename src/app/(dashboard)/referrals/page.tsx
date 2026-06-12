@@ -516,7 +516,6 @@ export default function ReferralManagement() {
                       <label className={labelClasses}>Partner Name</label>
                       <input
                         name="name"
-                        required
                         placeholder="Full Name"
                         className={inputClasses}
                         value={addRefereeForm.name}
@@ -528,7 +527,6 @@ export default function ReferralManagement() {
                       <div className="flex gap-2">
                         <input
                           name="extension"
-                          required
                           placeholder="91"
                           className={twMerge(inputClasses, "w-20 px-2 text-center")}
                           value={addRefereeForm.extension}
@@ -539,7 +537,6 @@ export default function ReferralManagement() {
                         />
                         <input
                           name="mobile"
-                          required
                           placeholder="Mobile Number"
                           className={inputClasses}
                           value={addRefereeForm.mobile}
@@ -582,31 +579,27 @@ export default function ReferralManagement() {
                     <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-primary/60">Payment Details</h4>
 
                     {/* Payment Method Selector */}
-                    <div className="flex gap-1.5 bg-muted/40 p-1 rounded-xl border border-border">
-                      <button
-                        type="button"
-                        onClick={() => setAddPaymentMethod("upi")}
-                        className={twMerge(
-                          "h-7 px-3 rounded-lg text-[9px] font-black uppercase tracking-wider transition-all",
-                          addPaymentMethod === "upi"
-                            ? "bg-card text-foreground shadow-sm"
-                            : "text-muted-foreground hover:text-foreground"
-                        )}
-                      >
-                        UPI
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setAddPaymentMethod("bank")}
-                        className={twMerge(
-                          "h-7 px-3 rounded-lg text-[9px] font-black uppercase tracking-wider transition-all",
-                          addPaymentMethod === "bank"
-                            ? "bg-card text-foreground shadow-sm"
-                            : "text-muted-foreground hover:text-foreground"
-                        )}
-                      >
-                        Bank Transfer
-                      </button>
+                    <div className="flex gap-3">
+                      <label className="flex items-center gap-2 cursor-pointer p-3 rounded-xl border border-border bg-card hover:bg-muted/50 transition-all flex-1">
+                        <input
+                          type="radio"
+                          name="addPaymentMethod"
+                          checked={addPaymentMethod === "upi"}
+                          onChange={() => setAddPaymentMethod("upi")}
+                          className="w-4 h-4 accent-primary"
+                        />
+                        <span className="text-xs font-bold text-foreground">UPI ID</span>
+                      </label>
+                      <label className="flex items-center gap-2 cursor-pointer p-3 rounded-xl border border-border bg-card hover:bg-muted/50 transition-all flex-1">
+                        <input
+                          type="radio"
+                          name="addPaymentMethod"
+                          checked={addPaymentMethod === "bank"}
+                          onChange={() => setAddPaymentMethod("bank")}
+                          className="w-4 h-4 accent-primary"
+                        />
+                        <span className="text-xs font-bold text-foreground">Bank Transfer</span>
+                      </label>
                     </div>
                   </div>
 
@@ -616,7 +609,6 @@ export default function ReferralManagement() {
                         <label className={labelClasses}>UPI ID *</label>
                         <input
                           placeholder="username@upi"
-                          required
                           className={inputClasses}
                           value={addRefereeForm.paymentDetails.upiId}
                           onChange={(e) => setAddRefereeForm({
@@ -633,7 +625,6 @@ export default function ReferralManagement() {
                         <label className={labelClasses}>Bank Name *</label>
                         <input
                           placeholder="e.g. HDFC Bank"
-                          required
                           className={inputClasses}
                           value={addRefereeForm.paymentDetails.bankName}
                           onChange={(e) => setAddRefereeForm({
@@ -646,7 +637,6 @@ export default function ReferralManagement() {
                         <label className={labelClasses}>Account Number *</label>
                         <input
                           placeholder="Account Number"
-                          required
                           className={inputClasses}
                           value={addRefereeForm.paymentDetails.accountNumber}
                           onChange={(e) => setAddRefereeForm({
@@ -659,7 +649,6 @@ export default function ReferralManagement() {
                         <label className={labelClasses}>IFSC Code *</label>
                         <input
                           placeholder="e.g. HDFC0000123"
-                          required
                           className={twMerge(inputClasses, "uppercase")}
                           value={addRefereeForm.paymentDetails.ifscCode}
                           onChange={(e) => setAddRefereeForm({
@@ -793,7 +782,6 @@ export default function ReferralManagement() {
                       <div className="space-y-1.5">
                         <label className={labelClasses}>Partner Name</label>
                         <input
-                          required
                           className={inputClasses}
                           value={editRefereeForm.name}
                           onChange={(e) => setEditRefereeForm({ ...editRefereeForm, name: e.target.value })}
@@ -803,14 +791,12 @@ export default function ReferralManagement() {
                         <label className={labelClasses}>Phone Number</label>
                         <div className="flex gap-2">
                           <input
-                            required
                             placeholder="91"
                             className={twMerge(inputClasses, "w-20 px-2 text-center")}
                             value={editRefereeForm.extension || "91"}
                             onChange={(e) => setEditRefereeForm({ ...editRefereeForm, extension: e.target.value.replace(/\D/g, "").slice(0, 4) })}
                           />
                           <input
-                            required
                             className={inputClasses}
                             value={editRefereeForm.mobile}
                             onChange={(e) => setEditRefereeForm({ ...editRefereeForm, mobile: e.target.value.replace(/\D/g, "").slice(0, 10) })}
@@ -842,32 +828,28 @@ export default function ReferralManagement() {
                       <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-primary/60">Payment Details</h4>
 
                       {/* Payment Method Selector */}
-                      <div className="flex gap-1.5 bg-muted/40 p-1 rounded-xl border border-border">
-                        <button
-                          type="button"
-                          onClick={() => setEditPaymentMethod("upi")}
-                          className={twMerge(
-                            "h-7 px-3 rounded-lg text-[9px] font-black uppercase tracking-wider transition-all",
-                            editPaymentMethod === "upi"
-                              ? "bg-card text-foreground shadow-sm"
-                              : "text-muted-foreground hover:text-foreground"
-                          )}
-                        >
-                          UPI
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setEditPaymentMethod("bank")}
-                          className={twMerge(
-                            "h-7 px-3 rounded-lg text-[9px] font-black uppercase tracking-wider transition-all",
-                            editPaymentMethod === "bank"
-                              ? "bg-card text-foreground shadow-sm"
-                              : "text-muted-foreground hover:text-foreground"
-                          )}
-                        >
-                          Bank Transfer
-                        </button>
-                      </div>
+                    <div className="flex gap-3">
+                      <label className="flex items-center gap-2 cursor-pointer p-3 rounded-xl border border-border bg-card hover:bg-muted/50 transition-all flex-1">
+                        <input
+                          type="radio"
+                          name="editPaymentMethod"
+                          checked={editPaymentMethod === "upi"}
+                          onChange={() => setEditPaymentMethod("upi")}
+                          className="w-4 h-4 accent-primary"
+                        />
+                        <span className="text-xs font-bold text-foreground">UPI ID</span>
+                      </label>
+                      <label className="flex items-center gap-2 cursor-pointer p-3 rounded-xl border border-border bg-card hover:bg-muted/50 transition-all flex-1">
+                        <input
+                          type="radio"
+                          name="editPaymentMethod"
+                          checked={editPaymentMethod === "bank"}
+                          onChange={() => setEditPaymentMethod("bank")}
+                          className="w-4 h-4 accent-primary"
+                        />
+                        <span className="text-xs font-bold text-foreground">Bank Transfer</span>
+                      </label>
+                    </div>
                     </div>
 
                     {editPaymentMethod === "upi" ? (
@@ -876,7 +858,6 @@ export default function ReferralManagement() {
                           <label className={labelClasses}>UPI ID *</label>
                           <input
                             placeholder="username@upi"
-                            required
                             className={inputClasses}
                             value={editRefereeForm.paymentDetails.upiId}
                             onChange={(e) => setEditRefereeForm({
@@ -893,7 +874,6 @@ export default function ReferralManagement() {
                           <label className={labelClasses}>Bank Name *</label>
                           <input
                             placeholder="e.g. HDFC Bank"
-                            required
                             className={inputClasses}
                             value={editRefereeForm.paymentDetails.bankName}
                             onChange={(e) => setEditRefereeForm({
@@ -906,7 +886,6 @@ export default function ReferralManagement() {
                           <label className={labelClasses}>Account Number *</label>
                           <input
                             placeholder="Account Number"
-                            required
                             className={inputClasses}
                             value={editRefereeForm.paymentDetails.accountNumber}
                             onChange={(e) => setEditRefereeForm({
@@ -919,7 +898,6 @@ export default function ReferralManagement() {
                           <label className={labelClasses}>IFSC Code *</label>
                           <input
                             placeholder="e.g. HDFC0000123"
-                            required
                             className={twMerge(inputClasses, "uppercase")}
                             value={editRefereeForm.paymentDetails.ifscCode}
                             onChange={(e) => setEditRefereeForm({

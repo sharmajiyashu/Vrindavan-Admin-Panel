@@ -76,6 +76,8 @@ export const tourBaseSchema = z.object({
   referralTourSummaryEn: z.string().optional().nullable(),
   referralTourSummaryHi: z.string().optional().nullable(),
   referralAmount: coerceNumber.min(0).default(0),
+  referralDiscountType: z.enum(['flat', 'percentage']).default('flat').optional().nullable(),
+  referralDiscountValue: coerceNumber.min(0).default(0).optional().nullable(),
 
   customerPickupLines: z.preprocess(jsonArrayPreprocess, z.array(z.string())).default([]),
 
@@ -95,6 +97,8 @@ export const tourBaseSchema = z.object({
     titleHi: z.string(),
     descriptionEn: z.string(),
     descriptionHi: z.string(),
+    sectionHeaderEn: z.string().optional().nullable(),
+    sectionHeaderHi: z.string().optional().nullable(),
   }))).default([]),
 
   faqs: z.preprocess(jsonArrayPreprocess, z.array(z.object({
