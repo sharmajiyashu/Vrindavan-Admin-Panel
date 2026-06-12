@@ -30,7 +30,24 @@ import Link from "next/link";
 import * as AlertDialog from "@radix-ui/react-alert-dialog";
 import { bookingService } from "@/lib/services/bookingService";
 import { format, subHours, parse, isValid, addDays, subDays, isToday, isAfter } from "date-fns";
+import {
+  normalizeSlotTimeInput,
+  parseSlotDateTime,
+  slotTimeToTimeInputValue,
+  timeInputValueToSlotTime,
+} from "@/lib/time";
 import * as XLSX from "xlsx";
+
+function createEmptySlot(date: string): Partial<TourSlot> {
+  return {
+    date,
+    startTime: "10:00 AM",
+    guideName: "",
+    guidePhoneNumber: "",
+    alternateNumber: "",
+    session: "morning",
+  };
+}
 
 export default function TourDetailPage() {
   const { id } = useParams();
@@ -70,6 +87,7 @@ export default function TourDetailPage() {
       toast.success("Slot saved successfully");
       setIsAddModalOpen(false);
       setEditingSlotIndex(null);
+      setNewSlot(createEmptySlot(selectedDate));
     },
     onError: (error: any) => {
       toast.error(error.message || "Failed to save slot");
@@ -131,14 +149,7 @@ export default function TourDetailPage() {
     enabled: isAlertOpen && !!slotToDelete,
   });
 
-  const [newSlot, setNewSlot] = useState<Partial<TourSlot>>({
-    date: selectedDate,
-    startTime: "10:00 AM",
-    guideName: "",
-    guidePhoneNumber: "",
-    alternateNumber: "",
-    session: "morning"
-  });
+  const [newSlot, setNewSlot] = useState<Partial<TourSlot>>(() => createEmptySlot(selectedDate));
 
   const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
   const [editingReviewIndex, setEditingReviewIndex] = useState<number | null>(null);
@@ -154,6 +165,7 @@ export default function TourDetailPage() {
 
   const [isBookingsModalOpen, setIsBookingsModalOpen] = useState(false);
   const [activeSlotForBookings, setActiveSlotForBookings] = useState<any>(null);
+  const [isCopyingSlots, setIsCopyingSlots] = useState(false);
 
   const checkBookingsAndPrompt = async (index: number, slot: TourSlot) => {
     if (!slot.startTime) {
@@ -261,14 +273,12 @@ export default function TourDetailPage() {
       return;
     }
 
-    const loadingToast = toast.loading(`Copying ${newSlotsToAdd.length} slots...`);
+    setIsCopyingSlots(true);
     try {
       const results = await Promise.allSettled(newSlotsToAdd.map(ns => tourService.addSlot(tourId, ns)));
 
       const fulfilled = results.filter(r => r.status === 'fulfilled').length;
       const rejected = results.filter(r => r.status === 'rejected').length;
-
-      toast.dismiss(loadingToast);
 
       if (fulfilled > 0) {
         toast.success(`Successfully copied ${fulfilled} slots`);
@@ -279,8 +289,9 @@ export default function TourDetailPage() {
 
       queryClient.invalidateQueries({ queryKey: ["tour", tourId] });
     } catch (error: any) {
-      toast.dismiss(loadingToast);
       toast.error(error.message || "An unexpected error occurred during copy");
+    } finally {
+      setIsCopyingSlots(false);
     }
   };
 
@@ -295,30 +306,52 @@ export default function TourDetailPage() {
       return;
     }
 
-    // Date & Time Validation
-    const now = new Date();
-    const selectedDateObj = parse(newSlot.date!, "yyyy-MM-dd", new Date());
-    const slotTimeObj = parse(newSlot.startTime, "hh:mm a", selectedDateObj);
+    const guideName = newSlot.guideName?.trim() ?? "";
+    const guidePhoneNumber = newSlot.guidePhoneNumber?.trim() ?? "";
+    if (guideName && !guidePhoneNumber) {
+      toast.error("Guide contact number is required when a guide name is provided");
+      return;
+    }
 
-    if (slotTimeObj < now) {
-      toast.error("Cannot create a slot for a past time/date");
+    const slotDate = newSlot.date || selectedDate;
+    const normalizedStartTime = normalizeSlotTimeInput(newSlot.startTime);
+    if (!normalizedStartTime) {
+      toast.error("Invalid time format. Pick a time from the calendar or use e.g. 12:00 AM.");
+      return;
+    }
+
+    const slotTimeObj = parseSlotDateTime(slotDate, normalizedStartTime);
+    if (!slotTimeObj) {
+      toast.error("Invalid time format. Pick a time from the calendar or use e.g. 12:00 AM.");
+      return;
+    }
+
+    if (slotTimeObj < new Date()) {
+      toast.error("This time has already passed for the selected date. Choose a future time or date.");
       return;
     }
 
     const isDuplicate = tour?.slots?.some(s =>
-      s.date === newSlot.date &&
-      s.startTime === newSlot.startTime &&
+      s.date === slotDate &&
+      s.startTime === normalizedStartTime &&
       s.id !== newSlot.id &&
       !s.isCancelled
     );
 
     if (isDuplicate) {
-      toast.error(`An active slot at ${newSlot.startTime} already exists for this date. Please edit the existing slot instead.`);
+      toast.error(`An active slot at ${normalizedStartTime} already exists for this date. Please edit the existing slot instead.`);
       return;
     }
 
-    slotMutation.mutate(newSlot);
+    slotMutation.mutate({
+      ...newSlot,
+      date: slotDate,
+      startTime: normalizedStartTime,
+      session: newSlot.session ?? "morning",
+    });
   };
+
+  const activeSlotSession = newSlot.session ?? "morning";
 
   if (isLoading) {
     return (
@@ -359,7 +392,7 @@ export default function TourDetailPage() {
           <button
             onClick={() => {
               setEditingSlotIndex(null);
-              setNewSlot({ date: selectedDate, startTime: "10:00 AM", guideName: "", guidePhoneNumber: "", alternateNumber: "" });
+              setNewSlot(createEmptySlot(selectedDate));
               setIsAddModalOpen(true);
             }}
             className="inline-flex h-9 items-center justify-center gap-1.5 rounded-xl bg-primary px-4 text-[10px] font-bold uppercase tracking-wider text-primary-foreground shadow-md shadow-primary/10 hover:opacity-90 active:scale-95 transition-all"
@@ -455,9 +488,18 @@ export default function TourDetailPage() {
                   <div className="pt-2">
                     <button
                       onClick={copyFromPreviousDay}
-                      className="w-full px-4 py-2 rounded-lg border border-primary/20 text-primary text-[10px] font-bold uppercase tracking-wider hover:bg-primary/5 transition-all"
+                      disabled={isCopyingSlots}
+                      aria-busy={isCopyingSlots}
+                      className="w-full inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg border border-primary/20 text-primary text-[10px] font-bold uppercase tracking-wider hover:bg-primary/5 transition-all disabled:opacity-60 disabled:cursor-not-allowed"
                     >
-                      Copy From Prev Day
+                      {isCopyingSlots ? (
+                        <>
+                          <IconLoader2 size={14} className="animate-spin" aria-hidden="true" />
+                          Copying slots...
+                        </>
+                      ) : (
+                        "Copy From Prev Day"
+                      )}
                     </button>
                   </div>
 
@@ -565,7 +607,7 @@ export default function TourDetailPage() {
                                           <button
                                             onClick={() => {
                                               setEditingSlotIndex(originalIndex);
-                                              setNewSlot(slot);
+                                              setNewSlot({ ...slot, session: slot.session ?? "morning" });
                                               setIsAddModalOpen(true);
                                             }}
                                             className="p-1.5 rounded-lg text-muted-foreground hover:bg-primary/10 hover:text-primary transition-all"
@@ -819,7 +861,16 @@ export default function TourDetailPage() {
       </div>
 
       {/* Add/Edit Slot Modal */}
-      <Dialog.Root open={isAddModalOpen} onOpenChange={setIsAddModalOpen}>
+      <Dialog.Root
+        open={isAddModalOpen}
+        onOpenChange={(open) => {
+          setIsAddModalOpen(open);
+          if (!open) {
+            setEditingSlotIndex(null);
+            setNewSlot(createEmptySlot(selectedDate));
+          }
+        }}
+      >
         <Dialog.Portal>
           <Dialog.Overlay className="fixed inset-0 z-[100] bg-black/40 backdrop-blur-sm animate-in fade-in duration-300" />
           <Dialog.Content className="fixed left-[50%] top-[50%] z-[100] w-[calc(100%-2rem)] max-w-lg translate-x-[-50%] translate-y-[-50%] rounded-[2.5rem] bg-card p-8 md:p-10 shadow-2xl animate-in zoom-in-95 fade-in duration-300 outline-none border border-border">
@@ -855,7 +906,7 @@ export default function TourDetailPage() {
                         }))}
                         className={twMerge(
                           "px-4 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all",
-                          newSlot.session === s
+                          activeSlotSession === s
                             ? "bg-card text-primary shadow-sm"
                             : "text-muted-foreground hover:text-foreground"
                         )}
@@ -868,24 +919,40 @@ export default function TourDetailPage() {
 
                 <div className="space-y-3">
                   <label className={labelClasses}>Start Time</label>
-                  <div className="relative">
-                    <IconClock className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/40" />
-                    <input
-                      type="text"
-                      placeholder="10:00 AM"
-                      value={newSlot.startTime}
-                      onChange={(e) => setNewSlot(prev => ({ ...prev, startTime: e.target.value }))}
-                      className={twMerge(inputClasses, "pl-10 h-12 font-bold focus:ring-primary/20")}
-                    />
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div className="relative">
+                      <IconClock className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/40 pointer-events-none" />
+                      <input
+                        type="time"
+                        value={slotTimeToTimeInputValue(newSlot.startTime || "10:00 AM")}
+                        onChange={(e) => {
+                          const slotTime = timeInputValueToSlotTime(e.target.value);
+                          if (slotTime) {
+                            setNewSlot(prev => ({ ...prev, startTime: slotTime }));
+                          }
+                        }}
+                        className={twMerge(inputClasses, "pl-10 h-12 font-bold focus:ring-primary/20 cursor-pointer")}
+                        aria-label="Select slot start time"
+                      />
+                    </div>
+                    <div className="flex items-center h-12 rounded-lg border border-border bg-muted/20 px-4">
+                      <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground mr-2">Selected</p>
+                      <p className="text-sm font-black text-foreground">
+                        {normalizeSlotTimeInput(newSlot.startTime || "") || "—"}
+                      </p>
+                    </div>
                   </div>
+                  <p className="text-[10px] text-muted-foreground">
+                    Tap the time field to open the clock picker, or choose a quick preset below.
+                  </p>
                   <div className="flex flex-wrap gap-2 pt-1">
-                    {(newSlot.session === "evening"
+                    {(activeSlotSession === "evening"
                       ? ["12:00 PM", "02:00 PM", "04:00 PM", "06:00 PM", "08:00 PM"]
-                      : ["06:00 AM", "08:00 AM", "09:00 AM", "10:00 AM", "11:00 AM"]
+                      : ["12:00 AM", "06:00 AM", "08:00 AM", "09:00 AM", "10:00 AM", "11:00 AM"]
                     ).map(time => {
-                      const slotDate = parse(selectedDate, "yyyy-MM-dd", new Date());
-                      const slotTime = parse(time, "hh:mm a", slotDate);
-                      const isExpired = isToday(slotDate) && isAfter(new Date(), slotTime);
+                      const slotDate = parse(newSlot.date || selectedDate, "yyyy-MM-dd", new Date());
+                      const slotTime = parseSlotDateTime(format(slotDate, "yyyy-MM-dd"), time);
+                      const isExpired = slotTime ? isToday(slotDate) && isAfter(new Date(), slotTime) : false;
 
                       if (isExpired) return null;
 
@@ -896,7 +963,7 @@ export default function TourDetailPage() {
                           onClick={() => setNewSlot(prev => ({ ...prev, startTime: time }))}
                           className={twMerge(
                             "px-2.5 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-[0.05em] border transition-all duration-300",
-                            newSlot.startTime === time
+                            normalizeSlotTimeInput(newSlot.startTime || "") === time
                               ? "bg-primary text-white border-primary shadow-lg shadow-primary/30 scale-105"
                               : "bg-muted/40 text-muted-foreground border-border/50 hover:bg-muted hover:border-primary/30"
                           )}
@@ -925,7 +992,10 @@ export default function TourDetailPage() {
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-2">
-                  <label className={labelClasses}>Guide Contact Number</label>
+                  <label className={labelClasses}>
+                    Guide Contact Number
+                    {newSlot.guideName?.trim() ? <span className="text-destructive"> *</span> : null}
+                  </label>
                   <div className="relative">
                     <IconPhone className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/40" />
                     <input
