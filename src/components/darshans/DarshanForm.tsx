@@ -97,8 +97,8 @@ export function DarshanForm({ initialData, onSubmit, onRemoveMedia, onComplete, 
           formData.append("templeId", String(data.templeId));
           formData.append("date", data.date);
           formData.append("shift", data.shift);
-          if (data.descriptionEn) formData.append("descriptionEn", data.descriptionEn);
-          if (data.descriptionHi) formData.append("descriptionHi", data.descriptionHi);
+          formData.append("descriptionEn", data.descriptionEn || "");
+          formData.append("descriptionHi", data.descriptionHi || "");
 
           files.forEach((file) => formData.append("images", file));
 
