@@ -48,6 +48,7 @@ export const darshanService = {
     if (templeId) url += `&templeId=${templeId}`;
     if (date) url += `&date=${date}`;
     if (shift) url += `&shift=${shift}`;
+    url += `&_t=${Date.now()}`;
     return await get<PaginatedDarshanResponse>(url);
   },
 
