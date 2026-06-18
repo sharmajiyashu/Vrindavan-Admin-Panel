@@ -68,6 +68,7 @@ export default function BookingsPage() {
   const [createCouponCode, setCreateCouponCode] = useState("");
   const [createPaymentStatus, setCreatePaymentStatus] = useState("pending");
   const [showSuggestions, setShowSuggestions] = useState(false);
+  const [sendWhatsAppDetails, setSendWhatsAppDetails] = useState(true);
 
   // Helper setter functions to reset page on filter change
   const handleStatusFilterChange = (status: string) => {
@@ -279,6 +280,7 @@ export default function BookingsPage() {
       setCreateCustomPrice("");
       setCreateCouponCode("");
       setCreatePaymentStatus("pending");
+      setSendWhatsAppDetails(true);
     },
     onError: (error: any) => {
       toast.error(error.message || "Failed to create booking");
@@ -1007,6 +1009,7 @@ export default function BookingsPage() {
                   totalPrice: createCustomPrice ? Number(createCustomPrice) : undefined,
                   couponCode: createCouponCode || undefined,
                   paymentStatus: createPaymentStatus,
+                  sendWhatsAppDetails: sendWhatsAppDetails,
                 });
               }}
               className="space-y-6"
@@ -1230,6 +1233,20 @@ export default function BookingsPage() {
                     <option value="pending">Pending</option>
                     <option value="success">Completed</option>
                   </select>
+                </div>
+
+                {/* Send details to WhatsApp */}
+                <div className="col-span-2 flex items-center gap-2 pt-2">
+                  <input
+                    type="checkbox"
+                    id="sendWhatsAppDetails"
+                    checked={sendWhatsAppDetails}
+                    onChange={(e) => setSendWhatsAppDetails(e.target.checked)}
+                    className="w-4 h-4 rounded border-border text-primary focus:ring-primary"
+                  />
+                  <label htmlFor="sendWhatsAppDetails" className="text-xs font-bold text-foreground cursor-pointer">
+                    Send details to WhatsApp
+                  </label>
                 </div>
               </div>
 

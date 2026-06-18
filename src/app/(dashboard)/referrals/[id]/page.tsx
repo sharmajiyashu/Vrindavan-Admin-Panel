@@ -21,7 +21,8 @@ import {
   IconDeviceFloppy,
   IconChecks,
   IconCurrencyRupee,
-  IconRoute
+  IconRoute,
+  IconCircleX
 } from "@tabler/icons-react";
 import { referralService } from "@/lib/services/referralService";
 import { useTranslations } from "@/contexts/LanguageContext";
@@ -440,14 +441,23 @@ export default function RefereeDetailPage() {
                         <td className="px-8 py-6">
                           <div className={twMerge(
                             "inline-flex items-center gap-1.5 px-2 py-0.5 rounded-lg text-[9px] font-black uppercase tracking-widest border",
-                            earn.status === 'completed' ? "bg-emerald-50 text-emerald-600 border-emerald-100" : "bg-amber-50 text-amber-600 border-amber-100"
+                            earn.status === 'completed' ? "bg-emerald-50 text-emerald-600 border-emerald-100" :
+                              earn.status === 'cancelled' ? "bg-red-50 text-red-600 border-red-100" :
+                                "bg-amber-50 text-amber-600 border-amber-100"
                           )}>
-                            {earn.status === 'completed' ? <IconChecks size={12} /> : <IconClock size={12} />}
+                            {earn.status === 'completed' ? <IconChecks size={12} /> : earn.status === 'cancelled' ? <IconCircleX size={12} /> : <IconClock size={12} />}
                             {earn.status}
                           </div>
                         </td>
                         <td className="px-8 py-6 text-right">
-                          <p className={twMerge("text-sm font-black", earn.status === 'completed' ? "text-emerald-600" : "text-amber-500")}>+₹{earn.referralAmount}</p>
+                          {earn.status === 'cancelled' ? (
+                            <div className="flex flex-col items-end">
+                              <p className="text-sm font-black text-muted-foreground line-through opacity-50">+₹{earn.referralAmount}</p>
+                              <p className="text-[10px] font-black uppercase text-red-500 tracking-widest mt-0.5">₹0 Earned</p>
+                            </div>
+                          ) : (
+                            <p className={twMerge("text-sm font-black", earn.status === 'completed' ? "text-emerald-600" : "text-amber-500")}>+₹{earn.referralAmount}</p>
+                          )}
                         </td>
                       </tr>
                     ))}

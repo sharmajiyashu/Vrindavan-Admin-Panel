@@ -75,8 +75,6 @@ export default function ReferralManagement() {
 
   const [configForm, setConfigForm] = useState<any>({
     supportPhone: "",
-    supportEmail: "",
-    supportWhatsApp: "",
     minPayoutAmount: 100,
     infoEn: "",
     infoHi: "",
@@ -96,12 +94,62 @@ export default function ReferralManagement() {
     queryFn: () => referralService.getConfig(),
   });
 
+  const [debouncedCode, setDebouncedCode] = useState("");
+  
+  React.useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedCode(addRefereeForm.referralCode);
+    }, 500);
+    return () => clearTimeout(handler);
+  }, [addRefereeForm.referralCode]);
+
+  const { data: codeCheck, isFetching: isCheckingCode } = useQuery({
+    queryKey: ["checkReferralCode", debouncedCode],
+    queryFn: () => referralService.checkReferralCode(debouncedCode),
+    enabled: debouncedCode.length >= 3,
+  });
+
+  // Payment Verification State
+  const [isVerifyingPayment, setIsVerifyingPayment] = useState(false);
+  const [verifiedPaymentInfo, setVerifiedPaymentInfo] = useState<{ valid: boolean; name?: string; message?: string } | null>(null);
+
+  const handleVerifyPayment = async (form: any, method: string) => {
+    try {
+      setIsVerifyingPayment(true);
+      setVerifiedPaymentInfo(null);
+      if (method === "upi") {
+        if (!form.paymentDetails.upiId) {
+          toast.error("UPI ID is required to verify");
+          setIsVerifyingPayment(false);
+          return;
+        }
+        const res = await referralService.verifyUpi(form.paymentDetails.upiId);
+        setVerifiedPaymentInfo(res);
+        if (res.valid) toast.success(`Verified: ${res.name}`);
+        else toast.error(res.message || "Invalid UPI ID");
+      } else {
+        if (!form.paymentDetails.accountNumber || !form.paymentDetails.ifscCode) {
+          toast.error("Account Number and IFSC are required to verify");
+          setIsVerifyingPayment(false);
+          return;
+        }
+        const res = await referralService.verifyBankAccount(form.paymentDetails.accountNumber, form.paymentDetails.ifscCode);
+        setVerifiedPaymentInfo(res);
+        if (res.valid) toast.success(`Verified: ${res.name}`);
+        else toast.error(res.message || "Invalid Bank Details");
+      }
+    } catch(err: any) {
+      toast.error(err.response?.data?.message || err.message || "Verification failed");
+      setVerifiedPaymentInfo({ valid: false, message: err.response?.data?.message || err.message });
+    } finally {
+      setIsVerifyingPayment(false);
+    }
+  };
+
   React.useEffect(() => {
     if (config) {
       setConfigForm({
         supportPhone: config.supportPhone || "",
-        supportEmail: config.supportEmail || "",
-        supportWhatsApp: config.supportWhatsApp || "",
         minPayoutAmount: config.minPayoutAmount || 100,
         infoEn: config.infoEn || "",
         infoHi: config.infoHi || "",
@@ -269,7 +317,10 @@ export default function ReferralManagement() {
               <IconDownload size={18} />
             </button>
             <button
-              onClick={() => setIsAddModalOpen(true)}
+              onClick={() => {
+                setIsAddModalOpen(true);
+                setVerifiedPaymentInfo(null);
+              }}
               className="h-10 px-5 rounded-xl bg-primary text-white text-[10px] font-black uppercase tracking-widest shadow-lg shadow-primary/20 hover:opacity-90 active:scale-95 transition-all flex items-center gap-2"
             >
               <IconPlus size={16} />
@@ -388,6 +439,7 @@ export default function ReferralManagement() {
                             });
                             setEditPaymentMethod(ref.paymentDetails?.upiId ? "upi" : "bank");
                             setIsEditModalOpen(true);
+                            setVerifiedPaymentInfo(null);
                           }}
                           title="Edit Profile"
                           className="h-9 w-9 inline-flex items-center justify-center rounded-xl bg-card text-muted-foreground shadow-sm ring-1 ring-border transition-all hover:bg-emerald-600 hover:text-white active:scale-95"
@@ -463,6 +515,9 @@ export default function ReferralManagement() {
                   if (!/^[A-Z0-9]+$/.test(trimmedCode)) {
                     return toast.error("Referral code must contain only uppercase letters and numbers");
                   }
+                  if (codeCheck && !codeCheck.isAvailable) {
+                    return toast.error("This referral code is already taken");
+                  }
                 }
 
                 const paymentData = { ...addRefereeForm.paymentDetails };
@@ -497,6 +552,10 @@ export default function ReferralManagement() {
                   paymentData.bankName = bankName;
                   paymentData.accountNumber = accNum;
                   paymentData.ifscCode = ifsc;
+                }
+
+                if (!verifiedPaymentInfo || !verifiedPaymentInfo.valid) {
+                  return toast.error("Please verify payment details before saving");
                 }
 
                 createMutation.mutate({
@@ -559,16 +618,34 @@ export default function ReferralManagement() {
                     </div>
                     <div className="space-y-1.5">
                       <label className={labelClasses}>Custom Code</label>
-                      <input
-                        name="referralCode"
-                        placeholder="GIFT2024"
-                        className={twMerge(inputClasses, "uppercase")}
-                        value={addRefereeForm.referralCode}
-                        onChange={(e) => {
-                          const val = e.target.value.toUpperCase().replace(/\s/g, "");
-                          setAddRefereeForm({ ...addRefereeForm, referralCode: val });
-                        }}
-                      />
+                      <div className="relative">
+                        <input
+                          name="referralCode"
+                          placeholder="GIFT2024"
+                          className={twMerge(inputClasses, "uppercase pr-10", 
+                            addRefereeForm.referralCode.length >= 3 && codeCheck && !codeCheck.isAvailable ? "border-red-500 focus:border-red-500 focus:ring-red-500/10" : ""
+                          )}
+                          value={addRefereeForm.referralCode}
+                          onChange={(e) => {
+                            const val = e.target.value.toUpperCase().replace(/\s/g, "");
+                            setAddRefereeForm({ ...addRefereeForm, referralCode: val });
+                          }}
+                        />
+                        <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                          {isCheckingCode ? (
+                            <IconLoader2 size={16} className="animate-spin text-muted-foreground" />
+                          ) : debouncedCode.length >= 3 && codeCheck ? (
+                            codeCheck.isAvailable ? (
+                              <IconShieldCheck size={16} className="text-emerald-500" title="Available" />
+                            ) : (
+                              <IconX size={16} className="text-red-500" title="Not Available" />
+                            )
+                          ) : null}
+                        </div>
+                      </div>
+                      {debouncedCode.length >= 3 && codeCheck && !codeCheck.isAvailable && (
+                        <p className="text-[10px] font-bold text-red-500">This code is already taken</p>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -607,15 +684,33 @@ export default function ReferralManagement() {
                     <div className="space-y-4 animate-in fade-in-50 duration-200">
                       <div className="space-y-1.5">
                         <label className={labelClasses}>UPI ID *</label>
-                        <input
-                          placeholder="username@upi"
-                          className={inputClasses}
-                          value={addRefereeForm.paymentDetails.upiId}
-                          onChange={(e) => setAddRefereeForm({
-                            ...addRefereeForm,
-                            paymentDetails: { ...addRefereeForm.paymentDetails, upiId: e.target.value }
-                          })}
-                        />
+                        <div className="flex gap-2">
+                          <input
+                            placeholder="username@upi"
+                            className={twMerge(inputClasses, "flex-1")}
+                            value={addRefereeForm.paymentDetails.upiId}
+                            onChange={(e) => {
+                              setAddRefereeForm({
+                                ...addRefereeForm,
+                                paymentDetails: { ...addRefereeForm.paymentDetails, upiId: e.target.value }
+                              });
+                              setVerifiedPaymentInfo(null);
+                            }}
+                          />
+                          <button
+                            type="button"
+                            onClick={() => handleVerifyPayment(addRefereeForm, "upi")}
+                            disabled={isVerifyingPayment || !addRefereeForm.paymentDetails.upiId}
+                            className="h-12 px-4 rounded-xl bg-primary/10 text-primary text-xs font-bold hover:bg-primary/20 transition-all disabled:opacity-50 flex items-center gap-2"
+                          >
+                            {isVerifyingPayment ? <IconLoader2 size={16} className="animate-spin" /> : "Verify"}
+                          </button>
+                        </div>
+                        {verifiedPaymentInfo && addPaymentMethod === "upi" && (
+                          <p className={twMerge("text-xs font-bold", verifiedPaymentInfo.valid ? "text-emerald-500" : "text-red-500")}>
+                            {verifiedPaymentInfo.valid ? `✓ ${verifiedPaymentInfo.name}` : `✗ ${verifiedPaymentInfo.message}`}
+                          </p>
+                        )}
                         <p className="text-[9px] text-muted-foreground/60 pl-1">For instant payouts via UPI.</p>
                       </div>
                     </div>
@@ -647,15 +742,33 @@ export default function ReferralManagement() {
                       </div>
                       <div className="space-y-1.5 sm:col-span-2">
                         <label className={labelClasses}>IFSC Code *</label>
-                        <input
-                          placeholder="e.g. HDFC0000123"
-                          className={twMerge(inputClasses, "uppercase")}
-                          value={addRefereeForm.paymentDetails.ifscCode}
-                          onChange={(e) => setAddRefereeForm({
-                            ...addRefereeForm,
-                            paymentDetails: { ...addRefereeForm.paymentDetails, ifscCode: e.target.value.toUpperCase() }
-                          })}
-                        />
+                        <div className="flex gap-2">
+                          <input
+                            placeholder="e.g. HDFC0000123"
+                            className={twMerge(inputClasses, "uppercase flex-1")}
+                            value={addRefereeForm.paymentDetails.ifscCode}
+                            onChange={(e) => {
+                              setAddRefereeForm({
+                                ...addRefereeForm,
+                                paymentDetails: { ...addRefereeForm.paymentDetails, ifscCode: e.target.value.toUpperCase() }
+                              });
+                              setVerifiedPaymentInfo(null);
+                            }}
+                          />
+                          <button
+                            type="button"
+                            onClick={() => handleVerifyPayment(addRefereeForm, "bank")}
+                            disabled={isVerifyingPayment || !addRefereeForm.paymentDetails.accountNumber || !addRefereeForm.paymentDetails.ifscCode}
+                            className="h-12 px-4 rounded-xl bg-primary/10 text-primary text-xs font-bold hover:bg-primary/20 transition-all disabled:opacity-50 flex items-center gap-2"
+                          >
+                            {isVerifyingPayment ? <IconLoader2 size={16} className="animate-spin" /> : "Verify"}
+                          </button>
+                        </div>
+                        {verifiedPaymentInfo && addPaymentMethod === "bank" && (
+                          <p className={twMerge("text-xs font-bold", verifiedPaymentInfo.valid ? "text-emerald-500" : "text-red-500")}>
+                            {verifiedPaymentInfo.valid ? `✓ ${verifiedPaymentInfo.name}` : `✗ ${verifiedPaymentInfo.message}`}
+                          </p>
+                        )}
                       </div>
                     </div>
                   )}
@@ -672,8 +785,8 @@ export default function ReferralManagement() {
               <button
                 type="submit"
                 form="add-referee-form"
-                disabled={createMutation.isPending}
-                className="flex-[2] h-12 rounded-2xl bg-primary text-xs font-black uppercase tracking-wider text-white shadow-lg shadow-primary/20 hover:opacity-90 active:scale-95 transition-all flex items-center justify-center gap-2"
+                disabled={createMutation.isPending || !verifiedPaymentInfo?.valid}
+                className="flex-[2] h-12 rounded-2xl bg-primary text-xs font-black uppercase tracking-wider text-white shadow-lg shadow-primary/20 hover:opacity-90 active:scale-95 transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {createMutation.isPending ? <IconLoader2 size={16} className="animate-spin" /> : <IconShieldCheck size={16} />}
                 Add Partner
@@ -766,6 +879,10 @@ export default function ReferralManagement() {
                     paymentData.ifscCode = ifsc;
                   }
 
+                  if (!verifiedPaymentInfo || !verifiedPaymentInfo.valid) {
+                    return toast.error("Please verify payment details before saving");
+                  }
+
                   updateMutation.mutate({
                     name: trimmedName,
                     extension: trimmedExtension,
@@ -856,15 +973,33 @@ export default function ReferralManagement() {
                       <div className="space-y-4 animate-in fade-in-50 duration-200">
                         <div className="space-y-1.5">
                           <label className={labelClasses}>UPI ID *</label>
-                          <input
-                            placeholder="username@upi"
-                            className={inputClasses}
-                            value={editRefereeForm.paymentDetails.upiId}
-                            onChange={(e) => setEditRefereeForm({
-                              ...editRefereeForm,
-                              paymentDetails: { ...editRefereeForm.paymentDetails, upiId: e.target.value }
-                            })}
-                          />
+                          <div className="flex gap-2">
+                            <input
+                              placeholder="username@upi"
+                              className={twMerge(inputClasses, "flex-1")}
+                              value={editRefereeForm.paymentDetails.upiId}
+                              onChange={(e) => {
+                                setEditRefereeForm({
+                                  ...editRefereeForm,
+                                  paymentDetails: { ...editRefereeForm.paymentDetails, upiId: e.target.value }
+                                });
+                                setVerifiedPaymentInfo(null);
+                              }}
+                            />
+                            <button
+                              type="button"
+                              onClick={() => handleVerifyPayment(editRefereeForm, "upi")}
+                              disabled={isVerifyingPayment || !editRefereeForm.paymentDetails.upiId}
+                              className="h-12 px-4 rounded-xl bg-primary/10 text-primary text-xs font-bold hover:bg-primary/20 transition-all disabled:opacity-50 flex items-center gap-2"
+                            >
+                              {isVerifyingPayment ? <IconLoader2 size={16} className="animate-spin" /> : "Verify"}
+                            </button>
+                          </div>
+                          {verifiedPaymentInfo && editPaymentMethod === "upi" && (
+                            <p className={twMerge("text-xs font-bold", verifiedPaymentInfo.valid ? "text-emerald-500" : "text-red-500")}>
+                              {verifiedPaymentInfo.valid ? `✓ ${verifiedPaymentInfo.name}` : `✗ ${verifiedPaymentInfo.message}`}
+                            </p>
+                          )}
                           <p className="text-[9px] text-muted-foreground/60 pl-1">For instant payouts via UPI.</p>
                         </div>
                       </div>
@@ -896,15 +1031,33 @@ export default function ReferralManagement() {
                         </div>
                         <div className="space-y-1.5 sm:col-span-2">
                           <label className={labelClasses}>IFSC Code *</label>
-                          <input
-                            placeholder="e.g. HDFC0000123"
-                            className={twMerge(inputClasses, "uppercase")}
-                            value={editRefereeForm.paymentDetails.ifscCode}
-                            onChange={(e) => setEditRefereeForm({
-                              ...editRefereeForm,
-                              paymentDetails: { ...editRefereeForm.paymentDetails, ifscCode: e.target.value.toUpperCase() }
-                            })}
-                          />
+                          <div className="flex gap-2">
+                            <input
+                              placeholder="e.g. HDFC0000123"
+                              className={twMerge(inputClasses, "uppercase flex-1")}
+                              value={editRefereeForm.paymentDetails.ifscCode}
+                              onChange={(e) => {
+                                setEditRefereeForm({
+                                  ...editRefereeForm,
+                                  paymentDetails: { ...editRefereeForm.paymentDetails, ifscCode: e.target.value.toUpperCase() }
+                                });
+                                setVerifiedPaymentInfo(null);
+                              }}
+                            />
+                            <button
+                              type="button"
+                              onClick={() => handleVerifyPayment(editRefereeForm, "bank")}
+                              disabled={isVerifyingPayment || !editRefereeForm.paymentDetails.accountNumber || !editRefereeForm.paymentDetails.ifscCode}
+                              className="h-12 px-4 rounded-xl bg-primary/10 text-primary text-xs font-bold hover:bg-primary/20 transition-all disabled:opacity-50 flex items-center gap-2"
+                            >
+                              {isVerifyingPayment ? <IconLoader2 size={16} className="animate-spin" /> : "Verify"}
+                            </button>
+                          </div>
+                          {verifiedPaymentInfo && editPaymentMethod === "bank" && (
+                            <p className={twMerge("text-xs font-bold", verifiedPaymentInfo.valid ? "text-emerald-500" : "text-red-500")}>
+                              {verifiedPaymentInfo.valid ? `✓ ${verifiedPaymentInfo.name}` : `✗ ${verifiedPaymentInfo.message}`}
+                            </p>
+                          )}
                         </div>
                       </div>
                     )}
@@ -922,8 +1075,8 @@ export default function ReferralManagement() {
               <button
                 type="submit"
                 form="edit-referee-form"
-                disabled={updateMutation.isPending}
-                className="flex-[2] h-12 rounded-2xl bg-emerald-600 text-xs font-black uppercase tracking-wider text-white shadow-lg shadow-emerald-600/20 hover:opacity-90 active:scale-95 transition-all flex items-center justify-center gap-2"
+                disabled={updateMutation.isPending || !verifiedPaymentInfo?.valid}
+                className="flex-[2] h-12 rounded-2xl bg-emerald-600 text-xs font-black uppercase tracking-wider text-white shadow-lg shadow-emerald-600/20 hover:opacity-90 active:scale-95 transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {updateMutation.isPending ? <IconLoader2 size={16} className="animate-spin" /> : <IconShieldCheck size={16} />}
                 Update Partner
@@ -973,24 +1126,6 @@ export default function ReferralManagement() {
                       <input
                         value={configForm.supportPhone}
                         onChange={(e) => setConfigForm({ ...configForm, supportPhone: e.target.value })}
-                        placeholder="+91 12345 67890"
-                        className={inputClasses}
-                      />
-                    </div>
-                    <div className="space-y-1.5">
-                      <label className={labelClasses}>Support Email</label>
-                      <input
-                        value={configForm.supportEmail}
-                        onChange={(e) => setConfigForm({ ...configForm, supportEmail: e.target.value })}
-                        placeholder="support@vrindavan.com"
-                        className={inputClasses}
-                      />
-                    </div>
-                    <div className="space-y-1.5">
-                      <label className={labelClasses}>Support WhatsApp</label>
-                      <input
-                        value={configForm.supportWhatsApp}
-                        onChange={(e) => setConfigForm({ ...configForm, supportWhatsApp: e.target.value })}
                         placeholder="+91 12345 67890"
                         className={inputClasses}
                       />

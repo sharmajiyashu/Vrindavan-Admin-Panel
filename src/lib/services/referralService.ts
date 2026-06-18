@@ -3,8 +3,6 @@ import { api } from "../api";
 export interface ReferralConfig {
   id: number;
   supportPhone: string;
-  supportEmail: string;
-  supportWhatsApp: string;
   minPayoutAmount: number;
   infoEn?: string;
   infoHi?: string;
@@ -120,5 +118,20 @@ export const referralService = {
   updateConfig: async (data: any) => {
     const response = await api.put("/referral/config", data);
     return response.data.data as ReferralConfig;
+  },
+
+  checkReferralCode: async (code: string) => {
+    const response = await api.get(`/referral/check-code?code=${code}`);
+    return response.data.data as { isAvailable: boolean };
+  },
+
+  verifyUpi: async (upiId: string) => {
+    const response = await api.post("/referral/verify-upi", { upiId });
+    return response.data.data as { valid: boolean; name?: string; message: string };
+  },
+
+  verifyBankAccount: async (accountNumber: string, ifsc: string) => {
+    const response = await api.post("/referral/verify-bank", { accountNumber, ifsc });
+    return response.data.data as { valid: boolean; name?: string; message: string };
   },
 };

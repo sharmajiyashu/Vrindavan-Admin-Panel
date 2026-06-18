@@ -185,9 +185,9 @@ export default function UsersPage() {
                     <td className="px-4 py-4">
                       <span className={twMerge(
                         "inline-flex items-center rounded-lg px-2 py-0.5 text-[9px] font-black uppercase tracking-widest border",
-                        user.totalBookings === 0 ? "bg-amber-50 text-amber-600 border-amber-100" : "bg-blue-50 text-blue-600 border-blue-100"
+                        Number(user.totalBookings) === 0 ? "bg-amber-50 text-amber-600 border-amber-100" : "bg-blue-50 text-blue-600 border-blue-100"
                       )}>
-                        {user.totalBookings === 0 ? "New User" : "Returning"}
+                        {Number(user.totalBookings) === 0 ? "New User" : "Returning"}
                       </span>
                     </td>
                     <td className="px-4 py-4">
