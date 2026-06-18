@@ -19,10 +19,15 @@ import {
   IconSettings,
   IconPlus,
   IconUsers,
+  IconDownload,
+  IconAlertCircle,
 } from "@tabler/icons-react";
 import * as Dialog from "@radix-ui/react-dialog";
+import * as XLSX from "xlsx";
 import { bookingService, Booking, PaginatedBookingResponse } from "@/lib/services/bookingService";
 import { tourService } from "@/lib/services/tourService";
+import { couponService } from "@/lib/services/couponService";
+import { userService } from "@/lib/services/userService";
 import { BookingDetails } from "@/components/bookings/BookingDetails";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { twMerge } from "tailwind-merge";
@@ -32,11 +37,14 @@ export default function BookingsPage() {
   const { t } = useLanguage();
   const queryClient = useQueryClient();
   const [searchTerm, setSearchTerm] = useState("");
-  const [statusFilter, setStatusFilter] = useState("all");
+  const [statusFilters, setStatusFilters] = useState<string[]>(["all"]);
+  const [paymentStatusFilters, setPaymentStatusFilters] = useState<string[]>(["all"]);
   const [tourFilter, setTourFilter] = useState("all");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   const [createdByAdminFilter, setCreatedByAdminFilter] = useState("all");
+  const [slotTimeFilter, setSlotTimeFilter] = useState("all");
+  const [createdDate, setCreatedDate] = useState("");
   const [page, setPage] = useState(1);
   const [limit] = useState(10);
   const [isCancelDialogOpen, setIsCancelDialogOpen] = useState(false);
@@ -44,6 +52,7 @@ export default function BookingsPage() {
   const [otherReason, setOtherReason] = useState("");
   const [selectedBookingId, setSelectedBookingId] = useState<number | null>(null);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
 
   // States for Admin Booking Creation Form
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
@@ -57,10 +66,38 @@ export default function BookingsPage() {
   const [createPersonCount, setCreatePersonCount] = useState(1);
   const [createCustomPrice, setCreateCustomPrice] = useState("");
   const [createCouponCode, setCreateCouponCode] = useState("");
+  const [createPaymentStatus, setCreatePaymentStatus] = useState("pending");
+  const [showSuggestions, setShowSuggestions] = useState(false);
 
   // Helper setter functions to reset page on filter change
-  const handleStatusFilterChange = (val: string) => {
-    setStatusFilter(val);
+  const handleStatusFilterChange = (status: string) => {
+    if (status === "all") {
+      setStatusFilters(["all"]);
+    } else {
+      let newFilters = statusFilters.includes("all") ? [] : [...statusFilters];
+      if (newFilters.includes(status)) {
+        newFilters = newFilters.filter(s => s !== status);
+        if (newFilters.length === 0) newFilters = ["all"];
+      } else {
+        newFilters.push(status);
+      }
+      setStatusFilters(newFilters);
+    }
+    setPage(1);
+  };
+  const handlePaymentStatusFilterChange = (status: string) => {
+    if (status === "all") {
+      setPaymentStatusFilters(["all"]);
+    } else {
+      let newFilters = paymentStatusFilters.includes("all") ? [] : [...paymentStatusFilters];
+      if (newFilters.includes(status)) {
+        newFilters = newFilters.filter(s => s !== status);
+        if (newFilters.length === 0) newFilters = ["all"];
+      } else {
+        newFilters.push(status);
+      }
+      setPaymentStatusFilters(newFilters);
+    }
     setPage(1);
   };
   const handleSearchTermChange = (val: string) => {
@@ -69,6 +106,11 @@ export default function BookingsPage() {
   };
   const handleTourFilterChange = (val: string) => {
     setTourFilter(val);
+    setSlotTimeFilter("all");
+    setPage(1);
+  };
+  const handleSlotTimeFilterChange = (val: string) => {
+    setSlotTimeFilter(val);
     setPage(1);
   };
   const handleStartDateChange = (val: string) => {
@@ -79,6 +121,10 @@ export default function BookingsPage() {
     setEndDate(val);
     setPage(1);
   };
+  const handleCreatedDateChange = (val: string) => {
+    setCreatedDate(val);
+    setPage(1);
+  };
   const handleCreatedByAdminFilterChange = (val: string) => {
     setCreatedByAdminFilter(val);
     setPage(1);
@@ -86,21 +132,27 @@ export default function BookingsPage() {
 
   const handleClearFilters = () => {
     setSearchTerm("");
-    setStatusFilter("all");
+    setStatusFilters(["all"]);
+    setPaymentStatusFilters(["all"]);
     setTourFilter("all");
     setStartDate("");
     setEndDate("");
     setCreatedByAdminFilter("all");
+    setSlotTimeFilter("all");
+    setCreatedDate("");
     setPage(1);
   };
 
   const isAnyFilterActive =
     searchTerm !== "" ||
-    statusFilter !== "all" ||
+    !(statusFilters.length === 1 && statusFilters[0] === "all") ||
+    !(paymentStatusFilters.length === 1 && paymentStatusFilters[0] === "all") ||
     tourFilter !== "all" ||
     startDate !== "" ||
     endDate !== "" ||
-    createdByAdminFilter !== "all";
+    createdByAdminFilter !== "all" ||
+    slotTimeFilter !== "all" ||
+    createdDate !== "";
 
   // Fetch all tours for dropdown list
   const { data: toursData } = useQuery({
@@ -128,27 +180,45 @@ export default function BookingsPage() {
     );
   }, [tourSlotsAll]);
 
-  // Fetch slots list dynamically for creation form
   const { data: slotsData, isLoading: isLoadingSlots } = useQuery({
     queryKey: ["tour-slots-admin", createTourId, createBookingDate],
     queryFn: () => tourService.getSlots(Number(createTourId), createBookingDate),
     enabled: !!createTourId && !!createBookingDate,
   });
 
+  const allToursList = toursData?.tours || [];
+
+  const selectedCreateTour = allToursList.find((t: any) => t.id === Number(createTourId));
+  const isPrivateTour = selectedCreateTour?.type === "private";
+
   const slotsList = slotsData || [];
 
+  const { data: filterTourSlotsData } = useQuery({
+    queryKey: ["tour-slots-filter", tourFilter],
+    queryFn: () => tourService.getSlots(Number(tourFilter)),
+    enabled: tourFilter !== "all",
+  });
+
+  const availableSlotTimesForFilter = useMemo(() => {
+    if (!filterTourSlotsData) return [];
+    return Array.from(new Set(filterTourSlotsData.map((s: any) => s.startTime))).sort();
+  }, [filterTourSlotsData]);
+
   const { data, isLoading } = useQuery<PaginatedBookingResponse>({
-    queryKey: ["bookings", page, limit, statusFilter, searchTerm, tourFilter, startDate, endDate, createdByAdminFilter],
+    queryKey: ["bookings", page, limit, statusFilters.join(","), paymentStatusFilters.join(","), searchTerm, tourFilter, startDate, endDate, createdByAdminFilter, slotTimeFilter, createdDate],
     queryFn: () =>
       bookingService.listBookings(
         page,
         limit,
-        statusFilter === "all" ? undefined : statusFilter,
+        statusFilters.includes("all") ? undefined : statusFilters.join(","),
         searchTerm,
         tourFilter === "all" ? undefined : Number(tourFilter),
         startDate || undefined,
         endDate || undefined,
-        createdByAdminFilter === "admin" ? true : (createdByAdminFilter === "user" ? false : undefined)
+        createdByAdminFilter === "admin" ? true : (createdByAdminFilter === "user" ? false : undefined),
+        slotTimeFilter === "all" ? undefined : slotTimeFilter,
+        createdDate || undefined,
+        paymentStatusFilters.includes("all") ? undefined : paymentStatusFilters.join(",")
       ),
   });
 
@@ -177,6 +247,20 @@ export default function BookingsPage() {
     },
   });
 
+  const updateBookingMutation = useMutation({
+    mutationFn: ({ id, data }: { id: number; data: Partial<Booking> }) => {
+      return bookingService.updateBooking(id, data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["bookings"] });
+      queryClient.invalidateQueries({ queryKey: ["booking", selectedBookingId] });
+      toast.success("Payment collected successfully");
+    },
+    onError: (error: any) => {
+      toast.error(error.message || "Failed to update payment status");
+    },
+  });
+
   const createBookingMutation = useMutation({
     mutationFn: (payload: any) => bookingService.createBookingAdmin(payload),
     onSuccess: () => {
@@ -194,11 +278,128 @@ export default function BookingsPage() {
       setCreatePersonCount(1);
       setCreateCustomPrice("");
       setCreateCouponCode("");
+      setCreatePaymentStatus("pending");
     },
     onError: (error: any) => {
       toast.error(error.message || "Failed to create booking");
     },
   });
+
+  const { data: suggestionsCoupons } = useQuery({
+    queryKey: ["coupons-suggest", createCouponCode],
+    queryFn: () => couponService.listCoupons(1, 10, createCouponCode),
+    enabled: createCouponCode.length > 0 && showSuggestions,
+  });
+
+  const { data: suggestionsUsers } = useQuery({
+    queryKey: ["users-suggest", createCouponCode],
+    queryFn: () => userService.listUsers(1, 10, createCouponCode),
+    enabled: createCouponCode.length > 0 && showSuggestions,
+  });
+
+  const suggestedCodes = useMemo(() => {
+    if (!createCouponCode) return [];
+    const codes: string[] = [];
+    if (suggestionsCoupons?.coupons) {
+      codes.push(...suggestionsCoupons.coupons.map((c: any) => c.code));
+    }
+    if (suggestionsUsers?.users) {
+      codes.push(
+        ...suggestionsUsers.users
+          .filter((u: any) => u.referralCode && u.referralCode.toLowerCase().includes(createCouponCode.toLowerCase()))
+          .map((u: any) => u.referralCode)
+      );
+    }
+    return Array.from(new Set(codes));
+  }, [suggestionsCoupons, suggestionsUsers, createCouponCode]);
+
+  const isCouponValid = !createCouponCode || suggestedCodes.includes(createCouponCode);
+
+  const calculatedBasePrice = selectedCreateTour ? selectedCreateTour.price * (isPrivateTour ? 1 : createPersonCount) : 0;
+  const originalPrice = createCustomPrice ? Number(createCustomPrice) : calculatedBasePrice;
+
+  const selectedCoupon = suggestionsCoupons?.coupons?.find((c: any) => c.code === createCouponCode);
+  const selectedReferralUser = suggestionsUsers?.users?.find((u: any) => u.referralCode === createCouponCode);
+
+  let discountAmount = 0;
+  let discountType = "";
+  let discountDescription = "";
+
+  if (selectedCoupon && isCouponValid && createCouponCode) {
+    if (selectedCoupon.discountType === 'flat') {
+      discountAmount = selectedCoupon.discountValue;
+      discountDescription = `Flat ₹${selectedCoupon.discountValue}`;
+    } else if (selectedCoupon.discountType === 'percentage') {
+      discountAmount = (originalPrice * selectedCoupon.discountValue) / 100;
+      discountDescription = `${selectedCoupon.discountValue}%`;
+    }
+    discountType = "Coupon";
+  } else if (selectedReferralUser && isCouponValid && createCouponCode) {
+    discountAmount = 0;
+    discountType = "Referral";
+    discountDescription = "Valid Referral (Reward to Referrer)";
+  }
+
+  const finalPrice = Math.max(0, originalPrice - discountAmount);
+
+  const handleDownloadExcel = async () => {
+    try {
+      setIsExporting(true);
+      const loadingToast = toast.loading("Fetching data for export...");
+
+      // Fetch with a large limit to get all filtered records
+      const response = await bookingService.listBookings(
+        1,
+        10000,
+        statusFilters.includes("all") ? undefined : statusFilters.join(","),
+        searchTerm,
+        tourFilter === "all" ? undefined : Number(tourFilter),
+        startDate || undefined,
+        endDate || undefined,
+        createdByAdminFilter === "admin" ? true : (createdByAdminFilter === "user" ? false : undefined),
+        slotTimeFilter === "all" ? undefined : slotTimeFilter,
+        createdDate || undefined,
+        paymentStatusFilters.includes("all") ? undefined : paymentStatusFilters.join(",")
+      );
+
+      toast.dismiss(loadingToast);
+
+      if (!response.bookings || response.bookings.length === 0) {
+        toast.info("No bookings found to export");
+        return;
+      }
+
+      // Format data for Excel
+      const excelData = response.bookings.map((b: any) => ({
+        "Booking ID": b.bookingId || `#${b.id}`,
+        "Customer Name": b.contacts?.[0]?.name || b.user?.name || "N/A",
+        "Mobile": b.contacts?.[0]?.mobile || b.user?.mobile || "N/A",
+        "Email": b.contacts?.[0]?.email || b.user?.email || "N/A",
+        "Tour": b.tour?.titleEn || "N/A",
+        "Date": b.bookingDate,
+        "Time Slot": b.slot,
+        "Persons": b.personCount,
+        "Total Price (Rs)": b.totalPrice,
+        "Status": b.status.toUpperCase(),
+        "Created By": b.createdByAdmin ? "Admin" : "User App",
+        "Created At": new Date(b.createdAt).toLocaleString(),
+      }));
+
+      const worksheet = XLSX.utils.json_to_sheet(excelData);
+      const workbook = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(workbook, worksheet, "Bookings");
+
+      const dateStr = new Date().toISOString().split('T')[0];
+      const filename = `Bookings_Export_${dateStr}.xlsx`;
+
+      XLSX.writeFile(workbook, filename);
+      toast.success("Export successful!");
+    } catch (error: any) {
+      toast.error("Failed to export data: " + (error.message || "Unknown error"));
+    } finally {
+      setIsExporting(false);
+    }
+  };
 
   const bookings = data?.bookings || [];
   const pagination = data?.pagination;
@@ -206,7 +407,9 @@ export default function BookingsPage() {
   const getStatusIcon = (status: string) => {
     switch (status) {
       case "upcoming":
-        return <IconCircleDotted size={14} className="text-blue-500" />;
+        return <IconClock size={12} strokeWidth={2.5} />;
+      case "pending":
+        return <IconClock size={12} strokeWidth={2.5} />;
       case "completed":
         return <IconCircleCheck size={14} className="text-emerald-500" />;
       case "cancelled":
@@ -219,7 +422,9 @@ export default function BookingsPage() {
   const getStatusClasses = (status: string) => {
     switch (status) {
       case "upcoming":
-        return "bg-blue-50 text-blue-600 ring-blue-500/10";
+        return "bg-blue-50 text-blue-600 border-blue-100";
+      case "pending":
+        return "bg-amber-50 text-amber-600 border-amber-100";
       case "completed":
         return "bg-emerald-50 text-emerald-600 ring-emerald-500/10";
       case "cancelled":
@@ -247,6 +452,15 @@ export default function BookingsPage() {
 
         <div className="flex items-center gap-3 self-end sm:self-auto ml-auto">
           <button
+            onClick={handleDownloadExcel}
+            disabled={isExporting}
+            className="h-10 px-4 rounded-xl bg-emerald-500 text-[10px] font-black uppercase tracking-wider text-white shadow-lg shadow-emerald-500/20 hover:opacity-90 active:scale-95 transition-all flex items-center gap-1.5 disabled:opacity-50"
+          >
+            {isExporting ? <IconLoader2 size={14} className="animate-spin" /> : <IconDownload size={14} />}
+            Download Excel
+          </button>
+
+          <button
             onClick={() => setIsCreateDialogOpen(true)}
             className="h-10 px-4 rounded-xl bg-primary text-[10px] font-black uppercase tracking-wider text-primary-foreground shadow-lg shadow-primary/20 hover:opacity-90 active:scale-95 transition-all flex items-center gap-1.5"
           >
@@ -267,21 +481,42 @@ export default function BookingsPage() {
       <div className="rounded-[2rem] border border-border bg-card/50 p-6 shadow-sm space-y-4 backdrop-blur-md">
         <div className="flex flex-col lg:flex-row gap-4 lg:items-center lg:justify-between">
           {/* Status Tabs */}
-          <div className="flex items-center gap-2 overflow-x-auto scrollbar-none pb-1 lg:pb-0">
-            {["all", "upcoming", "completed", "cancelled"].map((status) => (
-              <button
-                key={status}
-                onClick={() => handleStatusFilterChange(status)}
-                className={twMerge(
-                  "h-9 px-4 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all",
-                  statusFilter === status
-                    ? "bg-primary text-primary-foreground shadow-lg shadow-primary/20"
-                    : "bg-card text-muted-foreground border border-border hover:bg-muted"
-                )}
-              >
-                {status}
-              </button>
-            ))}
+          <div className="flex flex-col gap-2">
+            <div className="flex items-center gap-2 overflow-x-auto scrollbar-none pb-1 lg:pb-0">
+              <span className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/60 mr-2 whitespace-nowrap">Booking Status:</span>
+              {["all", "upcoming", "completed", "cancelled"].map((status) => (
+                <button
+                  key={status}
+                  onClick={() => handleStatusFilterChange(status)}
+                  className={twMerge(
+                    "h-8 px-3 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all",
+                    statusFilters.includes(status)
+                      ? "bg-primary text-primary-foreground shadow-lg shadow-primary/20"
+                      : "bg-card text-muted-foreground border border-border hover:bg-muted"
+                  )}
+                >
+                  {status}
+                </button>
+              ))}
+            </div>
+
+            <div className="flex items-center gap-2 overflow-x-auto scrollbar-none pb-1 lg:pb-0">
+              <span className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/60 mr-2 whitespace-nowrap">Payment Status:</span>
+              {[{ label: "All", value: "all" }, { label: "Pending", value: "pending" }, { label: "Completed", value: "success" }, { label: "Failed", value: "failed" }].map((status) => (
+                <button
+                  key={status.value}
+                  onClick={() => handlePaymentStatusFilterChange(status.value)}
+                  className={twMerge(
+                    "h-8 px-3 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all",
+                    paymentStatusFilters.includes(status.value)
+                      ? "bg-primary text-primary-foreground shadow-lg shadow-primary/20"
+                      : "bg-card text-muted-foreground border border-border hover:bg-muted"
+                  )}
+                >
+                  {status.label}
+                </button>
+              ))}
+            </div>
           </div>
 
           {/* Search Term and Clear Button */}
@@ -310,8 +545,8 @@ export default function BookingsPage() {
           </div>
         </div>
 
-        {/* Second row: Additional filters (Tour Dropdown, Date Range, and Created By) */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 pt-4 border-t border-border/40">
+        {/* Second row: Additional filters */}
+        <div className="grid grid-cols-1 md:grid-cols-5 lg:grid-cols-6 gap-4 pt-4 border-t border-border/40">
           {/* Tour Dropdown */}
           <div className="space-y-1.5">
             <label className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/60 ml-1">
@@ -334,7 +569,7 @@ export default function BookingsPage() {
           {/* Start Date */}
           <div className="space-y-1.5">
             <label className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/60 ml-1">
-              Start Booking Date
+              Start Slot Date
             </label>
             <div className="relative">
               <input
@@ -349,7 +584,7 @@ export default function BookingsPage() {
           {/* End Date */}
           <div className="space-y-1.5">
             <label className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/60 ml-1">
-              End Booking Date
+              End Slot Date
             </label>
             <div className="relative">
               <input
@@ -375,6 +610,44 @@ export default function BookingsPage() {
               <option value="admin">Admin Only</option>
               <option value="user">User App Only</option>
             </select>
+          </div>
+
+          {/* Slot Time Filter */}
+          <div className="space-y-1.5">
+            <label className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/60 ml-1">
+              Slot Time
+            </label>
+            <select
+              value={slotTimeFilter}
+              onChange={(e) => handleSlotTimeFilterChange(e.target.value)}
+              disabled={tourFilter === "all"}
+              className="w-full h-10 rounded-xl border border-border bg-card px-3 text-[11px] font-bold shadow-sm transition-all focus:border-primary focus:ring-4 focus:ring-primary/5 outline-none cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <option value="all">All Slots</option>
+              {availableSlotTimesForFilter.map((time: string) => (
+                <option key={time} value={time}>
+                  {time}
+                </option>
+              ))}
+            </select>
+            {tourFilter === "all" && (
+              <p className="text-[8px] text-muted-foreground ml-1">Select a tour first</p>
+            )}
+          </div>
+
+          {/* Booking Created Date */}
+          <div className="space-y-1.5">
+            <label className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/60 ml-1">
+              Booking Created On
+            </label>
+            <div className="relative">
+              <input
+                type="date"
+                value={createdDate}
+                onChange={(e) => handleCreatedDateChange(e.target.value)}
+                className="w-full h-10 rounded-xl border border-border bg-card px-3 text-[11px] font-bold shadow-sm transition-all focus:border-primary focus:ring-4 focus:ring-primary/5 outline-none"
+              />
+            </div>
           </div>
         </div>
       </div>
@@ -408,6 +681,7 @@ export default function BookingsPage() {
                   <th className="px-4 py-4">{t("bookings.personCount")}</th>
                   <th className="px-4 py-4">{t("bookings.totalPrice")}</th>
                   <th className="px-4 py-4">Created By</th>
+                  <th className="px-4 py-4">Payment Status</th>
                   <th className="px-4 py-4">{t("bookings.status")}</th>
                   <th className="px-6 py-4 text-right">Actions</th>
                 </tr>
@@ -469,6 +743,16 @@ export default function BookingsPage() {
                           User App
                         </span>
                       )}
+                    </td>
+                    <td className="px-4 py-4">
+                      <span className={twMerge(
+                        "inline-flex items-center rounded-full px-2 py-0.5 text-[8px] font-black uppercase tracking-wider ring-1 ring-inset",
+                        booking.paymentStatus === "success" ? "bg-emerald-50 text-emerald-600 ring-emerald-500/10" :
+                          booking.paymentStatus === "pending" ? "bg-amber-50 text-amber-600 ring-amber-500/10" :
+                            "bg-red-50 text-red-600 ring-red-500/10"
+                      )}>
+                        {booking.paymentStatus === "success" ? "Completed" : booking.paymentStatus === "failed" ? "Refund" : "Pending"}
+                      </span>
                     </td>
                     <td className="px-4 py-4">
                       <div className={twMerge(
@@ -538,12 +822,23 @@ export default function BookingsPage() {
               <div className="flex items-center gap-3">
                 {bookingDetail && (
                   <div className="flex items-center gap-3">
-                    {bookingDetail.status === "upcoming" && (
+                    {["upcoming", "pending"].includes(bookingDetail.status) && (
                       <>
+                        {bookingDetail.createdByAdmin && bookingDetail.paymentStatus === "pending" && (
+                          <button
+                            onClick={() => updateBookingMutation.mutate({ id: bookingDetail.id, data: { paymentStatus: "success" } })}
+                            disabled={updateBookingMutation.isPending}
+                            className="h-10 px-4 rounded-xl bg-primary text-[10px] font-black uppercase tracking-wider text-primary-foreground shadow-lg shadow-primary/20 hover:opacity-90 active:scale-95 transition-all flex items-center gap-2"
+                          >
+                            {updateBookingMutation.isPending && <IconLoader2 size={14} className="animate-spin" />}
+                            Payment Collected
+                          </button>
+                        )}
                         <button
                           onClick={() => updateStatusMutation.mutate({ id: bookingDetail.id, status: "completed" })}
-                          disabled={updateStatusMutation.isPending}
-                          className="h-10 px-4 rounded-xl bg-emerald-500 text-[10px] font-black uppercase tracking-wider text-white shadow-lg shadow-emerald-500/20 hover:opacity-90 active:scale-95 transition-all flex items-center gap-2"
+                          disabled={updateStatusMutation.isPending || bookingDetail.paymentStatus !== "success"}
+                          className="h-10 px-4 rounded-xl bg-emerald-500 text-[10px] font-black uppercase tracking-wider text-white shadow-lg shadow-emerald-500/20 hover:opacity-90 active:scale-95 transition-all flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                          title={bookingDetail.paymentStatus !== "success" ? "Payment must be completed first" : ""}
                         >
                           {updateStatusMutation.isPending && <IconLoader2 size={14} className="animate-spin" />}
                           Complete
@@ -623,6 +918,24 @@ export default function BookingsPage() {
                     className="w-full min-h-[100px] rounded-2xl border border-border bg-muted/20 p-4 text-xs font-bold transition-all focus:border-red-500 focus:ring-4 focus:ring-red-500/5 outline-none placeholder:text-muted-foreground/30"
                   />
                 )}
+
+                {bookingDetail && !bookingDetail.createdByAdmin && (
+                  <div className="flex items-start gap-2.5 p-4 rounded-xl bg-amber-50 text-amber-700 border border-amber-100 text-left">
+                    <IconAlertCircle size={16} className="shrink-0 mt-0.5 text-amber-600" />
+                    <p className="text-[10px] font-black uppercase tracking-widest leading-relaxed text-amber-600">
+                      Post Cancellation money to be automatically credited back to original payment mode
+                    </p>
+                  </div>
+                )}
+
+                {bookingDetail && bookingDetail.createdByAdmin && (
+                  <div className="flex items-start gap-2.5 p-4 rounded-xl bg-red-50 text-red-700 border border-red-100 text-left">
+                    <IconAlertCircle size={16} className="shrink-0 mt-0.5 text-red-600" />
+                    <p className="text-[10px] font-black uppercase tracking-widest leading-relaxed text-red-600">
+                      If Cash - You are about to cancel the Booking - Pls manually Refund any cash money taken from the Customer
+                    </p>
+                  </div>
+                )}
               </div>
 
               <div className="grid grid-cols-2 gap-3 w-full pt-4">
@@ -693,6 +1006,7 @@ export default function BookingsPage() {
                   personCount: createPersonCount,
                   totalPrice: createCustomPrice ? Number(createCustomPrice) : undefined,
                   couponCode: createCouponCode || undefined,
+                  paymentStatus: createPaymentStatus,
                 });
               }}
               className="space-y-6"
@@ -821,19 +1135,25 @@ export default function BookingsPage() {
                   )}
                 </div>
 
-                {/* Person Count */}
+                {/* Person Count or Tour Type */}
                 <div className="space-y-1.5">
                   <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/60 ml-1">
-                    Person Count *
+                    {isPrivateTour ? "Tour Type *" : "Person Count *"}
                   </label>
-                  <input
-                    type="number"
-                    min={1}
-                    required
-                    value={createPersonCount}
-                    onChange={(e) => setCreatePersonCount(Number(e.target.value))}
-                    className="w-full h-11 rounded-xl border border-border bg-muted/10 px-4 text-xs font-bold transition-all focus:border-primary outline-none"
-                  />
+                  {isPrivateTour ? (
+                    <div className="w-full h-11 rounded-xl border border-primary/20 bg-primary/5 flex items-center px-4 text-xs font-bold text-primary">
+                      Private Tour
+                    </div>
+                  ) : (
+                    <input
+                      type="number"
+                      min={1}
+                      required
+                      value={createPersonCount}
+                      onChange={(e) => setCreatePersonCount(Number(e.target.value))}
+                      className="w-full h-11 rounded-xl border border-border bg-muted/10 px-4 text-xs font-bold transition-all focus:border-primary outline-none"
+                    />
+                  )}
                 </div>
 
                 {/* Custom Price (Override) */}
@@ -852,19 +1172,89 @@ export default function BookingsPage() {
                 </div>
 
                 {/* Coupon / Referral Code */}
-                <div className="space-y-1.5">
+                <div className="space-y-1.5 relative">
                   <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/60 ml-1">
                     Coupon / Referral Code (Optional)
                   </label>
                   <input
                     type="text"
                     value={createCouponCode}
-                    onChange={(e) => setCreateCouponCode(e.target.value)}
+                    onChange={(e) => {
+                      setCreateCouponCode(e.target.value);
+                      setShowSuggestions(true);
+                    }}
+                    onFocus={() => setShowSuggestions(true)}
                     className="w-full h-11 rounded-xl border border-border bg-muted/10 px-4 text-xs font-bold transition-all focus:border-primary outline-none"
                     placeholder="Enter coupon or referral code"
                   />
+                  {showSuggestions && createCouponCode.length > 0 && (
+                    <div className="absolute z-50 top-full left-0 right-0 mt-2 rounded-xl border border-border bg-card shadow-xl overflow-hidden max-h-48 overflow-y-auto">
+                      {suggestedCodes.length > 0 ? (
+                        <div className="p-1.5 flex flex-col gap-1">
+                          {suggestedCodes.map((code) => (
+                            <button
+                              key={code}
+                              type="button"
+                              onClick={() => {
+                                setCreateCouponCode(code);
+                                setShowSuggestions(false);
+                              }}
+                              className="w-full text-left px-3 py-2.5 rounded-lg hover:bg-muted text-xs font-bold transition-all"
+                            >
+                              {code}
+                            </button>
+                          ))}
+                        </div>
+                      ) : (
+                        <div className="p-4 text-center text-[10px] font-black uppercase tracking-widest text-muted-foreground">
+                          No matching codes
+                        </div>
+                      )}
+                    </div>
+                  )}
+                  {!isCouponValid && (
+                    <p className="text-[10px] font-bold text-red-500 ml-1">Please select a valid code from suggestions</p>
+                  )}
+                </div>
+
+                {/* Payment Status */}
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/60 ml-1">
+                    Payment Status
+                  </label>
+                  <select
+                    value={createPaymentStatus}
+                    onChange={(e) => setCreatePaymentStatus(e.target.value)}
+                    className="w-full h-11 rounded-xl border border-border bg-muted/10 px-4 text-xs font-bold transition-all focus:border-primary outline-none appearance-none"
+                  >
+                    <option value="pending">Pending</option>
+                    <option value="success">Completed</option>
+                  </select>
                 </div>
               </div>
+
+              {/* Final Price Breakdown */}
+              {selectedCreateTour && (
+                <div className="rounded-xl border border-border bg-card p-4 space-y-3">
+                  <h4 className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/60 mb-2">
+                    Price Breakdown
+                  </h4>
+                  <div className="flex items-center justify-between text-xs font-bold text-muted-foreground">
+                    <span>Original Price {createCustomPrice ? "(Custom)" : `(₹${selectedCreateTour.price} × ${isPrivateTour ? 1 : createPersonCount})`}</span>
+                    <span>₹{originalPrice}</span>
+                  </div>
+                  {discountType && (
+                    <div className="flex items-center justify-between text-xs font-bold text-emerald-600">
+                      <span>Discount ({discountType} - {discountDescription})</span>
+                      <span>- ₹{discountAmount}</span>
+                    </div>
+                  )}
+                  <div className="pt-3 border-t border-border flex items-center justify-between text-sm font-black text-foreground">
+                    <span>Final Total Price</span>
+                    <span className="text-primary text-lg">₹{finalPrice}</span>
+                  </div>
+                </div>
+              )}
 
               {createBookingDate && !activeSlotDates.includes(createBookingDate) && (
                 <div className="rounded-xl border border-red-200 bg-red-50/50 p-4 text-xs text-red-600 font-bold">
@@ -878,7 +1268,7 @@ export default function BookingsPage() {
                 </Dialog.Close>
                 <button
                   type="submit"
-                  disabled={createBookingMutation.isPending || (!!createBookingDate && !activeSlotDates.includes(createBookingDate))}
+                  disabled={createBookingMutation.isPending || (!!createBookingDate && !activeSlotDates.includes(createBookingDate)) || !isCouponValid}
                   className="flex-1 h-12 rounded-xl bg-primary text-xs font-black uppercase tracking-wider text-primary-foreground shadow-lg shadow-primary/20 hover:opacity-90 active:scale-95 transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {createBookingMutation.isPending && <IconLoader2 size={16} className="animate-spin" />}

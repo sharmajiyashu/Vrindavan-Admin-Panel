@@ -30,6 +30,8 @@ export function BookingDetails({ booking }: BookingDetailsProps) {
     switch (status) {
       case "upcoming":
         return "bg-blue-50 text-blue-600 ring-blue-500/10";
+      case "pending":
+        return "bg-amber-50 text-amber-600 ring-amber-500/10";
       case "completed":
         return "bg-emerald-50 text-emerald-600 ring-emerald-500/10";
       case "cancelled":
@@ -58,6 +60,18 @@ export function BookingDetails({ booking }: BookingDetailsProps) {
                     </span>
                   )}
                 </h3>
+                {booking.createdAt && (
+                  <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider mt-1">
+                    Booked on: {new Date(booking.createdAt).toLocaleString('en-IN', {
+                      day: 'numeric',
+                      month: 'short',
+                      year: 'numeric',
+                      hour: '2-digit',
+                      minute: '2-digit',
+                      hour12: true
+                    })}
+                  </p>
+                )}
               </div>
               <div
                 className={twMerge(
@@ -96,12 +110,23 @@ export function BookingDetails({ booking }: BookingDetailsProps) {
                 <div className="flex items-center gap-2 text-muted-foreground">
                   <IconUsers size={14} />
                   <span className="text-[10px] font-bold uppercase tracking-wider">
-                    {t("bookings.personCount")}
+                    {booking.tour?.type === "private" ? "Tour Type" : t("bookings.personCount")}
                   </span>
                 </div>
-                <p className="text-sm font-bold text-foreground">
-                  {booking.personCount}
-                </p>
+                {booking.tour?.type === "private" ? (
+                  <div className="inline-flex items-center rounded-md bg-primary/10 px-2 py-0.5 text-[10px] font-black uppercase tracking-wider text-primary">
+                    Private Tour
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-2">
+                    <p className="text-sm font-bold text-foreground">
+                      {booking.personCount}
+                    </p>
+                    <span className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/50">
+                      (Group)
+                    </span>
+                  </div>
+                )}
               </div>
               <div className="space-y-1.5">
                 <div className="flex items-center gap-2 text-muted-foreground">
@@ -287,6 +312,13 @@ export function BookingDetails({ booking }: BookingDetailsProps) {
               {booking.couponCode && (
                 <div className="flex justify-between text-[10px] font-black uppercase tracking-widest text-primary bg-primary/5 px-2 py-1 rounded-lg">
                   <span>Coupon: {booking.couponCode}</span>
+                  {booking.couponDiscount ? <span>-₹{booking.couponDiscount}</span> : null}
+                </div>
+              )}
+              {booking.referrerId && (
+                <div className="flex justify-between text-[10px] font-black uppercase tracking-widest text-orange-600 bg-orange-50 px-2 py-1 rounded-lg mt-2">
+                  <span>Referred By: #{booking.referrerId}</span>
+                  {booking.referralAmount ? <span>Bonus: ₹{booking.referralAmount}</span> : null}
                 </div>
               )}
               <div className="pt-3 border-t border-border flex justify-between items-center">
@@ -295,6 +327,19 @@ export function BookingDetails({ booking }: BookingDetailsProps) {
                 </span>
                 <span className="text-xl font-black text-primary">
                   ₹{booking.totalPrice}
+                </span>
+              </div>
+              <div className="flex justify-between items-center pt-2">
+                <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/60">
+                  Payment Status
+                </span>
+                <span className={twMerge(
+                  "text-[9px] font-black uppercase tracking-widest px-2 py-1 rounded-md",
+                  booking.paymentStatus === "success" ? "bg-emerald-50 text-emerald-600" :
+                    booking.paymentStatus === "pending" ? "bg-amber-50 text-amber-600" :
+                      "bg-red-50 text-red-600"
+                )}>
+                  {booking.paymentStatus === "success" ? "Completed" : booking.paymentStatus === "pending" ? "Pending" : booking.paymentStatus === "failed" ? "Refund" : "Pending"}
                 </span>
               </div>
             </div>

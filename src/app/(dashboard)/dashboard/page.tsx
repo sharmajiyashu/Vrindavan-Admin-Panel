@@ -20,7 +20,8 @@ import {
   IconClock,
   IconX,
   IconShieldCheck,
-  IconAlertCircle
+  IconAlertCircle,
+  IconBrandWhatsapp
 } from "@tabler/icons-react";
 import * as Dialog from "@radix-ui/react-dialog";
 import { twMerge } from "tailwind-merge";
@@ -71,6 +72,18 @@ export default function DashboardPage() {
     if (editingSlot) {
       updateSlotMutation.mutate({ slotId: editingSlot.id, data: formData });
     }
+  };
+
+  const handleWhatsAppShare = (slot: any) => {
+    const tourTitle = slot.tour?.titleEn || "Tour";
+    const dateStr = slot.date;
+    const timeStr = slot.startTime;
+    const guideName = slot.guideName || "Not assigned";
+    const guidePhone = slot.guidePhoneNumber || "N/A";
+    
+    const message = `*Final Tour Details*\nTour: ${tourTitle}\nDate: ${dateStr}\nTime: ${timeStr}\n\n*Guide Details*\nName: ${guideName}\nPhone: ${guidePhone}`;
+    const waUrl = `https://wa.me/?text=${encodeURIComponent(message)}`;
+    window.open(waUrl, '_blank');
   };
 
   const { data, isLoading } = useQuery<DashboardResponse>({
@@ -247,6 +260,29 @@ export default function DashboardPage() {
                               {badgeText}
                             </div>
                           );
+                        })()}
+                        {(() => {
+                          const hasGuide = !!slot.guideName;
+                          const dateTimeStr = `${slot.date} ${slot.startTime}`;
+                          const slotTime = parse(dateTimeStr, "yyyy-MM-dd hh:mm a", new Date());
+                          const deadlineHours = slot.tour?.shareDetailsBeforeHours || 2;
+                          const deadlineTime = new Date(slotTime.getTime() - deadlineHours * 60 * 60 * 1000);
+                          const minutesLeft = differenceInMinutes(deadlineTime, new Date());
+                          const isDeadlinePassed = minutesLeft <= 0;
+                          const isTourStarted = new Date() > slotTime;
+
+                          return hasGuide && (isTourStarted || isDeadlinePassed) ? (
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleWhatsAppShare(slot);
+                              }}
+                              title="Share Details on WhatsApp"
+                              className="h-7 w-7 rounded-lg bg-green-50 flex items-center justify-center text-green-600 border border-green-100 hover:bg-green-100 transition-all"
+                            >
+                              <IconBrandWhatsapp size={14} />
+                            </button>
+                          ) : null;
                         })()}
                         <button
                           onClick={(e) => {

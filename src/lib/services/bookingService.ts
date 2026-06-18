@@ -11,10 +11,14 @@ export interface Booking {
   basePrice: number;
   discountAmount: number;
   couponCode: string;
+  couponDiscount?: number;
   totalPrice: number;
+  paymentStatus?: "pending" | "success" | "failed";
   status: "upcoming" | "completed" | "cancelled";
   cancellationReason: string | null;
   createdByAdmin?: boolean;
+  referrerId?: number | null;
+  referralAmount?: number;
   createdAt: string;
   updatedAt: string;
   tour?: {
@@ -70,7 +74,10 @@ export const bookingService = {
     tourId?: number,
     startDate?: string,
     endDate?: string,
-    createdByAdmin?: boolean
+    createdByAdmin?: boolean,
+    slotTime?: string,
+    createdDate?: string,
+    paymentStatus?: string
   ) => {
     const params = new URLSearchParams();
     params.append("page", page.toString());
@@ -81,6 +88,9 @@ export const bookingService = {
     if (startDate) params.append("startDate", startDate);
     if (endDate) params.append("endDate", endDate);
     if (createdByAdmin !== undefined) params.append("createdByAdmin", createdByAdmin.toString());
+    if (slotTime) params.append("slotTime", slotTime);
+    if (createdDate) params.append("createdDate", createdDate);
+    if (paymentStatus) params.append("paymentStatus", paymentStatus);
 
     return await get<PaginatedBookingResponse>(`/bookings?${params.toString()}`);
   },
@@ -99,6 +109,10 @@ export const bookingService = {
 
   completeBooking: async (id: number) => {
     return await post<Booking>(`/bookings/${id}/complete`);
+  },
+
+  updateBooking: async (id: number, data: Partial<Booking>) => {
+    return await patch<Booking>(`/bookings/${id}`, data);
   },
 
   createBookingAdmin: async (data: any) => {

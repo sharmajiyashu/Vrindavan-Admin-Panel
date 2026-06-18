@@ -1,7 +1,7 @@
 "use client";
 
-import React, { useState } from "react";
-import { useParams, useRouter } from "next/navigation";
+import React, { useState, useEffect } from "react";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   IconChevronLeft,
@@ -51,6 +51,7 @@ function createEmptySlot(date: string): Partial<TourSlot> {
 
 export default function TourDetailPage() {
   const { id } = useParams();
+  const searchParams = useSearchParams();
   const router = useRouter();
   const { t } = useLanguage();
   const queryClient = useQueryClient();
@@ -135,10 +136,27 @@ export default function TourDetailPage() {
     }
   });
 
-  const [selectedDate, setSelectedDate] = useState(format(new Date(), "yyyy-MM-dd"));
+  const [selectedDate, setSelectedDate] = useState<string>(() => {
+    const dateParam = searchParams.get("date");
+    if (dateParam && /^\d{4}-\d{2}-\d{2}$/.test(dateParam)) {
+      return dateParam;
+    }
+    return format(new Date(), "yyyy-MM-dd");
+  });
+
+  useEffect(() => {
+    const dateParam = searchParams.get("date");
+    if (dateParam && /^\d{4}-\d{2}-\d{2}$/.test(dateParam)) {
+      setSelectedDate(dateParam);
+    }
+  }, [searchParams]);
+
   const [slotToDelete, setSlotToDelete] = useState<{ index: number; slot: TourSlot } | null>(null);
   const [bookingCount, setBookingCount] = useState<number>(0);
   const [isAlertOpen, setIsAlertOpen] = useState(false);
+  const [isEditAlertOpen, setIsEditAlertOpen] = useState(false);
+  const [slotToEdit, setSlotToEdit] = useState<{ index: number; slot: TourSlot } | null>(null);
+  const [editBookingCount, setEditBookingCount] = useState<number>(0);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [cancellationReason, setCancellationReason] = useState("");
   const [editingSlotIndex, setEditingSlotIndex] = useState<number | null>(null);
@@ -186,6 +204,31 @@ export default function TourDetailPage() {
         await tourService.cancelSlot(tourId, slot.date, slot.startTime, "Admin removal", slot.id);
         queryClient.invalidateQueries({ queryKey: ["tour", tourId] });
         toast.success("Slot removed");
+      }
+    } catch (error: any) {
+      toast.dismiss(loadingToast);
+      toast.error("Failed to check bookings: " + (error.message || "Unknown error"));
+    }
+  };
+
+  const checkBookingsForEditPrompt = async (index: number, slot: TourSlot) => {
+    if (!slot.startTime) {
+      toast.error("Slot time is required for this action");
+      return;
+    }
+    const loadingToast = toast.loading("Checking for bookings...");
+    try {
+      const response = await tourService.getSlotBookingCount(tourId, slot.date, slot.startTime, slot.id);
+      toast.dismiss(loadingToast);
+
+      if (response.count > 0) {
+        setEditBookingCount(response.count);
+        setSlotToEdit({ index, slot });
+        setIsEditAlertOpen(true);
+      } else {
+        setEditingSlotIndex(index);
+        setNewSlot({ ...slot, session: slot.session ?? "morning" });
+        setIsAddModalOpen(true);
       }
     } catch (error: any) {
       toast.dismiss(loadingToast);
@@ -467,6 +510,12 @@ export default function TourDetailPage() {
             >
               Reviews
             </Tabs.Trigger>
+            <Tabs.Trigger
+              value="cancellations"
+              className="px-4 py-2 text-xs font-bold transition-all border-b-2 border-transparent data-[state=active]:text-destructive data-[state=active]:border-destructive text-muted-foreground hover:text-foreground"
+            >
+              Cancellations
+            </Tabs.Trigger>
           </Tabs.List>
 
           <Tabs.Content value="slots" className="animate-in fade-in slide-in-from-bottom-2 duration-300 outline-none">
@@ -605,11 +654,7 @@ export default function TourDetailPage() {
                                       <div className="flex items-center gap-1">
                                         {!isPast && (
                                           <button
-                                            onClick={() => {
-                                              setEditingSlotIndex(originalIndex);
-                                              setNewSlot({ ...slot, session: slot.session ?? "morning" });
-                                              setIsAddModalOpen(true);
-                                            }}
+                                            onClick={() => checkBookingsForEditPrompt(originalIndex, slot)}
                                             className="p-1.5 rounded-lg text-muted-foreground hover:bg-primary/10 hover:text-primary transition-all"
                                             title="Edit"
                                           >
@@ -646,53 +691,63 @@ export default function TourDetailPage() {
                   )}
                 </div>
 
-                {/* Cancelled Slots Tracking Section */}
-                {tour.slots && tour.slots.some(s => s.isCancelled) && (
-                  <div className="pt-8 space-y-4">
-                    <div className="flex items-center justify-between px-2">
-                      <div className="flex items-center gap-2">
-                        <IconAlertCircle size={14} className="text-destructive" />
-                        <h3 className="text-[10px] font-black uppercase tracking-widest text-destructive">Cancellation History & Logs</h3>
-                      </div>
-                      <p className="text-[9px] font-bold text-muted-foreground/60">Historical Record of Terminated Slots</p>
+              </div>
+            </div>
+          </Tabs.Content>
+
+          {/* New Cancellations Tab Content */}
+          <Tabs.Content value="cancellations" className="animate-in fade-in slide-in-from-bottom-2 duration-300 outline-none">
+            <div className="space-y-4">
+              {tour.slots && tour.slots.some(s => s.isCancelled) ? (
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between px-2">
+                    <div className="flex items-center gap-2">
+                      <IconAlertCircle size={14} className="text-destructive" />
+                      <h3 className="text-[10px] font-black uppercase tracking-widest text-destructive">Cancellation History & Logs</h3>
                     </div>
-                    <div className="grid gap-3">
-                      {tour.slots
-                        .filter(s => s.isCancelled)
-                        .sort((a: any, b: any) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
-                        .map((cs: any) => (
-                          <div key={cs.id} className="group p-4 rounded-2xl bg-destructive/5 border border-destructive/10 hover:bg-destructive/[0.08] transition-all flex items-center justify-between gap-4">
-                            <div className="flex items-center gap-4">
-                              <div className="h-10 w-10 rounded-xl bg-destructive/10 flex items-center justify-center text-destructive">
-                                <IconCalendar size={18} />
-                              </div>
-                              <div className="space-y-0.5">
-                                <div className="flex items-center gap-2">
-                                  <span className="text-xs font-black text-foreground">{format(new Date(cs.date), "EEEE, dd MMM yyyy")}</span>
-                                  <span className="px-2 py-0.5 rounded-md bg-destructive/10 text-destructive text-[8px] font-black uppercase">{cs.startTime}</span>
-                                </div>
-                                <p className="text-[10px] text-muted-foreground font-medium leading-relaxed max-w-[400px]">
-                                  <span className="font-black text-destructive/80 uppercase text-[8px]">Reason:</span> {cs.cancellationReason}
-                                </p>
-                              </div>
+                    <p className="text-[9px] font-bold text-muted-foreground/60">Historical Record of Terminated Slots</p>
+                  </div>
+                  <div className="grid gap-3">
+                    {tour.slots
+                      .filter(s => s.isCancelled)
+                      .sort((a: any, b: any) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
+                      .map((cs: any) => (
+                        <div key={cs.id} className="group p-4 rounded-2xl bg-destructive/5 border border-destructive/10 hover:bg-destructive/[0.08] transition-all flex items-center justify-between gap-4">
+                          <div className="flex items-center gap-4">
+                            <div className="h-10 w-10 rounded-xl bg-destructive/10 flex items-center justify-center text-destructive">
+                              <IconCalendar size={18} />
                             </div>
-                            <div className="flex items-center gap-4">
-                              <button
-                                onClick={() => {
-                                  setActiveSlotForBookings(cs);
-                                  setIsBookingsModalOpen(true);
-                                }}
-                                className="h-9 px-4 rounded-xl bg-destructive text-white text-[9px] font-black uppercase tracking-widest shadow-lg shadow-destructive/20 hover:scale-105 active:scale-95 transition-all"
-                              >
-                                View Logs
-                              </button>
+                            <div className="space-y-0.5">
+                              <div className="flex items-center gap-2">
+                                <span className="text-xs font-black text-foreground">{format(new Date(cs.date), "EEEE, dd MMM yyyy")}</span>
+                                <span className="px-2 py-0.5 rounded-md bg-destructive/10 text-destructive text-[8px] font-black uppercase">{cs.startTime}</span>
+                              </div>
+                              <p className="text-[10px] text-muted-foreground font-medium leading-relaxed max-w-[400px]">
+                                <span className="font-black text-destructive/80 uppercase text-[8px]">Reason:</span> {cs.cancellationReason}
+                              </p>
                             </div>
                           </div>
-                        ))}
-                    </div>
+                          <div className="flex items-center gap-4">
+                            <button
+                              onClick={() => {
+                                setActiveSlotForBookings(cs);
+                                setIsBookingsModalOpen(true);
+                              }}
+                              className="h-9 px-4 rounded-xl bg-destructive text-white text-[9px] font-black uppercase tracking-widest shadow-lg shadow-destructive/20 hover:scale-105 active:scale-95 transition-all"
+                            >
+                              View Logs
+                            </button>
+                          </div>
+                        </div>
+                      ))}
                   </div>
-                )}
-              </div>
+                </div>
+              ) : (
+                <div className="py-12 text-center border-2 border-dashed border-border rounded-xl bg-muted/5 flex flex-col items-center gap-3">
+                  <IconAlertCircle size={32} className="text-muted-foreground/20" />
+                  <p className="text-xs font-bold text-muted-foreground">No cancelled slots found.</p>
+                </div>
+              )}
             </div>
           </Tabs.Content>
 
@@ -1040,6 +1095,54 @@ export default function TourDetailPage() {
           </Dialog.Content>
         </Dialog.Portal>
       </Dialog.Root>
+
+      {/* Red Alert Modal for Editing */}
+      <AlertDialog.Root open={isEditAlertOpen} onOpenChange={setIsEditAlertOpen}>
+        <AlertDialog.Portal>
+          <AlertDialog.Overlay className="fixed inset-0 z-[100] bg-black/50 backdrop-blur-sm animate-in fade-in duration-300" />
+          <AlertDialog.Content className="fixed left-[50%] top-[50%] z-[100] w-[calc(100%-2rem)] max-w-lg translate-x-[-50%] translate-y-[-50%] rounded-[2.5rem] bg-card p-10 shadow-2xl animate-in zoom-in-95 fade-in duration-300 outline-none border border-destructive/20">
+            <div className="flex flex-col items-center text-center space-y-6">
+              <div className="h-16 w-16 rounded-2xl bg-destructive/10 flex items-center justify-center text-destructive">
+                <IconAlertCircle size={32} />
+              </div>
+
+              <div className="space-y-2">
+                <AlertDialog.Title className="text-xl font-black text-foreground tracking-tight">
+                  Editing Active Slot
+                </AlertDialog.Title>
+                <AlertDialog.Description className="text-sm font-medium text-muted-foreground leading-relaxed max-w-[400px] mx-auto">
+                  You are about to edit a slot that currently has <strong className="text-destructive font-black text-base">{editBookingCount} active bookings</strong>.
+                  <br /><br />
+                  <span className="text-[10px] uppercase tracking-widest text-muted-foreground/80">
+                    Modifying the date or time will NOT automatically notify customers. Are you sure you want to proceed?
+                  </span>
+                </AlertDialog.Description>
+              </div>
+            </div>
+
+            <div className="flex flex-col sm:flex-row gap-3 pt-8 w-full mt-2">
+              <AlertDialog.Cancel asChild>
+                <button className="flex-1 h-12 rounded-xl border border-border bg-muted/10 text-[11px] font-black uppercase tracking-widest text-muted-foreground hover:bg-muted transition-all active:scale-95">
+                  Cancel
+                </button>
+              </AlertDialog.Cancel>
+              <button
+                onClick={() => {
+                  if (slotToEdit) {
+                    setEditingSlotIndex(slotToEdit.index);
+                    setNewSlot({ ...slotToEdit.slot, session: slotToEdit.slot.session ?? "morning" });
+                    setIsAddModalOpen(true);
+                  }
+                  setIsEditAlertOpen(false);
+                }}
+                className="flex-[2] h-12 rounded-xl bg-destructive text-white text-[11px] font-black uppercase tracking-widest shadow-xl shadow-destructive/20 hover:scale-105 active:scale-95 transition-all flex items-center justify-center gap-2"
+              >
+                Proceed to Edit
+              </button>
+            </div>
+          </AlertDialog.Content>
+        </AlertDialog.Portal>
+      </AlertDialog.Root>
 
       {/* Red Alert Modal for Bookings */}
       <AlertDialog.Root open={isAlertOpen} onOpenChange={setIsAlertOpen}>

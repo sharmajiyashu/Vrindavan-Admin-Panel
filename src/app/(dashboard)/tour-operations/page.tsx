@@ -13,7 +13,9 @@ import {
   IconCircleCheck,
   IconArrowRight,
   IconLoader2,
-  IconFilter
+  IconFilter,
+  IconBrandWhatsapp,
+  IconUsers
 } from "@tabler/icons-react";
 import { dashboardService, DashboardResponse } from "@/lib/services/dashboardService";
 import { tourService } from "@/lib/services/tourService";
@@ -36,9 +38,23 @@ export default function TourOperationsPage() {
     alternateNumber: ""
   });
 
+  const [isBookingsModalOpen, setIsBookingsModalOpen] = useState(false);
+  const [viewingBookingsSlot, setViewingBookingsSlot] = useState<any>(null);
+
   const { data, isLoading } = useQuery<DashboardResponse>({
     queryKey: ["dashboard-stats"],
     queryFn: dashboardService.getStats,
+  });
+
+  const { data: slotBookings, isLoading: isLoadingBookings } = useQuery({
+    queryKey: ["slot-bookings", viewingBookingsSlot?.tourId, viewingBookingsSlot?.date, viewingBookingsSlot?.startTime, viewingBookingsSlot?.id],
+    queryFn: () => tourService.getSlotBookings(
+      viewingBookingsSlot.tourId,
+      viewingBookingsSlot.date,
+      viewingBookingsSlot.startTime,
+      viewingBookingsSlot.id
+    ),
+    enabled: !!viewingBookingsSlot && isBookingsModalOpen,
   });
 
   const updateSlotMutation = useMutation({
@@ -69,6 +85,18 @@ export default function TourOperationsPage() {
     if (editingSlot) {
       updateSlotMutation.mutate({ slotId: editingSlot.id, data: formData });
     }
+  };
+
+  const handleWhatsAppShare = (slot: any) => {
+    const tourTitle = slot.tour?.titleEn || "Tour";
+    const dateStr = slot.date;
+    const timeStr = slot.startTime;
+    const guideName = slot.guideName || "Not assigned";
+    const guidePhone = slot.guidePhoneNumber || "N/A";
+
+    const message = `*Final Tour Details*\nTour: ${tourTitle}\nDate: ${dateStr}\nTime: ${timeStr}\n\n*Guide Details*\nName: ${guideName}\nPhone: ${guidePhone}`;
+    const waUrl = `https://wa.me/?text=${encodeURIComponent(message)}`;
+    window.open(waUrl, '_blank');
   };
 
   const allSlots = data?.upcomingSlots || [];
@@ -186,6 +214,24 @@ export default function TourOperationsPage() {
 
                     <div className="flex items-center gap-2">
                       <button
+                        onClick={() => {
+                          setViewingBookingsSlot(slot);
+                          setIsBookingsModalOpen(true);
+                        }}
+                        className="px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all active:scale-95 border shadow-sm bg-blue-50 text-blue-600 border-blue-100 hover:bg-blue-100"
+                      >
+                        Bookings
+                      </button>
+                      {!!slot.guideName && (new Date() > slotTime || isDeadlinePassed) && (
+                        <button
+                          onClick={() => handleWhatsAppShare(slot)}
+                          title="Share Details on WhatsApp"
+                          className="px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all active:scale-95 border shadow-sm bg-green-50 text-green-600 border-green-100 hover:bg-green-100 flex items-center gap-1"
+                        >
+                          <IconBrandWhatsapp size={14} /> Share
+                        </button>
+                      )}
+                      <button
                         onClick={() => handleEditClick(slot)}
                         className={twMerge(
                           "px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all active:scale-95 border shadow-sm",
@@ -196,7 +242,7 @@ export default function TourOperationsPage() {
                       >
                         {slot.guideName ? "Edit Guide" : "Assign Guide"}
                       </button>
-                      <Link href={`/tours/${slot.tourId}`} className="h-8 w-8 rounded-lg bg-primary/5 flex items-center justify-center text-primary hover:bg-primary hover:text-white transition-all border border-primary/10">
+                      <Link href={`/tours/${slot.tourId}?date=${slot.date}`} className="h-8 w-8 rounded-lg bg-primary/5 flex items-center justify-center text-primary hover:bg-primary hover:text-white transition-all border border-primary/10">
                         <IconArrowRight size={14} />
                       </Link>
                     </div>
@@ -290,6 +336,56 @@ export default function TourOperationsPage() {
                 </button>
               </div>
             </form>
+          </Dialog.Content>
+        </Dialog.Portal>
+      </Dialog.Root>
+
+      {/* Bookings Modal */}
+      <Dialog.Root open={isBookingsModalOpen} onOpenChange={setIsBookingsModalOpen}>
+        <Dialog.Portal>
+          <Dialog.Overlay className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm animate-in fade-in duration-300" />
+          <Dialog.Content className="fixed left-[50%] top-[50%] z-50 w-full max-w-2xl translate-x-[-50%] translate-y-[-50%] overflow-hidden rounded-[2rem] bg-card p-8 shadow-2xl animate-in zoom-in-95 fade-in duration-300 outline-none border border-border max-h-[80vh] flex flex-col">
+            <div className="flex items-center justify-between mb-6 shrink-0">
+              <Dialog.Title className="text-xl font-black tracking-tight flex items-center gap-3">
+                <div className="h-8 w-8 rounded-xl bg-blue-50 flex items-center justify-center text-blue-600">
+                  <IconUsers size={18} />
+                </div>
+                Slot Bookings
+              </Dialog.Title>
+              <Dialog.Close className="h-8 w-8 flex items-center justify-center rounded-lg bg-muted/50 text-muted-foreground hover:bg-muted transition-all active:scale-90">
+                <IconX size={16} />
+              </Dialog.Close>
+            </div>
+
+            <div className="overflow-y-auto flex-1 pr-2 space-y-3">
+              {isLoadingBookings ? (
+                <div className="h-40 flex items-center justify-center">
+                  <IconLoader2 size={24} className="animate-spin text-primary/20" />
+                </div>
+              ) : slotBookings?.length === 0 ? (
+                <div className="h-40 flex items-center justify-center border border-dashed rounded-2xl bg-muted/5">
+                  <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">No bookings found</p>
+                </div>
+              ) : (
+                slotBookings?.map((booking: any) => (
+                  <div key={booking.id} className="p-4 rounded-xl border border-border bg-card shadow-sm flex items-start justify-between gap-4">
+                    <div>
+                      <h4 className="text-sm font-bold text-foreground">{booking.user?.name || "Unknown"}</h4>
+                      <div className="flex items-center gap-3 mt-1">
+                        <span className="flex items-center gap-1 text-[10px] font-medium text-muted-foreground"><IconPhone size={12} /> {booking.user?.mobile || "N/A"}</span>
+                        <span className="flex items-center gap-1 text-[10px] font-medium text-muted-foreground"><IconUsers size={12} /> {booking.personCount} Persons</span>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <div className={twMerge("px-2 py-1 inline-flex rounded-md text-[8px] font-black uppercase tracking-wider border", booking.status === 'upcoming' ? 'bg-blue-50 text-blue-600 border-blue-100' : booking.status === 'completed' ? 'bg-green-50 text-green-600 border-green-100' : 'bg-red-50 text-red-600 border-red-100')}>
+                        {booking.status}
+                      </div>
+                      <p className="text-xs font-bold mt-1">₹{booking.totalPrice}</p>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
           </Dialog.Content>
         </Dialog.Portal>
       </Dialog.Root>
